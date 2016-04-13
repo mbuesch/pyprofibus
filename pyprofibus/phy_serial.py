@@ -9,7 +9,20 @@
 
 from pyprofibus.phy import *
 
-import serial
+import sys
+
+try:
+	import serial
+except ImportError as e:
+	if "PyPy" in sys.version and\
+	   sys.version_info[0] == 2:
+		# We are on PyPy2.
+		# Try to import CPython2's serial.
+		import glob
+		sys.path.extend(glob.glob("/usr/lib/python2*/*-packages/"))
+		import serial
+	else:
+		raise e
 
 
 class CpPhySerial(CpPhy):
