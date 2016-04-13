@@ -115,7 +115,7 @@ class DpMaster(object):
 	def destroy(self):
 		#TODO
 		if self.phy:
-			self.phy.cleanup()
+			self.phy.close()
 			self.phy = None
 
 	def addSlave(self, slaveDesc):
