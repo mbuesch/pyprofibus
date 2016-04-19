@@ -159,6 +159,29 @@ class FdlTelegram(object):
 	FC_MRDY		= 0x20	# Master, ready to enter token ring
 	FC_MTR		= 0x30	# Master, in token ring
 
+	@classmethod
+	def getSizeFromRaw(cls, data):
+		try:
+			sd = data[0]
+			try:
+				return {
+					cls.SD1	: 6,
+					cls.SD3	: 14,
+					cls.SD4	: 3,
+					cls.SC	: 1,
+				}[sd]
+			except KeyError:
+				pass
+			if sd == cls.SD2:
+				le = data[1]
+				if data[2] != le:
+					raise FdlError("Repeated length field mismatch")
+				if le < 3 or le > 249:
+					raise FdlError("Invalid LE field")
+				return le
+		except IndexError:
+			raise FdlError("Invalid FDL packet format")
+
 	def __init__(self, sd, haveLE=False, da=None, sa=None,
 		     fc=None, dae=(), sae=(), du=None,
 		     haveFCS=False, ed=None):
