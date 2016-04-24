@@ -50,21 +50,11 @@ class FdlTransceiver(AbstractTransceiver):
 		ok, telegram = False, None
 		reply = self.phy.poll(timeout)
 		if reply is not None:
-			#FIXME
-			if reply.fc == CpPhyMessage.RPI_PACK_PB_SRD_REPLY:
-				telegram = FdlTelegram.fromRawData(reply.payload)
-				if self.__checkRXFilter(telegram):
-					if self.__fcbWaitingReply:
-						self.__FCBnext()
-					ok = True
-			elif reply.fc == CpPhyMessage.RPI_PACK_ACK:
+			telegram = FdlTelegram.fromRawData(reply)
+			if self.__checkRXFilter(telegram):
+				if self.__fcbWaitingReply:
+					self.__FCBnext()
 				ok = True
-			elif reply.fc == CpPhyMessage.RPI_PACK_NACK:
-				ok = False
-				self.resetFCB()
-			else:
-				raise FdlError("Received CpPhyMessage with "
-					"unknown type (0x%02X)" % reply.fc)
 		return (ok, telegram)
 
 	# Send an FdlTelegram.
@@ -178,7 +168,7 @@ class FdlTelegram(object):
 					raise FdlError("Repeated length field mismatch")
 				if le < 3 or le > 249:
 					raise FdlError("Invalid LE field")
-				return le
+				return le + 6
 		except IndexError:
 			raise FdlError("Invalid FDL packet format")
 
