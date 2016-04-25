@@ -40,7 +40,10 @@ class CpPhySerial(CpPhy):
 
 	def close(self):
 		if self.__serial:
-			self.__serial.close()
+			try:
+				self.__serial.close()
+			except serial.SerialException as e:
+				pass
 			self.__serial = None
 			self.__rxBuf = b""
 		super(CpPhySerial, self).close()
@@ -48,44 +51,52 @@ class CpPhySerial(CpPhy):
 	# Poll for received packet.
 	# timeout => In seconds. 0 = none, Negative = unlimited.
 	def poll(self, timeout = 0):
-		ret, s, size = None, self.__serial, -1
+		ret, rxBuf, s, size = None, self.__rxBuf, self.__serial, -1
+		getSize = FdlTelegram.getSizeFromRaw
 		timeoutStamp = time.clock() + timeout
-		while True:
-			if len(self.__rxBuf) == size:
-				ret = self.__rxBuf
-				self.__rxBuf = b""
-				break
+		try:
+			while True:
+				if len(rxBuf) == size:
+					ret, rxBuf = rxBuf, b""
+					break
 
-			if timeout >= 0 and\
-			   time.clock() >= timeoutStamp:
-				break
+				if timeout >= 0 and\
+				   time.clock() >= timeoutStamp:
+					break
 
-			if len(self.__rxBuf) < 1:
-				self.__rxBuf += s.read(1)
-				continue
+				if len(rxBuf) < 1:
+					rxBuf += s.read(1)
+					continue
 
-			if len(self.__rxBuf) < 3:
-				try:
-					size = FdlTelegram.getSizeFromRaw(self.__rxBuf)
-				except FdlError:
-					self.__rxBuf += s.read(3 - len(self.__rxBuf))
-				else:
-					self.__rxBuf += s.read(size - len(self.__rxBuf))
-				continue
+				if len(rxBuf) < 3:
+					try:
+						size = getSize(rxBuf)
+						readLen = size
+					except FdlError:
+						readLen = 3
+					rxBuf += s.read(readLen - len(rxBuf))
+					continue
 
-			if len(self.__rxBuf) >= 3:
-				try:
-					size = FdlTelegram.getSizeFromRaw(self.__rxBuf)
-				except FdlError:
-					self.__rxBuf = b""
-					raise PhyError("RX: Failed to get telegram size")
-				if len(self.__rxBuf) < size:
-					self.__rxBuf += s.read(size - len(self.__rxBuf))
-				continue
-		if self.debug:
-			if ret:
-				print("PHY-serial: received %s" %\
-				      binascii.b2a_hex(ret).decode())
+				if len(rxBuf) >= 3:
+					try:
+						size = getSize(rxBuf)
+					except FdlError:
+						rxBuf = b""
+						raise PhyError("PHY-serial: "
+							"Failed to get received "
+							"telegram size:\n"
+							"Invalid telegram format.")
+					if len(rxBuf) < size:
+						rxBuf += s.read(size - len(rxBuf))
+					continue
+		except serial.SerialException as e:
+			raise PhyError("PHY-serial: Failed to receive "
+				"telegram:\n" + str(e))
+		finally:
+			self.__rxBuf = rxBuf
+		if self.debug and ret:
+			print("PHY-serial: received %s" %\
+			      binascii.b2a_hex(ret).decode())
 		return ret
 
 	def setConfig(self, baudrate = CpPhy.BAUD_19200):
@@ -107,11 +118,15 @@ class CpPhySerial(CpPhy):
 				"configuration:\n" + str(e))
 
 	def profibusSend_SDN(self, telegramData):
-		telegramData = bytearray(telegramData)
-		if self.debug:
-			print("PHY-serial: sending %s" %\
-			      binascii.b2a_hex(telegramData).decode())
-		self.__serial.write(telegramData)
+		try:
+			telegramData = bytearray(telegramData)
+			if self.debug:
+				print("PHY-serial: sending %s" %\
+				      binascii.b2a_hex(telegramData).decode())
+			self.__serial.write(telegramData)
+		except serial.SerialException as e:
+			raise PhyError("PHY-serial: Failed to transmit "
+				"telegram:\n" + str(e))
 
 	def profibusSend_SRD(self, telegramData):
 		self.profibusSend_SDN(telegramData)
