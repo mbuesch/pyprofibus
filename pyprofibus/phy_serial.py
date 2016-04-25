@@ -108,7 +108,7 @@ class CpPhySerial(CpPhy):
 				bytesize = 8,
 				parity = serial.PARITY_EVEN,
 				stopbits = serial.STOPBITS_ONE,
-				timeout = 0.001,
+				timeout = 0,
 				xonxoff = False,
 				rtscts = False,
 				dsrdtr = False)
