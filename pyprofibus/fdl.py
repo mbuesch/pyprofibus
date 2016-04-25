@@ -169,6 +169,7 @@ class FdlTelegram(object):
 				if le < 3 or le > 249:
 					raise FdlError("Invalid LE field")
 				return le + 6
+			raise FdlError("Unknown start delimiter: %02X" % sd)
 		except IndexError:
 			raise FdlError("Invalid FDL packet format")
 
