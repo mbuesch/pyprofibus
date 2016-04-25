@@ -8,7 +8,7 @@
 #
 
 from pyprofibus.phy import *
-from pyprofibus.fdl import FdlError, FdlTelegram
+from pyprofibus.fdl import FdlTelegram
 
 import sys
 import time
@@ -72,7 +72,7 @@ class CpPhySerial(CpPhy):
 					try:
 						size = getSize(rxBuf)
 						readLen = size
-					except FdlError:
+					except ProfibusError:
 						readLen = 3
 					rxBuf += s.read(readLen - len(rxBuf))
 					continue
@@ -80,7 +80,7 @@ class CpPhySerial(CpPhy):
 				if len(rxBuf) >= 3:
 					try:
 						size = getSize(rxBuf)
-					except FdlError:
+					except ProfibusError:
 						rxBuf = bytearray()
 						raise PhyError("PHY-serial: "
 							"Failed to get received "
