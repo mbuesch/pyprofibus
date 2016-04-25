@@ -45,7 +45,7 @@ class CpPhySerial(CpPhy):
 			except serial.SerialException as e:
 				pass
 			self.__serial = None
-			self.__rxBuf = b""
+			self.__rxBuf = bytearray()
 		super(CpPhySerial, self).close()
 
 	# Poll for received packet.
@@ -57,7 +57,7 @@ class CpPhySerial(CpPhy):
 		try:
 			while True:
 				if len(rxBuf) == size:
-					ret, rxBuf = rxBuf, b""
+					ret, rxBuf = rxBuf, bytearray()
 					break
 
 				if timeout >= 0 and\
@@ -81,7 +81,7 @@ class CpPhySerial(CpPhy):
 					try:
 						size = getSize(rxBuf)
 					except FdlError:
-						rxBuf = b""
+						rxBuf = bytearray()
 						raise PhyError("PHY-serial: "
 							"Failed to get received "
 							"telegram size:\n"
@@ -112,7 +112,7 @@ class CpPhySerial(CpPhy):
 				xonxoff = False,
 				rtscts = False,
 				dsrdtr = False)
-			self.__rxBuf = b""
+			self.__rxBuf = bytearray()
 		except serial.SerialException as e:
 			raise PhyError("Failed to set CP-PHY "
 				"configuration:\n" + str(e))
