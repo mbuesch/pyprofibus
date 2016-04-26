@@ -1,0 +1,6 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+
+Files: *
+Copyright: 2013-2016 Michael Buesch
+License: GPL-2+
+         /usr/share/common-licenses/GPL-2

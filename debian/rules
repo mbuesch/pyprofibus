@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+export LC_ALL=C.UTF-8
+#export DH_VERBOSE=1
+
+export PYBUILD_NAME=pyprofibus
+export PYBUILD_SYSTEM=distutils
+#export PYBUILD_DEBUG=1
+
+export PYBUILD_DESTDIR_python2=debian/destdir-py2-pyprofibus/
+export PYBUILD_DESTDIR_python2-dbg=debian/destdir-py2-pyprofibus-dbg/
+export PYBUILD_DESTDIR_python3=debian/destdir-py3-pyprofibus/
+export PYBUILD_DESTDIR_python3-dbg=debian/destdir-py3-pyprofibus-dbg/
+export PYBUILD_DESTDIR_pypy=debian/destdir-pypy-pyprofibus/
+export PYBUILD_DESTDIR_pypy-dbg=debian/destdir-pypy-pyprofibus-dbg/
+
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONPATH=
+export PYTHONSTARTUP=
+export PYTHONINSPECT=
+
+%:
+	dh $@ --with python2,python3,pypy --buildsystem=pybuild

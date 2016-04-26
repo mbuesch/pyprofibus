@@ -1,0 +1,10 @@
+destdir-*/
+python-pyprofibus*/
+python3-pyprofibus*/
+pypy-pyprofibus*/
+
+files
+debhelper-build-stamp
+*.log
+*.debhelper
+*.substvars
