@@ -21,3 +21,6 @@ export PYTHONINSPECT=
 
 %:
 	dh $@ --with python2,python3,pypy --buildsystem=pybuild
+
+override_dh_auto_test:
+	true
