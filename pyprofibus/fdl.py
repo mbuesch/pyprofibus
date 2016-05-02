@@ -28,16 +28,16 @@ class FdlTransceiver(AbstractTransceiver):
 
 	def resetFCB(self):
 		self.__fcb = 1
-		self.__fcv = 0
+		self.__fcv = 0	# alternation disabled
 		self.__fcbWaitingReply = False
 
 	def enableFCB(self, enabled=True):
 		self.__fcbEnabled = enabled
 
-	def __FCBnext(self):
-		self.__fcb ^= 1
-		self.__fcv = 1
-		self.__fcbWaitingReply = False
+	def __FCBnext(self, wait=False):
+		self.__fcb ^= 1	# alternate next bit
+		self.__fcv = 1	# alternation enabled
+		self.__fcbWaitingReply = wait
 
 	def __checkRXFilter(self, telegram):
 		if telegram.da is None:
