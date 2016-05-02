@@ -128,9 +128,9 @@ class CpPhySerial(CpPhy):
 		if not raspi_hat_conf.PilcConf.havePilcHat():
 			return
 		try:
-			conf = PilcConf()
-			conf.setBaudrate(baudrate)
-		except PilcConf.Error as e:
+			conf = raspi_hat_conf.PilcConf()
+			conf.setBaudrate(baudrate / 1000.0)
+		except raspi_hat_conf.PilcConf.Error as e:
 			raise PhyError("Failed to configure PiLC HAT:\n%s" %\
 				str(e))
 
