@@ -116,6 +116,23 @@ class CpPhySerial(CpPhy):
 		except serial.SerialException as e:
 			raise PhyError("Failed to set CP-PHY "
 				"configuration:\n" + str(e))
+		self.__setConfigPiLC(baudrate)
+
+	def __setConfigPiLC(self, baudrate):
+		"""Reconfigure the PiLC HAT, if available.
+		"""
+		try:
+			import libpilc.raspi_hat_conf as raspi_hat_conf
+		except ImportError as e:
+			return
+		if not raspi_hat_conf.PilcConf.havePilcHat():
+			return
+		try:
+			conf = PilcConf()
+			conf.setBaudrate(baudrate)
+		except PilcConf.Error as e:
+			raise PhyError("Failed to configure PiLC HAT:\n%s" %\
+				str(e))
 
 	def profibusSend_SDN(self, telegramData):
 		try:
