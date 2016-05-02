@@ -197,27 +197,74 @@ class DpMaster(object):
 			raise DpError("ChkCfg request to slave %d failed" % da)
 		time.sleep(0.2)
 
-		# Send the final SlaveDiag request
+		# Send the final SlaveDiag request to check
+		# readyness for data exchange
 		self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
 		req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
 		limit = TimeLimited(1.0)
+		ready = False
 		while not limit.exceed():
 			ok, reply = self.dpTrans.sendSync(telegram=req,
 							  timeout=0.1)
 			if ok and reply:
-				#TODO additional checks?
-				break
+				if reply.hasExtDiag():
+					#TODO turn on red DIAG-LED
+					pass
+				if reply.isReadyDataEx():
+					ready = True
+					break
+				elif reply.needsNewPrmCfg():
+					#TODO restart proceure
+					pass
 		else:
 			raise DpError("Timeout in final SlaveDiag request "
 				"to slave %d" % da)
 		time.sleep(0.2)
 
 		slaveDesc.isParameterised = True
+		return ready
 
 	def __initializeSlaves(self):
-		slaveAddrs = self.slaveDescs.keys()
-		for slaveAddr in sorted(slaveAddrs):
-			self.__initializeSlave(self.slaveDescs[slaveAddr])
+		ready = []
+		for slaveAddr, slaveDesc in sorted(self.slaveDescs.items(),
+						   key = lambda x: x[0]):
+			slaveRdy = self.__initializeSlave(slaveDesc)
+			ready.append(slaveRdy)
+		return all(ready)
+
+	def diagSlave(self, slaveDesc):
+		da, sa = slaveDesc.slaveAddr, self.masterAddr
+
+		# Send the final SlaveDiag request to check
+		# readyness for data exchange
+		self.__debugMsg("Requesting Slave_Diag from "
+				"slave %d..." % da)
+		req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
+		limit = TimeLimited(1.0)
+		ready = False
+		while not limit.exceed():
+			ok, reply = self.dpTrans.sendSync(telegram=req,
+							  timeout=0.1)
+			if ok and reply:
+				if reply.hasExtDiag():
+					self.__debugMsg("Slave(%d) hasExtDiag" % da)
+				if reply.isReadyDataEx():
+					ready = True
+					break
+				elif reply.needsNewPrmCfg():
+					self.__debugMsg("Slave(%d) needsNewPrmCfg" % da)
+		else:
+			raise DpError("Timeout in SlaveDiag request "
+				      "to slave %d" % da)
+		return ready
+
+	def diagSlaves(self):
+		ready = []
+		for slaveAddr, slaveDesc in sorted(self.slaveDescs.items(),
+						   key = lambda x: x[0]):
+			slaveRdy = self.diagSlave(slaveDesc)
+			ready.append(slaveRdy)
+		return all(ready)
 
 	def initialize(self):
 		"""Initialize the DPM."""
@@ -227,7 +274,7 @@ class DpMaster(object):
 					   FdlTelegram.ADDRESS_MCAST])
 
 		# Initialize the registered slaves
-		self.__initializeSlaves()
+		return self.__initializeSlaves()
 
 	def dataExchange(self, da, outData):
 		"""Perform a data exchange with the slave at "da"."""
@@ -243,6 +290,8 @@ class DpMaster(object):
 			if resFunc == FdlTelegram.FC_DH or\
 			   resFunc == FdlTelegram.FC_RDH:
 				pass#TODO: Slave_Diag
+			elif resFunc == FdlTelegram.FC_RS:
+				raise DpError("Service not active on slave %d" % da)
 			return reply.getDU()
 		return None
 
