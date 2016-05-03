@@ -9,35 +9,60 @@
 
 from pyprofibus.phy import *
 from pyprofibus.util import *
-from pyprofibus.transceiver import *
 
 
 class FdlError(ProfibusError):
 	pass
 
-class FdlTransceiver(AbstractTransceiver):
-	def __init__(self, phy):
-		AbstractTransceiver.__init__(self)
-		self.phy = phy
+
+class FdlFCB():
+	"""FCB context, per slave.
+	"""
+
+	def __init__(self, enable = False):
 		self.resetFCB()
-		self.enableFCB(False)
+		self.enableFCB(enable)
+
+	def resetFCB(self):
+		self.__fcb = 1
+		self.__fcv = 0
+		self.__fcbWaitingReply = False
+
+	def enableFCB(self, enabled = True):
+		self.__fcbEnabled = bool(enabled)
+
+	def FCBnext(self, wait = False):
+		self.__fcb ^= 1
+		self.__fcv = 1
+		self.__fcbWaitingReply = wait
+
+	def enabled(self):
+		return self.__fcbEnabled
+
+	def bitIsOn(self):
+		return self.__fcb != 0
+
+	def bitIsValid(self):
+		return self.__fcv != 0
+
+	def isWaitingReply(self):
+		return self.__fcbWaitingReply
+
+	def setWaitingReply(self, value = True):
+		self.__fcbWaitingReply = bool(value)
+
+	def __repr__(self):
+		return "FdlFCB(en=%s, fcb=%d, fcv=%d, wait=%s)" % (
+			str(self.__fcbEnabled), self.__fcb,
+			self.__fcv, str(self.__fcbWaitingReply))
+
+class FdlTransceiver(object):
+	def __init__(self, phy):
+		self.phy = phy
 		self.setRXFilter(None)
 
 	def setRXFilter(self, newFilter):
 		self.__rxFilter = list(newFilter[:]) if newFilter else []
-
-	def resetFCB(self):
-		self.__fcb = 1
-		self.__fcv = 0	# alternation disabled
-		self.__fcbWaitingReply = False
-
-	def enableFCB(self, enabled=True):
-		self.__fcbEnabled = enabled
-
-	def __FCBnext(self, wait=False):
-		self.__fcb ^= 1	# alternate next bit
-		self.__fcv = 1	# alternation enabled
-		self.__fcbWaitingReply = wait
 
 	def __checkRXFilter(self, telegram):
 		if telegram.da is None:
@@ -46,19 +71,19 @@ class FdlTransceiver(AbstractTransceiver):
 		# Accept the packet, if it's in the RX filter.
 		return (telegram.da & FdlTelegram.ADDRESS_MASK) in self.__rxFilter
 
-	def poll(self, timeout=0):
+	def poll(self, fcb, timeout=0):
 		ok, telegram = False, None
 		reply = self.phy.poll(timeout)
 		if reply is not None:
 			telegram = FdlTelegram.fromRawData(reply)
 			if self.__checkRXFilter(telegram):
-				if self.__fcbWaitingReply:
-					self.__FCBnext()
+				if fcb.isWaitingReply():
+					fcb.FCBnext()
 				ok = True
 		return (ok, telegram)
 
 	# Send an FdlTelegram.
-	def send(self, telegram):
+	def send(self, fcb, telegram):
 		srd = False
 		if telegram.fc & FdlTelegram.FC_REQ:
 			func = telegram.fc & FdlTelegram.FC_REQFUNC_MASK
@@ -71,19 +96,23 @@ class FdlTransceiver(AbstractTransceiver):
 				       FdlTelegram.FC_IDENT,
 				       FdlTelegram.FC_LSAP)
 			telegram.fc &= ~(FdlTelegram.FC_FCB | FdlTelegram.FC_FCV)
-			if self.__fcbEnabled:
-				if self.__fcb:
+			if fcb.enabled():
+				if fcb.bitIsOn():
 					telegram.fc |= FdlTelegram.FC_FCB
-				if self.__fcv:
+				if fcb.bitIsValid():
 					telegram.fc |= FdlTelegram.FC_FCV
 				if srd:
-					self.__fcbWaitingReply = True
+					fcb.setWaitingReply(True)
 				else:
-					self.__FCBnext()
+					fcb.FCBnext()
 		if srd:
 			self.phy.profibusSend_SRD(telegram.getRawData())
 		else:
 			self.phy.profibusSend_SDN(telegram.getRawData())
+
+	def sendSync(self, fcb, telegram, timeout):
+		self.send(fcb, telegram)
+		return self.poll(fcb, timeout)
 
 class FdlTelegram(object):
 	# Start delimiter

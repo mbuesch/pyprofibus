@@ -9,20 +9,18 @@
 
 from pyprofibus.fdl import *
 from pyprofibus.util import *
-from pyprofibus.transceiver import *
 
 
 class DpError(ProfibusError):
 	pass
 
-class DpTransceiver(AbstractTransceiver):
+class DpTransceiver(object):
 	def __init__(self, fdlTrans):
-		AbstractTransceiver.__init__(self)
 		self.fdlTrans = fdlTrans
 
-	def poll(self, timeout=0):
+	def poll(self, fcb, timeout=0):
 		dpTelegram = None
-		ok, fdlTelegram = self.fdlTrans.poll(timeout)
+		ok, fdlTelegram = self.fdlTrans.poll(fcb, timeout)
 		if ok and fdlTelegram:
 			if fdlTelegram.sd in (FdlTelegram.SD1,
 					      FdlTelegram.SD2,
@@ -33,8 +31,12 @@ class DpTransceiver(AbstractTransceiver):
 		return (ok, dpTelegram)
 
 	# Send a DpTelegram.
-	def send(self, telegram):
-		self.fdlTrans.send(telegram.toFdlTelegram())
+	def send(self, fcb, telegram):
+		self.fdlTrans.send(fcb, telegram.toFdlTelegram())
+
+	def sendSync(self, fcb, telegram, timeout):
+		self.send(fcb, telegram)
+		return self.poll(fcb, timeout)
 
 class DpTelegram(object):
 	# Source Service Access Point number

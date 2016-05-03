@@ -20,12 +20,15 @@ class DpSlaveDesc(object):
 	def __init__(self,
 		     identNumber,
 		     slaveAddr,
-		     inputAddressRangeSize,
-		     outputAddressRangeSize):
+		     inputAddressRangeSize = 0,
+		     outputAddressRangeSize = 0):
 		self.identNumber = identNumber
 		self.slaveAddr = slaveAddr
 		self.inputAddressRangeSize = inputAddressRangeSize
 		self.outputAddressRangeSize = outputAddressRangeSize
+
+		# Context for FC-Bit toggeling
+		self.fcb = FdlFCB()
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(
@@ -102,7 +105,11 @@ class DpMaster(object):
 		self.masterAddr = masterAddr
 		self.debug = debug
 
-		self.slaveDescs = {}
+		self.slaveDescs = {
+			FdlTelegram.ADDRESS_MCAST : DpSlaveDesc(
+					identNumber = 0,
+					slaveAddr = FdlTelegram.ADDRESS_MCAST)
+		}
 
 		# Create the transceivers
 		self.fdlTrans = FdlTransceiver(self.phy)
@@ -127,7 +134,8 @@ class DpMaster(object):
 		"""Get a list of registered DpSlaveDescs, sorted by address."""
 
 		return [ desc for addr, desc in sorted(self.slaveDescs.items(),
-						       key = lambda x: x[0]) ]
+						       key = lambda x: x[0])
+			 if addr != FdlTelegram.ADDRESS_MCAST ]
 
 	def __initializeSlave(self, slaveDesc):
 		da, sa = slaveDesc.slaveAddr, self.masterAddr
@@ -139,8 +147,8 @@ class DpMaster(object):
 			req = FdlTelegram_FdlStat_Req(da=da, sa=sa)
 			limit = TimeLimited(5.0)
 			while not limit.exceed():
-				ok, reply = self.fdlTrans.sendSync(telegram=req,
-								   timeout=0.1)
+				ok, reply = self.fdlTrans.sendSync(
+					fcb=slaveDesc.fcb, telegram=req, timeout=0.1)
 				if ok and reply:
 					if reply.fc & FdlTelegram.FC_REQ:
 						raise DpError("Slave %d replied with "
@@ -161,15 +169,15 @@ class DpMaster(object):
 		time.sleep(0.1)
 
 		# Enable the FCB bit.
-		self.fdlTrans.enableFCB(True)
+		slaveDesc.fcb.enableFCB(True)
 
 		# Send a SlaveDiag request
 		self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
 		req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
 		limit = TimeLimited(5.0)
 		while not limit.exceed():
-			ok, reply = self.dpTrans.sendSync(telegram=req,
-							  timeout=0.1)
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.1)
 			if ok and reply:
 				#TODO checks?
 				break
@@ -182,8 +190,8 @@ class DpMaster(object):
 		self.__debugMsg("Sending Set_Prm to slave %d..." % da)
 		req = slaveDesc.setPrmTelegram
 		req.sa = sa # Assign master address
-		ok, reply = self.dpTrans.sendSync(telegram=req,
-						  timeout=0.3)
+		ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.3)
 		if not ok:
 			raise DpError("SetPrm request to slave %d failed" % da)
 		time.sleep(0.2)
@@ -192,7 +200,8 @@ class DpMaster(object):
 		self.__debugMsg("Sending Ckh_Cfg to slave %d..." % da)
 		req = slaveDesc.chkCfgTelegram
 		req.sa = sa # Assign master address
-		ok, reply = self.dpTrans.sendSync(telegram=req, timeout=0.3)
+		ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.3)
 		if not ok:
 			raise DpError("ChkCfg request to slave %d failed" % da)
 		time.sleep(0.2)
@@ -204,8 +213,8 @@ class DpMaster(object):
 		limit = TimeLimited(1.0)
 		ready = False
 		while not limit.exceed():
-			ok, reply = self.dpTrans.sendSync(telegram=req,
-							  timeout=0.1)
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.1)
 			if ok and reply:
 				if reply.hasExtDiag():
 					#TODO turn on red DIAG-LED
@@ -226,10 +235,8 @@ class DpMaster(object):
 
 	def __initializeSlaves(self):
 		ready = []
-		for slaveAddr, slaveDesc in sorted(self.slaveDescs.items(),
-						   key = lambda x: x[0]):
-			slaveRdy = self.__initializeSlave(slaveDesc)
-			ready.append(slaveRdy)
+		for slaveDesc in self.getSlaveList():
+			ready.append(self.__initializeSlave(slaveDesc))
 		return all(ready)
 
 	def diagSlave(self, slaveDesc):
@@ -243,8 +250,8 @@ class DpMaster(object):
 		limit = TimeLimited(1.0)
 		ready = False
 		while not limit.exceed():
-			ok, reply = self.dpTrans.sendSync(telegram=req,
-							  timeout=0.1)
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.1)
 			if ok and reply:
 				if reply.hasExtDiag():
 					self.__debugMsg("Slave(%d) hasExtDiag" % da)
@@ -260,10 +267,8 @@ class DpMaster(object):
 
 	def diagSlaves(self):
 		ready = []
-		for slaveAddr, slaveDesc in sorted(self.slaveDescs.items(),
-						   key = lambda x: x[0]):
-			slaveRdy = self.diagSlave(slaveDesc)
-			ready.append(slaveRdy)
+		for slaveDesc in self.getSlaveList():
+			ready.append(self.diagSlave(slaveDesc))
 		return all(ready)
 
 	def initialize(self):
@@ -278,10 +283,15 @@ class DpMaster(object):
 
 	def dataExchange(self, da, outData):
 		"""Perform a data exchange with the slave at "da"."""
-
+		try:
+			slaveDesc = self.slaveDescs[da]
+		except KeyError:
+			raise DpError("Data_Exchange: da=%d not "
+				"found in slave list." % da)
 		req = DpTelegram_DataExchange_Req(da=da, sa=self.masterAddr,
 						  du=outData)
-		ok, reply = self.dpTrans.sendSync(telegram=req, timeout=0.1)
+		ok, reply = self.dpTrans.sendSync(
+				fcb=slaveDesc.fcb, telegram=req, timeout=0.1)
 		if ok and reply:
 			if not DpTelegram_DataExchange_Con.checkType(reply):
 				raise DpError("Data_Exchange.req reply is not of "
@@ -296,11 +306,13 @@ class DpMaster(object):
 		return None
 
 	def __syncFreezeHelper(self, groupMask, controlCommand):
-		globCtl = DpTelegram_GlobalControl(da=FdlTelegram.ADDRESS_MCAST,
+		slaveDesc = self.slaveDescs[FdlTelegram.ADDRESS_MCAST]
+		globCtl = DpTelegram_GlobalControl(da=slaveDesc.slaveAddr,
 						   sa=self.masterAddr)
 		globCtl.controlCommand |= controlCommand
 		globCtl.groupSelect = groupMask & 0xFF
-		ok, reply = self.dpTrans.sendSync(telegram=globCtl, timeout=0.1)
+		ok, reply = self.dpTrans.sendSync(
+			fcb=slaveDesc.fcb, telegram=globCtl, timeout=0.1)
 		if ok:
 			assert(not reply) # SDN
 		else:
