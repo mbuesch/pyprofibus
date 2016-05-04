@@ -30,7 +30,7 @@ import pyprofibus.phy_serial
 port = "/dev/ttyAMA0"
 
 # Enable verbose debug messages?
-debug = False
+debug = True
 
 # Create a PHY (layer 1) interface object
 phy = pyprofibus.phy_serial.CpPhySerial(port = port,
@@ -71,7 +71,6 @@ master.addSlave(et200s)
 try:
 	# Initialize the DPM and all registered slaves
 	master.initialize()
-	print("Initialization finished. Running Data_Exchange...")
 
 	# Cyclically run Data_Exchange.
 	# 4 input bits from the 4-DI module are copied to
@@ -79,9 +78,9 @@ try:
 	inData = 0
 	while 1:
 		outData = [inData & 3, (inData >> 2) & 3]
-		inData = master.dataExchange(da = et200s.slaveAddr,
-					     outData = outData)
-		inData = inData[0] if inData else 0
+		inDataTmp = master.runSlave(et200s, outData)
+		if inDataTmp is not None:
+			inData = inDataTmp[0]
 except:
 	print("Terminating.")
 	master.destroy()
