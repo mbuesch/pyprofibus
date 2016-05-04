@@ -33,17 +33,8 @@ class DpSlaveState():
 		# Currently running request telegram
 		self.req = None
 
+		self.faultDeb = FaultDebouncer()
 		self.limit = TimeLimited(0.01)	# timeout object
-		self.retryCountReset()
-
-	def retryCountReset(self):
-		self.__retryCnt = 0
-
-	def retryCountInc(self):
-		self.__retryCnt += 1
-
-	def getRetryCount(self):
-		return self.__retryCnt
 
 	def setStateInit(self):
 		self.__nextState = "init"
@@ -308,20 +299,19 @@ class DpMaster(object):
 			if slave.stateChanged():
 				self.__debugMsg("Initialization finished. "
 					"Running Data_Exchange with slave %d..." % da)
-				slave.retryCountReset()
+				slave.faultDeb.reset()
 			#TODO: add support for in/out- only slaves
 			try:
 				dataExInData = self.__dataExchange(da, dataExOutData)
-				slave.retryCountReset()
+				faultCount = slave.faultDeb.faultless()
 			except ProfibusError as e:
 				self.__debugMsg("Data_Exchange error at "
 					"slave %d:\n%s" % (da, str(e)))
 				dataExInData = None
-				slave.retryCountInc()
-			retryCount = slave.getRetryCount()
-			if retryCount >= 5:
+				faultCount = slave.faultDeb.fault()
+			if faultCount >= 5:
 				slave.setStateInit()	# communication lost
-			elif retryCount >= 3:
+			elif faultCount >= 3:
 				try:
 					ready, reply = self.diagSlave(slaveDesc)
 					if not ready and reply.needsNewPrmCfg():
@@ -342,6 +332,7 @@ class DpMaster(object):
 
 	def diagSlave(self, slaveDesc):
 		da, sa = slaveDesc.slaveAddr, self.masterAddr
+		slave = self.__slaveStates[da]
 
 		# Send the final SlaveDiag request to check
 		# readyness for data exchange

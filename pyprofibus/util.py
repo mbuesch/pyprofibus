@@ -63,3 +63,30 @@ class TimeLimited(object):
 	@classmethod
 	def sleep(cls, seconds=0.001):
 		time.sleep(seconds)
+
+class FaultDebouncer(object):
+	"""Fault counter/debouncer.
+	"""
+
+	def __init__(self, countMax = 0xFFFF):
+		self.__countMax = countMax
+		self.reset()
+
+	def reset(self):
+		self.__count = 0
+
+	def inc(self):
+		if self.__count < self.__countMax - 2:
+			self.__count += 2
+		return (self.__count + 1) // 2
+
+	def dec(self):
+		if self.__count > 0:
+			self.__count -= 1
+		return (self.__count + 1) // 2
+
+	fault = inc
+	faultless = dec
+
+	def get(self):
+		return (self.__count + 1) // 2
