@@ -63,7 +63,7 @@ et200s.setPrmTelegram.addUserPrmData([0x11 | 0x40])
 et200s.setSyncMode(True)		# Sync-mode supported
 et200s.setFreezeMode(True)		# Freeze-mode supported
 et200s.setGroupMask(1)			# Group-ident 1
-et200s.setWatchdog(5000)		# Watchdog: 5 seconds
+et200s.setWatchdog(300)			# Watchdog: 300 ms
 
 # Register the ET-200S slave at the DPM
 master.addSlave(et200s)
