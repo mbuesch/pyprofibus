@@ -122,14 +122,10 @@ class DpSlaveDesc(object):
 					da = self.slaveAddr,
 					sa = None)
 
-#FIXME not here
-		self.isParameterised = False
-
 	def setSyncMode(self, enabled):
 		"""Enable/disable sync-mode.
 		Must be called before parameterisation."""
 
-		assert(not self.isParameterised)
 		if enabled:
 			self.setPrmTelegram.stationStatus |= DpTelegram_SetPrm_Req.STA_SYNC
 		else:
@@ -139,7 +135,6 @@ class DpSlaveDesc(object):
 		"""Enable/disable freeze-mode.
 		Must be called before parameterisation."""
 
-		assert(not self.isParameterised)
 		if enabled:
 			self.setPrmTelegram.stationStatus |= DpTelegram_SetPrm_Req.STA_FREEZE
 		else:
@@ -149,7 +144,6 @@ class DpSlaveDesc(object):
 		"""Assign the slave to one or more groups.
 		Must be called before parameterisation."""
 
-		assert(not self.isParameterised)
 		self.setPrmTelegram.groupIdent = groupMask
 
 	def setWatchdog(self, timeoutMS):
@@ -234,7 +228,6 @@ class DpMaster(object):
 
 		if slave.stateIsInit():
 			if slave.stateChanged():
-				slaveDesc.isParameterised = False
 				self.__debugMsg("Trying to initialize slave %d..." % da)
 
 				# Disable the FCB bit.
@@ -316,7 +309,6 @@ class DpMaster(object):
 				self.__debugMsg("Initialization finished. "
 					"Running Data_Exchange with slave %d..." % da)
 				slave.retryCountReset()
-				slaveDesc.isParameterised = True
 			#TODO: add support for in/out- only slaves
 			try:
 				dataExInData = self.__dataExchange(da, dataExOutData)
