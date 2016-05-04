@@ -20,11 +20,31 @@ class DpSlaveState():
 	"""Run time state of a DP slave that is managed by a DPM instance.
 	"""
 
-	def __init__(self):
-		self.__state = ""
-		self.__nextState = ""
-		self.__prevState = ""
-		self.setStateInit()
+	_STATE_INVALID	= -1
+	STATE_INIT	= 0 # Initialize
+	STATE_WDIAG	= 1 # Wait for diagnosis
+	STATE_WPRM	= 2 # Wait for Prm telegram
+	STATE_WCFG	= 3 # Wait for Cfg telegram
+	STATE_WDXRDY	= 4 # Wait for Data_Exchange ready
+	STATE_DX	= 5 # Data_Exchange
+
+	state2name = {
+		_STATE_INVALID	: "invalid",
+		STATE_INIT	: "init",
+		STATE_WDIAG	: "wait for diag",
+		STATE_WPRM	: "wait for Prm",
+		STATE_WCFG	: "wait for Cfg",
+		STATE_WDXRDY	: "wait for Data_Exchange ready",
+		STATE_DX	: "Data_Exchange",
+	}
+
+	def __init__(self, slaveDesc):
+		self.slaveDesc = slaveDesc
+
+		self.__state = self._STATE_INVALID
+		self.__nextState = self._STATE_INVALID
+		self.__prevState = self._STATE_INVALID
+		self.setState(self.STATE_INIT)
 		self.applyState()
 
 		# Context for FC-Bit toggeling
@@ -36,23 +56,14 @@ class DpSlaveState():
 		self.faultDeb = FaultDebouncer()
 		self.limit = TimeLimited(0.01)	# timeout object
 
-	def setStateInit(self):
-		self.__nextState = "init"
+	def getState(self):
+		return self.__state
 
-	def setStateWaitDiag(self):
-		self.__nextState = "wdiag"
+	def getNextState(self):
+		return self.__nextState
 
-	def setStateWaitPrm(self):
-		self.__nextState = "wprm"
-
-	def setStateWaitCfg(self):
-		self.__nextState = "wcfg"
-
-	def setWaitDxReady(self):
-		self.__nextState = "wdxrd"
-
-	def setStateDataEx(self):
-		self.__nextState = "dxchg"
+	def setState(self, state):
+		self.__nextState = state
 
 	def applyState(self):
 		self.__prevState, self.__state = self.__state, self.__nextState
@@ -62,30 +73,6 @@ class DpSlaveState():
 
 	def stateIsChanging(self):
 		return self.__nextState != self.__state
-
-	def stateIsInit(self):
-		return self.__state == "init"
-
-	def stateIsWaitDiag(self):
-		return self.__state == "wdiag"
-
-	def stateIsWaitPrm(self):
-		return self.__state == "wprm"
-
-	def stateIsWaitCfg(self):
-		return self.__state == "wcfg"
-
-	def stateIsWaitDxReady(self):
-		return self.__state == "wdxrd"
-
-	def stateIsDataEx(self):
-		return self.__state == "dxchg"
-
-	def getCurrentStateName(self):
-		return self.__state
-
-	def getNextStateName(self):
-		return self.__nextState
 
 class DpSlaveDesc(object):
 	"""Static descriptor data of a DP slave that
@@ -172,13 +159,16 @@ class DpMaster(object):
 		self.masterAddr = masterAddr
 		self.debug = debug
 
+		mcastSlaveDesc = DpSlaveDesc(
+			identNumber = 0,
+			slaveAddr = FdlTelegram.ADDRESS_MCAST)
+		mcastSlave = DpSlaveState(mcastSlaveDesc)
+
 		self.__slaveDescs = {
-			FdlTelegram.ADDRESS_MCAST : DpSlaveDesc(
-					identNumber = 0,
-					slaveAddr = FdlTelegram.ADDRESS_MCAST),
+			FdlTelegram.ADDRESS_MCAST : mcastSlaveDesc,
 		}
 		self.__slaveStates = {
-			FdlTelegram.ADDRESS_MCAST : DpSlaveState(),
+			FdlTelegram.ADDRESS_MCAST : mcastSlave,
 		}
 
 		# Create the transceivers
@@ -203,7 +193,7 @@ class DpMaster(object):
 		   slaveAddr in self.__slaveStates:
 			raise DpError("Slave %d is already registered." % slaveAddr)
 		self.__slaveDescs[slaveAddr] = slaveDesc
-		self.__slaveStates[slaveAddr] = DpSlaveState()
+		self.__slaveStates[slaveAddr] = DpSlaveState(slaveDesc)
 
 	def getSlaveList(self):
 		"""Get a list of registered DpSlaveDescs, sorted by address."""
@@ -212,120 +202,171 @@ class DpMaster(object):
 						       key = lambda x: x[0])
 			 if addr != FdlTelegram.ADDRESS_MCAST ]
 
-	def runSlave(self, slaveDesc, dataExOutData = None):
-		da, sa = slaveDesc.slaveAddr, self.masterAddr
-		slave = self.__slaveStates[da]
-		dataExInData = None
+	def __runSlave_init(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
 
-		if slave.stateIsInit():
-			if slave.stateChanged():
-				self.__debugMsg("Trying to initialize slave %d..." % da)
+		if slave.stateChanged():
+			self.__debugMsg("Trying to initialize slave %d..." % da)
 
-				# Disable the FCB bit.
-				slave.fcb.enableFCB(False)
+			# Disable the FCB bit.
+			slave.fcb.enableFCB(False)
 
-				slave.req = FdlTelegram_FdlStat_Req(da=da, sa=sa)
+			slave.req = FdlTelegram_FdlStat_Req(da=da, sa=sa)
 
+		try:
 			ok, reply = self.fdlTrans.sendSync(
 				fcb=slave.fcb, telegram=slave.req, timeout=0.1)
-			if ok and reply:
-				stype = reply.fc & FdlTelegram.FC_STYPE_MASK
-				if reply.fc & FdlTelegram.FC_REQ:
-					self.__debugMsg("Slave %d replied with "
-							"request bit set." % da)
-				elif stype != FdlTelegram.FC_SLAVE:
-					self.__debugMsg("Device %d is not a slave. "
-							"Detected type: 0x%02X" % (
-							da, stype))
-				else:
-					slave.setStateWaitDiag()
+		except ProfibusError as e:
+			ok, reply = False, None
+			self.__debugMsg("FdlStat_Req failed: %s" % str(e))
+		if ok and reply and reply.fc is not None:
+			stype = reply.fc & FdlTelegram.FC_STYPE_MASK
+			if reply.fc & FdlTelegram.FC_REQ:
+				self.__debugMsg("Slave %d replied with "
+						"request bit set." % da)
+			elif stype != FdlTelegram.FC_SLAVE:
+				self.__debugMsg("Device %d is not a slave. "
+						"Detected type: 0x%02X" % (
+						da, stype))
+			else:
+				slave.setState(slave.STATE_WDIAG)
+		return None
 
-		elif slave.stateIsWaitDiag():
-			if slave.stateChanged():
-				# Enable the FCB bit.
-				slave.fcb.enableFCB(True)
+	def __runSlave_waitDiag(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
 
-				# Send a SlaveDiag request
-				self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
-				slave.req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
+		if slave.stateChanged():
+			# Enable the FCB bit.
+			slave.fcb.enableFCB(True)
+
+			# Send a SlaveDiag request
+			self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
+			slave.req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
+
+		try:
 			ok, reply = self.dpTrans.sendSync(
 				fcb=slave.fcb, telegram=slave.req, timeout=0.1)
-			if ok and DpTelegram_SlaveDiag_Con.checkType(reply):
-				slave.setStateWaitPrm()
-			else:
-				slave.setStateInit()
-
-		elif slave.stateIsWaitPrm():
-			if slave.stateChanged():
-				self.__debugMsg("Sending Set_Prm to slave %d..." % da)
-				slave.req = slaveDesc.setPrmTelegram
-				slave.req.sa = sa # Assign master address
-			ok, reply = self.dpTrans.sendSync(
-				fcb=slave.fcb, telegram=slave.req, timeout=0.3)
-			if ok:
-				slave.setStateWaitCfg()
-			else:
-				slave.setStateInit()
-
-		elif slave.stateIsWaitCfg():
-			if slave.stateChanged():
-				self.__debugMsg("Sending Ckh_Cfg to slave %d..." % da)
-				slave.req = slaveDesc.chkCfgTelegram
-				slave.req.sa = sa # Assign master address
-			ok, reply = self.dpTrans.sendSync(
-				fcb=slave.fcb, telegram=slave.req, timeout=0.3)
-			if ok:
-				slave.setWaitDxReady()
-			else:
-				slave.setStateInit()
-
-		elif slave.stateIsWaitDxReady():
-			if slave.stateChanged():
-				self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
-				slave.limit = TimeLimited(1.0)
-				slave.req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
-			ok, reply = self.dpTrans.sendSync(
-				fcb=slave.fcb, telegram=slave.req, timeout=0.1)
-			if ok and DpTelegram_SlaveDiag_Con.checkType(reply):
-				if reply.hasExtDiag():
-					pass#TODO turn on red DIAG-LED
-				if reply.isReadyDataEx():
-					slave.setStateDataEx()
-				elif reply.needsNewPrmCfg() or\
-				     slave.limit.exceed():
-					slave.setStateInit()
-
-		elif slave.stateIsDataEx():
-			if slave.stateChanged():
-				self.__debugMsg("Initialization finished. "
-					"Running Data_Exchange with slave %d..." % da)
-				slave.faultDeb.reset()
-			#TODO: add support for in/out- only slaves
-			try:
-				dataExInData = self.__dataExchange(da, dataExOutData)
-				faultCount = slave.faultDeb.faultless()
-			except ProfibusError as e:
-				self.__debugMsg("Data_Exchange error at "
-					"slave %d:\n%s" % (da, str(e)))
-				dataExInData = None
-				faultCount = slave.faultDeb.fault()
-			if faultCount >= 5:
-				slave.setStateInit()	# communication lost
-			elif faultCount >= 3:
-				try:
-					ready, reply = self.diagSlave(slaveDesc)
-					if not ready and reply.needsNewPrmCfg():
-						slave.setStateInit()
-				except ProfibusError as e:
-					self.__debugMsg("Diag exception at "
-						"slave %d:\n%s" % (da, str(e)))
-
+		except ProfibusError as e:
+			ok, reply = False, None
+			self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
+		if ok and DpTelegram_SlaveDiag_Con.checkType(reply):
+			slave.setState(slave.STATE_WPRM)
 		else:
-			assert(0)
+			slave.setState(slave.STATE_INIT)
+		return None
+
+	def __runSlave_waitPrm(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
+
+		if slave.stateChanged():
+			self.__debugMsg("Sending Set_Prm to slave %d..." % da)
+			slave.req = slave.slaveDesc.setPrmTelegram
+			slave.req.sa = sa # Assign master address
+
+		try:
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slave.fcb, telegram=slave.req, timeout=0.3)
+		except ProfibusError as e:
+			ok, reply = False, None
+			self.__debugMsg("Set_Prm failed: %s" % str(e))
+		if ok:
+			slave.setState(slave.STATE_WCFG)
+		else:
+			slave.setState(slave.STATE_INIT)
+		return None
+
+	def __runSlave_waitCfg(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
+
+		if slave.stateChanged():
+			self.__debugMsg("Sending Ckh_Cfg to slave %d..." % da)
+			slave.req = slave.slaveDesc.chkCfgTelegram
+			slave.req.sa = sa # Assign master address
+
+		try:
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slave.fcb, telegram=slave.req, timeout=0.3)
+		except ProfibusError as e:
+			ok, reply = False, None
+			self.__debugMsg("Chk_Cfg failed: %s" % str(e))
+		if ok:
+			slave.setState(slave.STATE_WDXRDY)
+		else:
+			slave.setState(slave.STATE_INIT)
+		return None
+
+	def __runSlave_waitDxRdy(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
+
+		if slave.stateChanged():
+			self.__debugMsg("Requesting Slave_Diag from slave %d..." % da)
+			slave.limit = TimeLimited(1.0)
+			slave.req = DpTelegram_SlaveDiag_Req(da=da, sa=sa)
+
+		try:
+			ok, reply = self.dpTrans.sendSync(
+				fcb=slave.fcb, telegram=slave.req, timeout=0.1)
+		except ProfibusError as e:
+			ok, reply = False, None
+			self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
+		if ok and DpTelegram_SlaveDiag_Con.checkType(reply):
+			if reply.hasExtDiag():
+				pass#TODO turn on red DIAG-LED
+			if reply.isReadyDataEx():
+				slave.setState(slave.STATE_DX)
+			elif reply.needsNewPrmCfg() or\
+			     slave.limit.exceed():
+				slave.setState(slave.STATE_INIT)
+		return None
+
+	def __runSlave_dataExchange(self, slave, dataExOutData):
+		da, sa = slave.slaveDesc.slaveAddr, self.masterAddr
+		dataExInData = None
+
+		if slave.stateChanged():
+			self.__debugMsg("Initialization finished. "
+				"Running Data_Exchange with slave %d..." % da)
+			slave.faultDeb.reset()
+		#TODO: add support for in/out- only slaves
+		try:
+			dataExInData = self.__dataExchange(da, dataExOutData)
+			faultCount = slave.faultDeb.faultless()
+		except ProfibusError as e:
+			self.__debugMsg("Data_Exchange error at "
+				"slave %d:\n%s" % (da, str(e)))
+			dataExInData = None
+			faultCount = slave.faultDeb.fault()
+		if faultCount >= 5:
+			slave.setState(slave.STATE_INIT)	# communication lost
+		elif faultCount >= 3:
+			try:
+				ready, reply = self.diagSlave(slave.slaveDesc)
+				if not ready and reply.needsNewPrmCfg():
+					slave.setState(slave.STATE_INIT)
+			except ProfibusError as e:
+				self.__debugMsg("Diag exception at "
+					"slave %d:\n%s" % (da, str(e)))
+		return dataExInData
+
+	__slaveStateHandlers = {
+		DpSlaveState.STATE_INIT		: __runSlave_init,
+		DpSlaveState.STATE_WDIAG	: __runSlave_waitDiag,
+		DpSlaveState.STATE_WPRM		: __runSlave_waitPrm,
+		DpSlaveState.STATE_WCFG		: __runSlave_waitCfg,
+		DpSlaveState.STATE_WDXRDY	: __runSlave_waitDxRdy,
+		DpSlaveState.STATE_DX		: __runSlave_dataExchange,
+	}
+
+	def runSlave(self, slaveDesc, dataExOutData = None):
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+
+		handler = self.__slaveStateHandlers[slave.getState()]
+		dataExInData = handler(self, slave, dataExOutData)
 
 		if slave.stateIsChanging():
 			self.__debugMsg("slave[%02X].state --> %s" % (
-				da, slave.getNextStateName()))
+				slave.slaveDesc.slaveAddr,
+				slave.state2name[slave.getNextState()]))
 		slave.applyState()
 
 		return dataExInData
@@ -373,7 +414,6 @@ class DpMaster(object):
 	def __dataExchange(self, da, outData):
 		"""Perform a data exchange with the slave at "da"."""
 		try:
-			slaveDesc = self.__slaveDescs[da]
 			slave = self.__slaveStates[da]
 		except KeyError:
 			raise DpError("Data_Exchange: da=%d not "
@@ -396,9 +436,8 @@ class DpMaster(object):
 		return None
 
 	def __syncFreezeHelper(self, groupMask, controlCommand):
-		slaveDesc = self.__slaveDescs[FdlTelegram.ADDRESS_MCAST]
 		slave = self.__slaveStates[FdlTelegram.ADDRESS_MCAST]
-		globCtl = DpTelegram_GlobalControl(da=slaveDesc.slaveAddr,
+		globCtl = DpTelegram_GlobalControl(da=FdlTelegram.ADDRESS_MCAST,
 						   sa=self.masterAddr)
 		globCtl.controlCommand |= controlCommand
 		globCtl.groupSelect = groupMask & 0xFF
