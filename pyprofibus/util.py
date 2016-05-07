@@ -35,15 +35,19 @@ def boolToStr(val):
 	return str(bool(val))
 
 
-class TimeLimited(object):
+class TimeLimit(object):
+	UNLIMITED = -1
+
 	# limit => The time limit, in seconds.
 	#          Negative value = unlimited.
-	def __init__(self, limit):
+	def __init__(self, limit = 0):
 		self.__limit = limit
 		self.start()
 
 	# (Re-)start the time.
-	def start(self):
+	def start(self, limit = None):
+		if limit is not None:
+			self.__limit = limit
 		self.__startTime = time.time()
 		self.__endTime = self.__startTime + self.__limit
 
@@ -58,11 +62,6 @@ class TimeLimited(object):
 			# Unlimited
 			return False
 		return time.time() >= self.__endTime
-
-	# Sleep for 'seconds'.
-	@classmethod
-	def sleep(cls, seconds=0.001):
-		time.sleep(seconds)
 
 class FaultDebouncer(object):
 	"""Fault counter/debouncer.
