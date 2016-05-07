@@ -48,6 +48,11 @@ class CpPhySerial(CpPhy):
 			self.__rxBuf = bytearray()
 		super(CpPhySerial, self).close()
 
+	def __discard(self):
+		if self.__serial:
+			self.__serial.flushInput()
+			self.__serial.flushOutput()
+
 	# Poll for received packet.
 	# timeout => In seconds. 0 = none, Negative = unlimited.
 	def poll(self, timeout = 0):
@@ -56,6 +61,28 @@ class CpPhySerial(CpPhy):
 		timeoutStamp = time.clock() + timeout
 		try:
 			while True:
+				if len(rxBuf) < 1:
+					rxBuf += s.read(1)
+				elif len(rxBuf) < 3:
+					try:
+						size = getSize(rxBuf)
+						readLen = size
+					except ProfibusError:
+						readLen = 3
+					rxBuf += s.read(readLen - len(rxBuf))
+				elif len(rxBuf) >= 3:
+					try:
+						size = getSize(rxBuf)
+					except ProfibusError:
+						rxBuf = bytearray()
+						self.__discard()
+						raise PhyError("PHY-serial: "
+							"Failed to get received "
+							"telegram size:\n"
+							"Invalid telegram format.")
+					if len(rxBuf) < size:
+						rxBuf += s.read(size - len(rxBuf))
+
 				if len(rxBuf) == size:
 					ret, rxBuf = rxBuf, bytearray()
 					break
@@ -63,33 +90,9 @@ class CpPhySerial(CpPhy):
 				if timeout >= 0 and\
 				   time.clock() >= timeoutStamp:
 					break
-
-				if len(rxBuf) < 1:
-					rxBuf += s.read(1)
-					continue
-
-				if len(rxBuf) < 3:
-					try:
-						size = getSize(rxBuf)
-						readLen = size
-					except ProfibusError:
-						readLen = 3
-					rxBuf += s.read(readLen - len(rxBuf))
-					continue
-
-				if len(rxBuf) >= 3:
-					try:
-						size = getSize(rxBuf)
-					except ProfibusError:
-						rxBuf = bytearray()
-						raise PhyError("PHY-serial: "
-							"Failed to get received "
-							"telegram size:\n"
-							"Invalid telegram format.")
-					if len(rxBuf) < size:
-						rxBuf += s.read(size - len(rxBuf))
-					continue
 		except serial.SerialException as e:
+			rxBuf = bytearray()
+			self.__discard()
 			raise PhyError("PHY-serial: Failed to receive "
 				"telegram:\n" + str(e))
 		finally:
