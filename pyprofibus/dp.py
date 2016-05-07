@@ -1,7 +1,7 @@
 #
 # PROFIBUS DP - Layer 7
 #
-# Copyright (c) 2013-2014 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -18,25 +18,24 @@ class DpTransceiver(object):
 	def __init__(self, fdlTrans):
 		self.fdlTrans = fdlTrans
 
-	def poll(self, fcb, timeout=0):
-		dpTelegram = None
-		ok, fdlTelegram = self.fdlTrans.poll(fcb, timeout)
+	def poll(self, timeout=0):
+		retTelegram = None
+		ok, fdlTelegram = self.fdlTrans.poll(timeout)
 		if ok and fdlTelegram:
-			if fdlTelegram.sd in (FdlTelegram.SD1,
+			if fdlTelegram.sd in {FdlTelegram.SD1,
 					      FdlTelegram.SD2,
-					      FdlTelegram.SD3):
-				dpTelegram = DpTelegram.fromFdlTelegram(fdlTelegram)
-			elif fdlTelegram.sd != FdlTelegram.SC:
+					      FdlTelegram.SD3}:
+				retTelegram = DpTelegram.fromFdlTelegram(fdlTelegram)
+			elif fdlTelegram.sd in {FdlTelegram.SC,
+						FdlTelegram.SD4}:
+				retTelegram = fdlTelegram
+			else:
 				ok = False
-		return (ok, dpTelegram)
+		return (ok, retTelegram)
 
 	# Send a DpTelegram.
 	def send(self, fcb, telegram):
 		self.fdlTrans.send(fcb, telegram.toFdlTelegram())
-
-	def sendSync(self, fcb, telegram, timeout):
-		self.send(fcb, telegram)
-		return self.poll(fcb, timeout)
 
 class DpTelegram(object):
 	# Source Service Access Point number

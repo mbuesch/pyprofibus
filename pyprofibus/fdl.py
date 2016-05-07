@@ -1,7 +1,7 @@
 #
 # PROFIBUS - Layer 2 - Fieldbus Data Link (FDL)
 #
-# Copyright (c) 2013-2014 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -31,10 +31,10 @@ class FdlFCB():
 	def enableFCB(self, enabled = True):
 		self.__fcbEnabled = bool(enabled)
 
-	def FCBnext(self, wait = False):
+	def FCBnext(self):
 		self.__fcb ^= 1
 		self.__fcv = 1
-		self.__fcbWaitingReply = wait
+		self.__fcbWaitingReply = False
 
 	def enabled(self):
 		return self.__fcbEnabled
@@ -45,11 +45,12 @@ class FdlFCB():
 	def bitIsValid(self):
 		return self.__fcv != 0
 
-	def isWaitingReply(self):
-		return self.__fcbWaitingReply
+	def setWaitingReply(self):
+		self.__fcbWaitingReply = True
 
-	def setWaitingReply(self, value = True):
-		self.__fcbWaitingReply = bool(value)
+	def handleReply(self):
+		if self.__fcbWaitingReply:
+			self.FCBnext()
 
 	def __repr__(self):
 		return "FdlFCB(en=%s, fcb=%d, fcv=%d, wait=%s)" % (
@@ -71,14 +72,12 @@ class FdlTransceiver(object):
 		# Accept the packet, if it's in the RX filter.
 		return (telegram.da & FdlTelegram.ADDRESS_MASK) in self.__rxFilter
 
-	def poll(self, fcb, timeout=0):
+	def poll(self, timeout=0):
 		ok, telegram = False, None
 		reply = self.phy.poll(timeout)
 		if reply is not None:
 			telegram = FdlTelegram.fromRawData(reply)
 			if self.__checkRXFilter(telegram):
-				if fcb.isWaitingReply():
-					fcb.FCBnext()
 				ok = True
 		return (ok, telegram)
 
@@ -102,17 +101,13 @@ class FdlTransceiver(object):
 				if fcb.bitIsValid():
 					telegram.fc |= FdlTelegram.FC_FCV
 				if srd:
-					fcb.setWaitingReply(True)
+					fcb.setWaitingReply()
 				else:
 					fcb.FCBnext()
 		if srd:
 			self.phy.profibusSend_SRD(telegram.getRawData())
 		else:
 			self.phy.profibusSend_SDN(telegram.getRawData())
-
-	def sendSync(self, fcb, telegram, timeout):
-		self.send(fcb, telegram)
-		return self.poll(fcb, timeout)
 
 class FdlTelegram(object):
 	# Start delimiter
@@ -361,6 +356,10 @@ class FdlTelegram(object):
 			error = True
 		if error:
 			raise FdlError("Invalid FDL packet format")
+
+	@classmethod
+	def checkType(cls, telegram):
+		return isinstance(telegram, cls)
 
 class FdlTelegram_var(FdlTelegram):
 	def __init__(self, da, sa, fc, dae, sae, du):
