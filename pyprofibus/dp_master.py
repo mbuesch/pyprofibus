@@ -100,7 +100,6 @@ class DpSlaveState():
 	def restartStateTimeout(self, timeout = None):
 		self.__stateTimeout.start(timeout)
 
-	#TODO handle this
 	def stateHasTimeout(self):
 		return self.__stateTimeout.exceed()
 
@@ -213,7 +212,6 @@ class DpMaster(object):
 			print("DPM%d: %s" % (self.dpmClass, msg))
 
 	def destroy(self):
-		#TODO
 		if self.phy:
 			self.phy.close()
 			self.phy = None
@@ -242,7 +240,8 @@ class DpMaster(object):
 
 	def __send(self, slave, telegram,
 		   timeout = 0.1, busLock = False):
-
+		"""Asynchronously send a telegram to a slave.
+		"""
 		slave.pendingReq = telegram
 		slave.pendingReqTimeout.start(timeout)
 		slave.busLock = busLock
@@ -423,6 +422,11 @@ class DpMaster(object):
 			self.__debugMsg("Initialization finished. "
 				"Running Data_Exchange with slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+
+		if slave.pendingReqTimeout.exceed():
+			slave.faultDeb.fault()
+			slave.pendingReq = None
+
 		if slave.pendingReq:
 			for telegram in slave.getRxQueue():
 				if not DpTelegram_DataExchange_Con.checkType(telegram):
@@ -434,7 +438,7 @@ class DpMaster(object):
 				resFunc = telegram.fc & FdlTelegram.FC_RESFUNC_MASK
 				if resFunc in {FdlTelegram.FC_DH,
 					       FdlTelegram.FC_RDH}:
-					pass#TODO: Slave_Diag
+					slave.setState(slave.STATE_WDXRDY, 1.0)
 				elif resFunc == FdlTelegram.FC_RS:
 					raise DpError("Service not active "
 						"on slave %d" % slave.slaveDesc.slaveAddr)
@@ -443,13 +447,6 @@ class DpMaster(object):
 				slave.pendingReq = None
 				slave.faultDeb.faultless()
 				slave.restartStateTimeout()
-			faultCount = slave.faultDeb.get()
-			if faultCount >= 5:
-				# communication lost
-				slave.setState(slave.STATE_INIT)
-			elif faultCount >= 3:
-				# Diagnose the slave
-				slave.setState(slave.STATE_WDXRDY, 1.0)
 		else:
 			try:
 				self.__send(slave,
@@ -460,6 +457,15 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("DataExchange_Req failed: %s" % str(e))
 				return None
+
+		faultCount = slave.faultDeb.get()
+		if faultCount >= 5:
+			# communication lost
+			slave.setState(slave.STATE_INIT)
+		elif faultCount >= 3:
+			# Diagnose the slave
+			slave.setState(slave.STATE_WDXRDY, 1.0)
+
 		return dataExInData
 
 	__slaveStateHandlers = {
