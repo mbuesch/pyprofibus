@@ -98,7 +98,7 @@ class CpPhySerial(CpPhy):
 		finally:
 			self.__rxBuf = rxBuf
 		if self.debug and ret:
-			print("PHY-serial: received %s" %\
+			print("PHY-serial: RX %s" %\
 			      binascii.b2a_hex(ret).decode())
 		return ret
 
@@ -141,12 +141,11 @@ class CpPhySerial(CpPhy):
 		try:
 			telegramData = bytearray(telegramData)
 			if self.debug:
-				print("PHY-serial: sending %s" %\
+				print("PHY-serial: TX %s" %\
 				      binascii.b2a_hex(telegramData).decode())
 			self.__serial.write(telegramData)
 		except serial.SerialException as e:
 			raise PhyError("PHY-serial: Failed to transmit "
 				"telegram:\n" + str(e))
 
-	def profibusSend_SRD(self, telegramData):
-		self.profibusSend_SDN(telegramData)
+	profibusSend_SRD = profibusSend_SDN
