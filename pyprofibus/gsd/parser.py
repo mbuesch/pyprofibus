@@ -95,17 +95,18 @@ class GsdParser(object):
 		except (IOError, UnicodeError) as e:
 			raise GsdError("Failed to read GSD file '%s':\n%s" % (
 				filepath, str(e)))
-		return cls.fromBytes(data)
+		return cls.fromBytes(data, filepath)
 
 	@classmethod
-	def fromBytes(cls, data):
+	def fromBytes(cls, data, filename = None):
 		try:
 			text = data.decode("latin_1")
 		except UnicodeError as e:
 			raise GsdError("Failed to parse GSD data: %s" % str(e))
-		return cls(text)
+		return cls(text, filename)
 
-	def __init__(self, text):
+	def __init__(self, text, filename = None):
+		self.__filename = filename
 		self.__reset()
 		self.__parse(text)
 
@@ -176,16 +177,6 @@ class GsdParser(object):
 					inGsd = True
 		lines = newLines
 
-		# Expand line continuations.
-		newLines, inCont = [], False
-		for line in lines:
-			if inCont:
-				newLines[-1].text += line.text
-			else:
-				newLines.append(line)
-			inCont = line.text.endswith("\\")
-		lines = newLines
-
 		# Remove comments
 		newLines = []
 		for line in lines:
@@ -196,10 +187,27 @@ class GsdParser(object):
 				else:
 					if c == ";":
 						line.text = "".join(newLineText)
+						line.text = line.text.rstrip()
 						break
 					inQuote = (c == '"')
 				newLineText.append(c)
 			newLines.append(line)
+		lines = newLines
+
+		# Expand line continuations.
+		newLines, inCont = [], False
+		for line in lines:
+			if inCont:
+				if line.text.rstrip().endswith("\\"):
+					line.text = line.text[:-1]
+				else:
+					inCont = False
+				newLines[-1].text += line.text
+			else:
+				if line.text.endswith("\\"):
+					line.text = line.text[:-1]
+					inCont = True
+				newLines.append(line)
 		lines = newLines
 
 		# Strip all lines and remove empty lines.
@@ -228,13 +236,15 @@ class GsdParser(object):
 	_STATE_MODULE		= 3
 
 	def __parseErr(self, line, errorText):
-		raise GsdError("GSD parsing failed at "
-			"line %d:\n%s\n --> %s" % (
+		raise GsdError("GSD parsing failed in "
+			"'%s' at line %d:\n%s\n --> %s" % (
+			self.__filename or "GSD data",
 			line.lineNr, line.text, errorText))
 
 	def __parseWarn(self, line, errorText):
-		print("GSD parser warning at "
-			"line %d:\n%s\n --> %s" % (
+		print("GSD parser warning in "
+			"'%s' at line %d:\n%s\n --> %s" % (
+			self.__filename or "GSD data",
 			line.lineNr, line.text, errorText))
 
 	@classmethod
