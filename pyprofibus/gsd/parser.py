@@ -43,6 +43,14 @@ class GsdParser(object):
 			self.refNr = refNr
 			self.texts = []
 
+	class _PrmTextValue(object):
+		"""PrmText text value.
+		"""
+
+		def __init__(self, offset, text):
+			self.offset = offset
+			self.text = text
+
 	class _ExtUserPrmData(object):
 		"""ExtUserPrmData section.
 		"""
@@ -50,6 +58,7 @@ class GsdParser(object):
 		def __init__(self, refNr, name):
 			self.refNr = refNr
 			self.name = name
+			self.textRefNr = None
 
 	class _ExtUserPrmDataConst(object):
 		"""Ext_User_Prm_Data_Const(x)
@@ -226,12 +235,20 @@ class GsdParser(object):
 			return bool(value)
 		return None
 
-	def __trySimpleStr(self, line, name):
-		m = re.match(r'^' + name + r'\s*=\s*"(' + self._reStr + r')"$',
+	def __trySimpleStr(self, line, name, hasOffset = False):
+		m = re.match(r'^' + name +\
+			     ((r'\s*\(\s*(' + self._reNum + r')\s*\)\s*')\
+			      if hasOffset else r'\s*') +\
+			     r'=\s*"(' + self._reStr + r')"$',
 			     line.text)
+		offset, value = None, None
 		if m:
-			return m.group(1)
-		return None
+			if hasOffset:
+				offset = m.group(1)
+				value = m.group(2)
+			else:
+				value = m.group(1)
+		return (offset, value) if hasOffset else value
 
 	def __tryStrNoQuotes(self, line, name):
 		m = re.match(r'^' + name + r'\s*=\s*(.*)$',
@@ -361,7 +378,13 @@ class GsdParser(object):
 		if line.text == "EndPrmText":
 			self.__state = self._STATE_GLOBAL
 			return
-		pass#TODO
+
+		offset, value = self.__trySimpleStr(line, "Text",
+						    hasOffset = True)
+		if value is not None:
+			self.__fields["PrmText"][-1].texts.append(
+				self._PrmTextValue(offset, value))
+			return
 
 		self.__parseWarn(line, "Ignored unknown line")
 
@@ -369,7 +392,11 @@ class GsdParser(object):
 		if line.text == "EndExtUserPrmData":
 			self.__state = self._STATE_GLOBAL
 			return
-		pass#TODO
+
+		value = self.__trySimpleNum(line, "Prm_Text_Ref")
+		if value is not None:
+			self.__fields["ExtUserPrmData"][-1].textRefNr = value
+			return
 
 		self.__parseWarn(line, "Ignored unknown line")
 
@@ -377,7 +404,11 @@ class GsdParser(object):
 		if line.text == "EndModule":
 			self.__state = self._STATE_GLOBAL
 			return
-		pass#TODO
+
+		value = self.__trySimpleBool(line, "Preset")
+		if value is not None:
+			self.__fields["Module"][-1].preset = value
+			return
 
 		self.__parseWarn(line, "Ignored unknown line")
 
