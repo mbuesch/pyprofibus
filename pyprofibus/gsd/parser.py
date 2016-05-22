@@ -35,75 +35,87 @@ class GsdParser(object):
 			return "_Line(lineNr = %d, text = '%s')" % (
 				self.lineNr, self.text)
 
-	class _PrmText(object):
+	class _Item(object):
+		"""Abstract item base class.
+		"""
+
+		def __init__(self):
+			self._fields = {}
+
+	class _PrmText(_Item):
 		"""PrmText section.
 		"""
 
 		def __init__(self, refNr):
+			GsdParser._Item.__init__(self)
 			self.refNr = refNr
 			self.texts = []
 
-	class _PrmTextValue(object):
+	class _PrmTextValue(_Item):
 		"""PrmText text value.
 		"""
 
 		def __init__(self, offset, text):
+			GsdParser._Item.__init__(self)
 			self.offset = offset
 			self.text = text
 
-	class _ExtUserPrmData(object):
+	class _ExtUserPrmData(_Item):
 		"""ExtUserPrmData section.
 		"""
 
 		def __init__(self, refNr, name):
+			GsdParser._Item.__init__(self)
 			self.refNr = refNr
 			self.name = name
-			self.textRefNr = None
 
-	class _ExtUserPrmDataConst(object):
+	class _ExtUserPrmDataConst(_Item):
 		"""Ext_User_Prm_Data_Const(x)
 		"""
 
 		def __init__(self, offset, dataBytes):
+			GsdParser._Item.__init__(self)
 			self.offset = offset
 			self.dataBytes = dataBytes
 
-	class _ExtUserPrmDataRef(object):
+	class _ExtUserPrmDataRef(_Item):
 		"""Ext_User_Prm_Data_Ref(x)
 		"""
 
 		def __init__(self, offset, refNr):
+			GsdParser._Item.__init__(self)
 			self.offset = offset
 			self.refNr = refNr
 
-	class _Module(object):
+	class _Module(_Item):
 		"""Module section.
 		"""
 
 		def __init__(self, name, configBytes):
+			GsdParser._Item.__init__(self)
 			self.name = name
 			self.configBytes = configBytes
-			self.preset = None
 
 	@classmethod
-	def fromFile(cls, filepath):
+	def fromFile(cls, filepath, debug = False):
 		try:
 			with open(filepath, "rb") as fd:
 				data = fd.read()
 		except (IOError, UnicodeError) as e:
 			raise GsdError("Failed to read GSD file '%s':\n%s" % (
 				filepath, str(e)))
-		return cls.fromBytes(data, filepath)
+		return cls.fromBytes(data, filepath, debug)
 
 	@classmethod
-	def fromBytes(cls, data, filename = None):
+	def fromBytes(cls, data, filename = None, debug = False):
 		try:
 			text = data.decode("latin_1")
 		except UnicodeError as e:
 			raise GsdError("Failed to parse GSD data: %s" % str(e))
-		return cls(text, filename)
+		return cls(text, filename, debug)
 
-	def __init__(self, text, filename = None):
+	def __init__(self, text, filename = None, debug = False):
+		self.__debug = debug
 		self.__filename = filename
 		self.__reset()
 		self.__parse(text)
@@ -192,6 +204,8 @@ class GsdParser(object):
 			line.lineNr, line.text, errorText))
 
 	def __parseWarn(self, line, errorText):
+		if not self.__debug:
+			return
 		print("GSD parser warning in "
 			"'%s' at line %d:\n%s\n --> %s" % (
 			self.__filename or "GSD data",
@@ -379,11 +393,13 @@ class GsdParser(object):
 			self.__state = self._STATE_GLOBAL
 			return
 
+		prmText = self.__fields["PrmText"][-1]
+
+		# Parse specials
 		offset, value = self.__trySimpleStr(line, "Text",
 						    hasOffset = True)
 		if value is not None:
-			self.__fields["PrmText"][-1].texts.append(
-				self._PrmTextValue(offset, value))
+			prmText.texts.append(self._PrmTextValue(offset, value))
 			return
 
 		self.__parseWarn(line, "Ignored unknown line")
@@ -393,10 +409,14 @@ class GsdParser(object):
 			self.__state = self._STATE_GLOBAL
 			return
 
-		value = self.__trySimpleNum(line, "Prm_Text_Ref")
-		if value is not None:
-			self.__fields["ExtUserPrmData"][-1].textRefNr = value
-			return
+		extUserPrmData = self.__fields["ExtUserPrmData"][-1]
+
+		# Parse simple numbers.
+		for name in ("Prm_Text_Ref", ):
+			value = self.__trySimpleNum(line, name)
+			if value is not None:
+				extUserPrmData._fields[name] = value
+				return
 
 		self.__parseWarn(line, "Ignored unknown line")
 
@@ -405,9 +425,32 @@ class GsdParser(object):
 			self.__state = self._STATE_GLOBAL
 			return
 
-		value = self.__trySimpleBool(line, "Preset")
+		module = self.__fields["Module"][-1]
+
+		# Parse simple numbers.
+		for name in ("Ext_Module_Prm_Data_Len", ):
+			value = self.__trySimpleNum(line, name)
+			if value is not None:
+				module._fields[name] = value
+				return
+
+		# Parse simple booleans.
+		for name in ("Preset", ):
+			value = self.__trySimpleBool(line, name)
+			if value is not None:
+				module._fields[name] = value
+				return
+
+		# Parse specials
+		offset, value = self.__tryByteArray(line, "Ext_User_Prm_Data_Const",
+						    hasOffset = True)
 		if value is not None:
-			self.__fields["Module"][-1].preset = value
+			module._fields["Ext_User_Prm_Data_Const"] = value
+			return
+		offset, value = self.__trySimpleNum(line, "Ext_User_Prm_Data_Ref",
+						    hasOffset = True)
+		if value is not None:
+			module._fields["Ext_User_Prm_Data_Ref"] = value
 			return
 
 		self.__parseWarn(line, "Ignored unknown line")
