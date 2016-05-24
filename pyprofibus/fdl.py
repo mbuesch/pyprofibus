@@ -63,7 +63,9 @@ class FdlTransceiver(object):
 		self.setRXFilter(None)
 
 	def setRXFilter(self, newFilter):
-		self.__rxFilter = list(newFilter[:]) if newFilter else []
+		if newFilter is None:
+			newFilter = range(0, FdlTelegram.ADDRESS_MASK + 1)
+		self.__rxFilter = set(newFilter)
 
 	def __checkRXFilter(self, telegram):
 		if telegram.da is None:
