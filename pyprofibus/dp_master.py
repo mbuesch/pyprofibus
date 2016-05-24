@@ -110,13 +110,9 @@ class DpSlaveDesc(object):
 
 	def __init__(self,
 		     identNumber,
-		     slaveAddr,
-		     inputAddressRangeSize = 0,
-		     outputAddressRangeSize = 0):
+		     slaveAddr):
 		self.identNumber = identNumber
 		self.slaveAddr = slaveAddr
-		self.inputAddressRangeSize = inputAddressRangeSize
-		self.outputAddressRangeSize = outputAddressRangeSize
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(

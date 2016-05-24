@@ -45,9 +45,7 @@ master = pyprofibus.DPM1(phy = phy,
 # Create a slave description for an ET-200S.
 # The ET-200S has got the DP address 8 set via DIP-switches.
 et200s = pyprofibus.DpSlaveDesc(identNumber = 0x806A,
-				slaveAddr = 8,
-				inputAddressRangeSize = 1,
-				outputAddressRangeSize = 2)
+				slaveAddr = 8)
 
 # Create Chk_Cfg telegram elements
 for elem in (pyprofibus.DpCfgDataElement(0),		# PM-E module
