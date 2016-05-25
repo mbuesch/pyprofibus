@@ -291,6 +291,42 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 	STA_UNLOCK		= 0x40	# Unlock_Req
 	STA_LOCK		= 0x80	# Lock_Req
 
+	# First DPv1 User_Prm_Data byte. (DPv1 or later only)
+	DPV1PRM0_R0		= 0x01	# Reserved bit 0
+	DPV1PRM0_R1		= 0x02	# Reserved bit 1
+	DPV1PRM0_WD1MS		= 0x04	# 1 ms warchdog base.
+	DPV1PRM0_R3		= 0x08	# Reserved bit 3
+	DPV1PRM0_R4		= 0x10	# Reserved bit 4
+	DPV1PRM0_PUBL		= 0x20	# Run as publisher
+	DPV1PRM0_FAILSAFE	= 0x40	# Fail_Safe mode
+	DPV1PRM0_V1MODE		= 0x80	# DPv1 mode enable
+
+	# Second DPv1 User_Prm_Data byte. (DPv1 or later only)
+	DPV1PRM1_REDCFG		= 0x01	# Reduced Chk_Cfg
+	DPV1PRM1_R1		= 0x02	# Reserved bit 1
+	DPV1PRM1_ALRMUPD	= 0x04	# Alarm: update
+	DPV1PRM1_ALRMSTAT	= 0x08	# Alarm: status
+	DPV1PRM1_ALRMVEND	= 0x10	# Alarm: vendor specific
+	DPV1PRM1_ALRMDIAG	= 0x20	# Alarm: diagnostic
+	DPV1PRM1_ALRMPROC	= 0x40	# Alarm: process
+	DPV1PRM1_ALRMPLUG	= 0x80	# Alarm: pull-plug
+
+	# Third DPv1 User_Prm_Data byte. (DPv1 or later only)
+	DPV1PRM2_ALRMCNT_MASK	= 0x07	# Alarm count mask
+	DPV1PRM2_ALRMCNT1	= 0x00	# 1 alarm in total
+	DPV1PRM2_ALRMCNT2	= 0x01	# 2 alarms in total
+	DPV1PRM2_ALRMCNT4	= 0x02	# 4 alarms in total
+	DPV1PRM2_ALRMCNT8	= 0x03	# 8 alarms in total
+	DPV1PRM2_ALRMCNT12	= 0x04	# 12 alarms in total
+	DPV1PRM2_ALRMCNT16	= 0x05	# 16 alarms in total
+	DPV1PRM2_ALRMCNT24	= 0x06	# 24 alarms in total
+	DPV1PRM2_ALRMCNT32	= 0x07	# 32 alarms in total
+	DPV1PRM2_PRMBLK		= 0x08	# Parameter block follows
+	DPV1PRM2_ISO		= 0x10	# Isochronous mode
+	DPV1PRM2_R5		= 0x20	# Reserved bit 5
+	DPV1PRM2_R6		= 0x40	# Reserved bit 6
+	DPV1PRM2_REDUN		= 0x80	# Redundancy commands on
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
