@@ -42,6 +42,11 @@ class GsdParser(object):
 		def __init__(self):
 			self._fields = {}
 
+		def getField(self, name, default = None):
+			"""Get a field by name.
+			"""
+			return self._fields.get(name, default)
+
 	class _PrmText(_Item):
 		"""PrmText section.
 		"""
@@ -119,6 +124,9 @@ class GsdParser(object):
 		self.__filename = filename
 		self.__reset()
 		self.__parse(text)
+
+	def getFileName(self):
+		return self.__filename
 
 	def __reset(self):
 		self.__fields = {}
@@ -318,7 +326,8 @@ class GsdParser(object):
 			     "9.6_supp", "19.2_supp", "45.45_supp",
 			     "93.75_supp", "187.5_supp", "500_supp",
 			     "1.5M_supp", "3M_supp", "6M_supp",
-			     "12M_supp", "FixPresetModules"):
+			     "12M_supp", "FixPresetModules",
+			     "DPV1_Slave"):
 			value = self.__trySimpleBool(line, name)
 			if value is not None:
 				self.__fields[name] = value
@@ -445,12 +454,14 @@ class GsdParser(object):
 		offset, value = self.__tryByteArray(line, "Ext_User_Prm_Data_Const",
 						    hasOffset = True)
 		if value is not None:
-			module._fields["Ext_User_Prm_Data_Const"] = value
+			module._fields.setdefault("Ext_User_Prm_Data_Const", []).append(
+				self._ExtUserPrmDataConst(offset, value))
 			return
 		offset, value = self.__trySimpleNum(line, "Ext_User_Prm_Data_Ref",
 						    hasOffset = True)
 		if value is not None:
-			module._fields["Ext_User_Prm_Data_Ref"] = value
+			module._fields.setdefault("Ext_User_Prm_Data_Ref", []).append(
+				self._ExtUserPrmDataRef(offset, value))
 			return
 
 		self.__parseWarn(line, "Ignored unknown line")
@@ -471,3 +482,8 @@ class GsdParser(object):
 				self.__parseLine_module(line)
 			else:
 				assert(0)
+
+	def getField(self, name, default = None):
+		"""Get a field by name.
+		"""
+		return self.__fields.get(name, default)
