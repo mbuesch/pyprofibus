@@ -12,6 +12,7 @@
 from __future__ import division, absolute_import, print_function, unicode_literals
 
 from pyprofibus.gsd.parser import GsdParser, GsdError
+from pyprofibus.dp import DpCfgDataElement
 
 import difflib
 
@@ -23,6 +24,7 @@ class GsdInterp(GsdParser):
 	def __init__(self, text, filename = None, debug = False):
 		super(GsdInterp, self).__init__(text, filename, debug)
 		self.__configMods = []
+		self.__addPresetModules(onlyFixed = False)
 
 	def __interpErr(self, errorText):
 		raise GsdError("GSD '%s': %s" % (
@@ -80,19 +82,51 @@ class GsdInterp(GsdParser):
 					     name,
 					     lambda module: module.name)
 
-	def setConfiguredModules(self, moduleNameList, force = False):
-		"""Set the list of modules plugged into the device.
+	def __addPresetModules(self, onlyFixed = False):
+		if not self.getField("FixPresetModules", False) and\
+		   onlyFixed:
+			return
+		for mod in self.getField("Module", []):
+			if mod.getField("Preset", False):
+				self.__configMods.append(mod)
+
+	def clearConfiguredModules(self):
+		"""Remove all configured modules.
+		This also removes all preset modules, except for the fixed preset mods.
+		"""
+		self.__configMods = []
+		self.__addPresetModules(onlyFixed = True)
+
+	def setConfiguredModule(self, moduleName,
+				index = -1, force = False):
+		"""Set a configured module that is plugged into the device.
+		If index>=0 then set the module at the specified index.
+		If index<0 then append the module.
+		If moduleName is None then the module is removed.
 		"""
 		if not self.isModular() and not force:
 			self.__interpErr("Trying to configure modules, "
 				"but station is non-modular.")
-		self.__configMods = []
-		for modName in moduleNameList:
-			mod = self.findModule(modName)
+		if index >= 0 and index < len(self.__configMods) and\
+		   self.getField("FixPresetModules", False) and\
+		   self.__configMods[index].getField("Preset", False):
+			self.__interpErr("Not modifying fixed preset module "
+				"at index %d." % index)
+		if moduleName is None:
+			if index >= 0 and index < len(self.__configMods):
+				self.__configMods.pop(index)
+			else:
+				self.__interpErr("Module index %d out of range." % (
+					index))
+		else:
+			mod = self.findModule(moduleName)
 			if not mod:
 				self.__interpErr("Module '%s' not found in GSD." % (
-					modName))
-			self.__configMods.append(mod)
+					moduleName))
+			if index < 0 or index >= len(self.__configMods):
+				self.__configMods.append(mod)
+			else:
+				self.__configMods[index] = mod
 
 	def isModular(self):
 		"""Returns True, if this is a modular device.
@@ -103,7 +137,12 @@ class GsdInterp(GsdParser):
 		"""Get a tuple of config data elements (DpCfgDataElement)
 		for this station with the configured modules.
 		"""
-		pass#TODO
+		elems = []
+		for mod in self.__configMods:
+			elems.append(DpCfgDataElement(
+				mod.configBytes[0],
+				mod.configBytes[1:]))
+		return elems
 
 	def getUserPrmData(self):
 		"""Get a bytearray of User_Prm_Data
