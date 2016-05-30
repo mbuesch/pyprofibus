@@ -32,7 +32,7 @@ class GsdInterp(GsdParser):
 			errorText))
 
 	def __interpWarn(self, errorText):
-		if not self.__debug:
+		if not self.debugEnabled():
 			return
 		print("Warning in GSD '%s': %s" % (
 			self.getFileName() or "<data>",
@@ -144,9 +144,10 @@ class GsdInterp(GsdParser):
 				mod.configBytes[1:]))
 		return elems
 
-	def getUserPrmData(self):
+	def getUserPrmData(self, dp1PrmMask = None, dp1PrmSet = None):
 		"""Get a bytearray of User_Prm_Data
 		for this station with the configured modules.
+		dp1PrmMask/Set: Optional mask/set override for the DPV1 prm.
 		"""
 		def merge(baseData, extData, offset):
 			if extData is not None:
@@ -175,7 +176,19 @@ class GsdInterp(GsdParser):
 			# Add to global data.
 			data += modData
 		if self.getField("DPV1_Slave", False):
-			pass#TODO modify DPv1 params
+			assert((dp1PrmMask is None and dp1PrmSet is None) or\
+			       (dp1PrmMask is not None and dp1PrmSet is not None))
+			if dp1PrmMask is not None:
+				assert(len(dp1PrmMask) == 3 and len(dp1PrmSet) == 3)
+				if len(data) < 3:
+					self.__interpErr("DPv1 User_Prm_Data is "
+						"shorter than 3 bytes.")
+				# Apply the DPv1 prm override.
+				for i in range(3):
+					data[i] = (data[i] & ~dp1PrmMask[i]) |\
+						  (dp1PrmSet[i] & dp1PrmMask[i])
+		elif dp1PrmMask is not None:
+			self.__interpWarn("DPv1 User_Prm_Data override ignored")
 		trunc(data, self.getField("Max_User_Prm_Data_Len"),
 		      "Max_User_Prm_Data_Len", False)
 		return data
