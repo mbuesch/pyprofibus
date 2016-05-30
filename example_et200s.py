@@ -49,28 +49,27 @@ et200s = pyprofibus.DpSlaveDesc(identNumber = 0x806A,
 				slaveAddr = 8)
 
 # Create Chk_Cfg telegram elements
-cfg = (pyprofibus.DpCfgDataElement(0),		# 6ES7 138-4CA01-0AA0 PM-E DC24V
-       pyprofibus.DpCfgDataElement(0x20),	# 6ES7 132-4BB30-0AA0  2DO DC24V
-       pyprofibus.DpCfgDataElement(0x20),	# 6ES7 132-4BB30-0AA0  2DO DC24V
-       pyprofibus.DpCfgDataElement(0x10))	# 6ES7 131-4BD01-0AA0  4DI DC24V
-for elem in cfg:
-	et200s.chkCfgTelegram.addCfgDataElement(elem)
+et200s.setCfgDataElements(
+	(pyprofibus.DpCfgDataElement(0),	# 6ES7 138-4CA01-0AA0 PM-E DC24V
+	 pyprofibus.DpCfgDataElement(0x20),	# 6ES7 132-4BB30-0AA0  2DO DC24V
+	 pyprofibus.DpCfgDataElement(0x20),	# 6ES7 132-4BB30-0AA0  2DO DC24V
+	 pyprofibus.DpCfgDataElement(0x10),))	# 6ES7 131-4BD01-0AA0  4DI DC24V
 
 # Set User_Prm_Data
-userPrm = (DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,	# DPV1 prm
-	   DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,	# DPV1 prm
-	   0x00,					# DPV1 prm
-	   0x11, 0x21, 0x00, 0x00, 0x00,		# (constant)
-	   0x00,					# No diag
-	   0x02,					# Bus length >1m
-	   0x00,		# S7 analog format; 50 Hz suppression
-	   0x01,					# Reference: none
-	   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Options: none
-	   0x20, 0x01, 0x00,	# 6ES7 138-4CA01-0AA0 PM-E DC24V
-	   0x11,		# 6ES7 132-4BB30-0AA0  2DO DC24V
-	   0x11,		# 6ES7 132-4BB30-0AA0  2DO DC24V
-	   0x18)		# 6ES7 131-4BD01-0AA0  4DI DC24V
-et200s.setPrmTelegram.addUserPrmData(userPrm)
+et200s.setUserPrmData(
+	(DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,	# DPV1 prm
+	 DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,		# DPV1 prm
+	 0x00,						# DPV1 prm
+	 0x11, 0x21, 0x00, 0x00, 0x00,			# (constant)
+	 0x00,						# No diag
+	 0x02,						# Bus length >1m
+	 0x00,		# S7 analog format; 50 Hz suppression
+	 0x01,						# Reference: none
+	 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Options: none
+	 0x20, 0x01, 0x00,		# 6ES7 138-4CA01-0AA0 PM-E DC24V
+	 0x11,				# 6ES7 132-4BB30-0AA0  2DO DC24V
+	 0x11,				# 6ES7 132-4BB30-0AA0  2DO DC24V
+	 0x18,))			# 6ES7 131-4BD01-0AA0  4DI DC24V
 
 # Set various standard parameters
 et200s.setSyncMode(True)		# Sync-mode supported

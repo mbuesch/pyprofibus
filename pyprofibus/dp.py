@@ -340,7 +340,7 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 		self.minTSDR = 0			# min_Tsdr (0 = no change)
 		self.identNumber = 0			# Ident_Number
 		self.groupIdent = 0			# Group_Ident (Lock_Req must be set)
-		self.userPrmData = []			# User_Prm_Data
+		self.clearUserPrmData()
 
 	def __repr__(self):
 		return "DpTelegram_SetPrm_Req(da=%s, sa=%s, fc=%s, " \
@@ -360,6 +360,9 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
 		pass#TODO
+
+	def clearUserPrmData(self):
+		self.userPrmData = []
 
 	def addUserPrmData(self, data):
 		self.userPrmData.extend(data)
@@ -419,7 +422,7 @@ class DpTelegram_ChkCfg_Req(DpTelegram):
 		     ssap=DpTelegram.SSAP_MS0):
 		DpTelegram.__init__(self, da=da, sa=sa, fc=fc,
 				    dsap=dsap, ssap=ssap)
-		self.cfgData = []	# Cfg_Data element
+		self.clearCfgDataElements()
 
 	def __repr__(self):
 		return "DpTelegram_ChkCfg_Req(da=%s, sa=%s, fc=%s, " \
@@ -429,6 +432,9 @@ class DpTelegram_ChkCfg_Req(DpTelegram):
 			 intToHex(self.fc),
 			 intToHex(self.dsap), intToHex(self.ssap),
 			 ", ".join(str(d) for d in self.cfgData))
+
+	def clearCfgDataElements(self):
+		self.cfgData = []
 
 	def addCfgDataElement(self, element):
 		self.cfgData.append(element)

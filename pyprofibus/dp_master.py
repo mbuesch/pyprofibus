@@ -14,8 +14,6 @@ from pyprofibus.util import *
 import math
 
 
-#TODO GSD parser
-
 class DpSlaveState():
 	"""Run time state of a DP slave that is managed by a DPM instance.
 	"""
@@ -124,6 +122,20 @@ class DpSlaveDesc(object):
 		self.chkCfgTelegram = DpTelegram_ChkCfg_Req(
 					da = self.slaveAddr,
 					sa = None)
+
+	def setCfgDataElements(self, cfgDataElements):
+		"""Sets DpCfgDataElement()s from the specified list
+		in the Chk_Cfg telegram.
+		"""
+		self.chkCfgTelegram.clearCfgDataElements()
+		for cfgDataElement in cfgDataElements:
+			self.chkCfgTelegram.addCfgDataElement(cfgDataElement)
+
+	def setUserPrmData(self, userPrmData):
+		"""Sets the User_Prm_Data of the Set_Prm telegram.
+		"""
+		self.setPrmTelegram.clearUserPrmData()
+		self.setPrmTelegram.addUserPrmData(userPrmData)
 
 	def setSyncMode(self, enabled):
 		"""Enable/disable sync-mode.
