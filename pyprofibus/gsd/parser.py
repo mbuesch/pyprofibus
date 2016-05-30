@@ -128,6 +128,9 @@ class GsdParser(object):
 	def getFileName(self):
 		return self.__filename
 
+	def debugEnabled(self):
+		return self.__debug
+
 	def __reset(self):
 		self.__fields = {}
 
