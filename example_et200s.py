@@ -93,7 +93,6 @@ try:
 		inDataTmp = master.runSlave(et200s, outData)
 		if inDataTmp is not None:
 			inData = inDataTmp[0]
-except:
-	print("Terminating.")
+except Exception as e:
+	print("Terminating: %s" % str(e))
 	master.destroy()
-	raise
