@@ -20,18 +20,28 @@ import getopt
 
 
 def usage():
-	print("gsdparser [OPTIONS] FILE.GSD")
+	print("gsdparser [OPTIONS] [ACTIONS] FILE.GSD")
 	print("")
 	print("FILE.GSD is the GSD file to parse.")
 	print("")
 	print("Options:")
+	print(" -d|--debug          Enable parser debugging (default off)")
 	print(" -h|--help           Show this help.")
+	print("")
+	print("Actions:")
+	print(" -S|--summary        Print a summary of the GSD file contents.")
+	print("                     (The default, if no action is given specified)")
 
 def main():
+	opt_debug = False
+	actions = []
+
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:],
-			"h",
-			[ "help", ])
+			"hdS",
+			[ "help",
+			  "debug",
+			  "summary", ])
 	except getopt.GetoptError as e:
 		sys.stderr.write(str(e) + "\n")
 		usage()
@@ -40,14 +50,24 @@ def main():
 		if o in ("-h", "--help"):
 			usage()
 			return 0
+		if o in ("-d", "--debug"):
+			opt_debug = True
+		if o in ("-S", "--summary"):
+			actions.append("summary")
 	if len(args) != 1:
 		usage()
 		return 1
 	gsdFile = args[0]
+	if not actions:
+		actions = [ "summary", ]
 
 	try:
-		interp = GsdInterp.fromFile(gsdFile, debug = False)
-		print(str(interp))
+		interp = GsdInterp.fromFile(gsdFile, debug = opt_debug)
+		for action in actions:
+			if action == "summary":
+				print(str(interp))
+			else:
+				assert(0)
 	except GsdError as e:
 		sys.stderr.write("ERROR: %s\n" % str(e))
 		return 1
