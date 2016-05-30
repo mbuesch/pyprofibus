@@ -196,17 +196,20 @@ class GsdInterp(GsdParser):
 	def __str__(self):
 		text = []
 
+		if self.getFileName():
+			text.append("File:              %s\n" %\
+				    self.getFileName())
 		vendor = self.getField("Vendor_Name", "")
 		model = self.getField("Model_Name", "")
 		rev = self.getField("Revision", "")
 		ident = self.getField("Ident_Number")
-		text.append("%s; %s; %s; Ident: %s\n" % (
+		text.append("Device:            %s; %s; %s; Ident %s\n" % (
 			vendor, model, rev,
 			("0x%04X" % ident) if ident is not None else "-"))
 
 		order = self.getField("OrderNumber")
 		if order:
-			text.append("Order number: %s\n" % order)
+			text.append("Order number:      %s\n" % order)
 
 		for module in self.getField("Module"):
 			if module.getField("Preset"):
