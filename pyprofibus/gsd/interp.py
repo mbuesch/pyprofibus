@@ -133,6 +133,11 @@ class GsdInterp(GsdParser):
 		"""
 		return self.getField("Modular_Station", False)
 
+	def isDPV1(self):
+		"""Returns True, if this is a DPV1 slave.
+		"""
+		return self.getField("DPV1_Slave", False):
+
 	def getCfgDataElements(self):
 		"""Get a tuple of config data elements (DpCfgDataElement)
 		for this station with the configured modules.
@@ -175,7 +180,7 @@ class GsdInterp(GsdParser):
 			      "Ext_Module_Prm_Data_Len")
 			# Add to global data.
 			data += modData
-		if self.getField("DPV1_Slave", False):
+		if self.isDPV1():
 			assert((dp1PrmMask is None and dp1PrmSet is None) or\
 			       (dp1PrmMask is not None and dp1PrmSet is not None))
 			if dp1PrmMask is not None:
@@ -192,6 +197,14 @@ class GsdInterp(GsdParser):
 		trunc(data, self.getField("Max_User_Prm_Data_Len"),
 		      "Max_User_Prm_Data_Len", False)
 		return data
+
+	def getIdentNumber(self):
+		"""Get the ident number.
+		"""
+		ident = self.getField("Ident_Number")
+		if ident is None:
+			self.__interpErr("No Ident_Number in GSD.")
+		return ident
 
 	def __str__(self):
 		text = []
