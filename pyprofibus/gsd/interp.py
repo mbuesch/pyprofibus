@@ -136,7 +136,7 @@ class GsdInterp(GsdParser):
 	def isDPV1(self):
 		"""Returns True, if this is a DPV1 slave.
 		"""
-		return self.getField("DPV1_Slave", False):
+		return self.getField("DPV1_Slave", False)
 
 	def getCfgDataElements(self):
 		"""Get a tuple of config data elements (DpCfgDataElement)
