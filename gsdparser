@@ -30,7 +30,7 @@ def usage():
 	print("")
 	print("Actions:")
 	print(" -S|--summary        Print a summary of the GSD file contents.")
-	print("                     (The default, if no action is given specified)")
+	print("                     (The default, if no action is specified)")
 
 def main():
 	opt_debug = False
