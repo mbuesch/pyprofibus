@@ -1,0 +1,8 @@
+include example_*.py
+include COPYING
+include README.md
+graft doc
+graft debian
+
+prune build
+prune ./build
