@@ -36,7 +36,7 @@ debug = True
 
 # Parse the GSD file.
 # And select the plugged modules.
-gsd = GsdInterp.fromFile("si03806a.gse", debug = debug)
+gsd = GsdInterp.fromFile("si03806a.gse", debug = False)
 gsd.setConfiguredModule("6ES7 138-4CA01-0AA0 PM-E DC24V")
 gsd.setConfiguredModule("6ES7 132-4BB30-0AA0  2DO DC24V")
 gsd.setConfiguredModule("6ES7 132-4BB30-0AA0  2DO DC24V")
@@ -44,7 +44,7 @@ gsd.setConfiguredModule("6ES7 131-4BD01-0AA0  4DI DC24V")
 
 # Create a PHY (layer 1) interface object
 phy = pyprofibus.phy_serial.CpPhySerial(port = port,
-					debug = False)
+					debug = debug)
 phy.setConfig(19200)
 
 # Create a DP class 1 master with DP address 1
