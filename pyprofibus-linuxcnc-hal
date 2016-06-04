@@ -314,10 +314,8 @@ def createHalPins(hal, slaveAddr, outputSize, inputSize):
 		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
 	addr = slaveAddr
 
-	printInfo("Mapping %d bytes of PROFIBUS slave %d output data." % (
-		outputSize, addr))
-	printInfo("Mapping %d bytes of PROFIBUS slave %d input data." % (
-		inputSize, addr))
+	printInfo("DP slave %d output: %d bytes" % (addr, outputSize))
+	printInfo("DP slave %d input:  %d bytes" % (addr, inputSize))
 
 	# Create the input pins
 	for i in range(0, inputSize):

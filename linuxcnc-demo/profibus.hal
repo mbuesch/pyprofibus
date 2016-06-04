@@ -24,8 +24,8 @@ loadusr -Wn profibus pyprofibus-linuxcnc-hal pyprofibus.conf
 # Deactivated output pins will not be forwarded from LinuxCNC to the PROFIBUS.
 setp	profibus.slave.8.output.bit.0.0.active		1
 setp	profibus.slave.8.output.bit.0.1.active		1
-setp	profibus.slave.8.output.bit.0.2.active		1
-setp	profibus.slave.8.output.bit.0.3.active		1
+setp	profibus.slave.8.output.bit.1.0.active		1
+setp	profibus.slave.8.output.bit.1.1.active		1
 #setp	profibus.slave.8.output.float.4.active		1
 #setp	profibus.slave.8.output.float.8.active		1
 #setp	profibus.slave.8.output.float.12.active		1
@@ -33,8 +33,8 @@ setp	profibus.slave.8.output.bit.0.3.active		1
 # --- Connect output pins ---
 net	heartbeat		=> profibus.slave.8.output.bit.0.0
 net	estop-out-not		=> profibus.slave.8.output.bit.0.1
-net	spindle-cw		=> profibus.slave.8.output.bit.0.2
-net	spindle-ccw		=> profibus.slave.8.output.bit.0.3
+net	spindle-cw		=> profibus.slave.8.output.bit.1.0
+net	spindle-ccw		=> profibus.slave.8.output.bit.1.1
 #net	xpos-cmd		=> profibus.slave.8.output.float.4
 #net	ypos-cmd		=> profibus.slave.8.output.float.8
 #net	zpos-cmd		=> profibus.slave.8.output.float.12
