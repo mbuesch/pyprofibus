@@ -3,6 +3,7 @@ include COPYING
 include README.md
 graft doc
 graft debian
+graft linuxcnc-demo
 
 prune build
 prune ./build

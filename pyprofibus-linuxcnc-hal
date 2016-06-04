@@ -1,0 +1,343 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# PROFIBUS DP - LinuxCNC HAL module
+#
+# Copyright 2016 Michael Buesch <m@bues.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+from __future__ import division, absolute_import, print_function, unicode_literals
+
+import sys
+import os
+import time
+import getopt
+
+from pyprofibus import DPM1, DPM2, DpSlaveDesc
+from pyprofibus import ProfibusError, FdlError, DpError
+from pyprofibus.util import fileExists
+from pyprofibus.phy_serial import CpPhySerial
+from pyprofibus.gsd.interp import GsdInterp
+from pyprofibus.dp import DpTelegram_SetPrm_Req
+from pyprofibus.conf import PbConf, PbConfError
+
+
+class LinuxCNC_NotRunning(Exception):
+	pass
+
+def printError(msg):
+	sys.stderr.write("pyprofibus: " + msg + "\n")
+
+def printWarning(msg):
+	sys.stderr.write("pyprofibus: " + msg + "\n")
+
+def printInfo(msg):
+	sys.stdout.write("pyprofibus: " + msg + "\n")
+
+# Check presence of LinuxCNC.
+# Returns normally, if LinuxCNC is detected.
+# Raises LinuxCNC_NotRunning, if LinuxCNC is not detected.
+def watchdog():
+	# Check whether LinuxCNC is running.
+	for lockname in ("/tmp/linuxcnc.lock", "/tmp/emc.lock"):
+		if fileExists(lockname):
+			return True
+	if not opt_watchdog:
+		# The check is disabled. Return success.
+		return True
+	printError("LinuxCNC doesn't seem to be running. "\
+		   "(Use '--watchdog off' to disable this check.)")
+	raise LinuxCNC_NotRunning()
+
+def mainLoop(master):
+	slaves = master.getSlaveList()
+	while watchdog():
+		for slave in slaves:
+			pass#TODO
+			txData = None
+			rxData = master.runSlave(slave, txData)
+			if rxData is not None:
+				pass#TODO
+
+# Create the LinuxCNC HAL pins
+def createHalPins(hal, slaveIndex, outputSize, inputSize):
+	HAL_BIT, HAL_U32, HAL_S32, HAL_FLOAT = \
+		LinuxCNC_HAL.HAL_BIT, LinuxCNC_HAL.HAL_U32, \
+		LinuxCNC_HAL.HAL_S32, LinuxCNC_HAL.HAL_FLOAT
+	HAL_IN, HAL_OUT, HAL_RO, HAL_RW = \
+		LinuxCNC_HAL.HAL_IN, LinuxCNC_HAL.HAL_OUT, \
+		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
+	idx = slaveIndex
+
+	printInfo("Mapping %d bytes of PROFIBUS slave %d output data." % (
+		outputSize, idx))
+	printInfo("Mapping %d bytes of PROFIBUS slave %d input data." % (
+		inputSize, idx))
+
+	# Create the input pins
+	for i in range(0, inputSize):
+		for bit in range(8):
+			hal.newpin("slave.%d.input.bit.%d.%d" % (idx, i, bit),
+				   HAL_BIT, HAL_OUT)
+			hal.newparam("slave.%d.input.bit.%d.%d.active" % (idx, i, bit),
+				     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.input.u8.%d" % (idx, i),
+			   HAL_U32, HAL_OUT)
+		hal.newparam("slave.%d.input.u8.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		if i % 2:
+			continue
+		if inputSize - i < 2:
+			continue
+		hal.newpin("slave.%d.input.u16.%d" % (idx, i),
+			   HAL_U32, HAL_OUT)
+		hal.newparam("slave.%d.input.u16.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.input.s16.%d" % (idx, i),
+			   HAL_S32, HAL_OUT)
+		hal.newparam("slave.%d.input.s16.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		if inputSize - i < 4:
+			continue
+		hal.newpin("slave.%d.input.u31.%d" % (idx, i),
+			   HAL_U32, HAL_OUT)
+		hal.newparam("slave.%d.input.u31.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.input.s32.%d" % (idx, i),
+			   HAL_S32, HAL_OUT)
+		hal.newparam("slave.%d.input.s32.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.input.float.%d" % (idx, i),
+			   HAL_FLOAT, HAL_OUT)
+		hal.newparam("slave.%d.input.float.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+
+	# Create the output pins
+	for i in range(0, outputSize):
+		for bit in range(8):
+			hal.newpin("slave.%d.output.bit.%d.%d" % (idx, i, bit),
+				   HAL_BIT, HAL_IN)
+			hal.newparam("slave.%d.output.bit.%d.%d.active" % (idx, i, bit),
+				     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.output.u8.%d" % (idx, i),
+			   HAL_U32, HAL_IN)
+		hal.newparam("slave.%d.output.u8.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		if i % 2:
+			continue
+		if outputSize < 2:
+			continue
+		hal.newpin("slave.%d.output.u16.%d" % (idx, i),
+			   HAL_U32, HAL_IN)
+		hal.newparam("slave.%d.output.u16.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.output.s16.%d" % (idx, i),
+			   HAL_S32, HAL_IN)
+		hal.newparam("slave.%d.output.s16.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		if outputSize < 4:
+			continue
+		hal.newpin("slave.%d.output.u31.%d" % (idx, i),
+			   HAL_U32, HAL_IN)
+		hal.newparam("slave.%d.output.u31.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.output.s32.%d" % (idx, i),
+			   HAL_S32, HAL_IN)
+		hal.newparam("slave.%d.output.s32.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+		hal.newpin("slave.%d.output.float.%d" % (idx, i),
+			   HAL_FLOAT, HAL_IN)
+		hal.newparam("slave.%d.output.float.%d.active" % (idx, i),
+			     HAL_BIT, HAL_RW)
+
+	hal.newparam("config.ready", HAL_BIT, HAL_RW)
+
+def usage():
+	print("pyprofibus-linuxcnc-hal version %s" % VERSION_STRING)
+	print("")
+	print("Usage: pyprofibus-linuxcnc-hal [OPTIONS] pyprofibus.conf")
+	print("")
+	print("Options:")
+	print("")
+	print(" -L|--loglevel LVL       Set the log level:")
+	print("                         0: Log nothing")
+	print("                         1: Log errors")
+	print("                         2: Log errors and warnings")
+	print("                         3: Log errors, warnings and info messages (default)")
+	print("                         4: Verbose logging")
+	print("                         5: Extremely verbose logging")
+	print(" -N|--nice NICE          Renice the process. -20 <= NICE <= 19.")
+	print("                         Default: Do not renice")
+	print("")
+	print("Debugging options:")
+	print(" -W|--watchdog 1/0       Enable/disable LinuxCNC runtime watchdog.")
+	print("                         Default: on")
+	print("")
+	print("For an example LinuxCNC HAL configuration see:")
+	print("  linuxcnc-demo.hal")
+
+def main():
+	global LinuxCNC_HAL
+
+	global opt_loglevel
+	global opt_nice
+	global opt_watchdog
+
+	opt_loglevel = 3
+	opt_nice = None
+	opt_watchdog = True
+
+	try:
+		(opts, args) = getopt.getopt(sys.argv[1:],
+			"hL:N:W:",
+			[ "help",
+			  "loglevel=",
+			  "nice=",
+			  "watchdog=", ])
+	except getopt.GetoptError as e:
+		printError(str(e))
+		usage()
+		return 1
+	for (o, v) in opts:
+		if o in ("-h", "--help"):
+			usage()
+			return 0
+		if o in ("-L", "--loglevel"):
+			try:
+				opt_loglevel = int(v)
+			except ValueError:
+				printError("-L|--loglevel: Invalid log level")
+				return 1
+		if o in ("-N", "--nice"):
+			try:
+				opt_nice = int(v)
+				if opt_nice < -20 or opt_nice > 19:
+					raise ValueError
+			except ValueError:
+				printError("-N|--nice: Invalid niceness level")
+				return 1
+		if o in ("-W", "--watchdog"):
+			opt_watchdog = str2bool(v)
+	if len(args) != 1:
+		usage()
+		return 1
+	configFile = args[0]
+
+	result = 0
+	try:
+		# Parse the Profibus config file
+		config = PbConf.fromFile(configFile)
+
+		# Adjust process priority
+		if opt_nice is not None:
+			try:
+				os.nice(opt_nice)
+			except OSError as e:
+				printError("Failed to renice process to "
+					   "%d: %s" % (opt_nice, str(e)))
+				return 1
+
+		# Try to import the LinuxCNC HAL module
+		try:
+			import hal as LinuxCNC_HAL
+		except ImportError as e:
+			printError("Failed to import LinuxCNC HAL "
+				   "module: %s" % str(e))
+			return 1
+
+		# Create the LinuxCNC HAL component.
+		hal = LinuxCNC_HAL.component("profibus")
+
+		# Create the HAL pins.
+		for i, slaveConf in enumerate(config.slaveConfs):
+			createHalPins(hal = hal,
+				      slaveIndex = i,
+				      inputSize = slaveConf.inputSize,
+				      outputSize = slaveConf.outputSize)
+
+		# Setup the PROFIBUS stack.
+		if config.phyType.lower().strip() == "serial":
+			phy = CpPhySerial(port = config.phyDev,
+					  debug = (opt_loglevel >= 5))
+		else:
+			printError("Invalid PHY type '%s'." % conf.phyType)
+			return 1
+		phy.setConfig(baudrate = config.phyBaud)
+		if config.dpMasterClass == 1:
+			DPM = DPM1
+		else:
+			DPM = DPM2
+		master = DPM(phy = phy,
+			     masterAddr = config.dpMasterAddr,
+			     debug = (opt_loglevel >= 4))
+		for slaveConf in config.slaveConfs:
+			gsd = slaveConf.gsd
+			slave = DpSlaveDesc(
+				identNumber = gsd.getIdentNumber(),
+				slaveAddr = slaveConf.addr)
+			slave.setCfgDataElements(
+				gsd.getCfgDataElements())
+			dp1PrmMask = bytearray((
+				DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+				0x00))
+			dp1PrmSet  = bytearray((
+				DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+				0x00))
+			slave.setUserPrmData(
+				gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
+						   dp1PrmSet = dp1PrmSet))
+			slave.setSyncMode(slaveConf.syncMode)
+			slave.setFreezeMode(slaveConf.freezeMode)
+			slave.setGroupMask(slaveConf.groupMask)
+			slave.setWatchdog(slaveConf.watchdogMs)
+			master.addSlave(slave)
+
+		printInfo("Running PROFIBUS...")
+		master.initialize()
+		hal.ready()
+		printInfo("ready.")
+		lastExceptionTime = None
+		while True:
+			try:
+				mainLoop(master)
+			except ProfibusError as e:
+				now = time.time()
+				if lastExceptionTime is not None and\
+				   now - lastExceptionTime < 1.0:
+					# The last fault is less than one second
+					# in the past. Raise a fatal exception.
+					printError("Fatal fault detected")
+					raise e
+				else:
+					lastExceptionTime = now
+					# Non-fatal fault.
+					printError("PROFIBUS fault:\n%s" % str(e))
+	except LinuxCNC_NotRunning as e:
+		result = 1
+	except KeyboardInterrupt as e:
+		result = 1
+	except ProfibusError as e:
+		printError("Fatal PROFIBUS fault:\n%s" % str(e))
+		result = 1
+	printInfo("LinuxCNC HAL module shutdown.")
+
+	return result
+
+if __name__ == "__main__":
+	sys.exit(main())
