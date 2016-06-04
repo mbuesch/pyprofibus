@@ -1,13 +1,15 @@
 #
 # Utility helpers
 #
-# Copyright (c) 2013 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
 #
 
+import os
 import time
+import errno
 
 
 class ProfibusError(Exception):
@@ -34,6 +36,18 @@ def intListToHex(valList):
 def boolToStr(val):
 	return str(bool(val))
 
+def fileExists(filename):
+	"""Returns True, if the file exists.
+	Returns False, if the file does not exist.
+	Returns None, if another error occurred.
+	"""
+	try:
+		os.stat(filename)
+	except OSError as e:
+		if e.errno == errno.ENOENT:
+			return False
+		return None
+	return True
 
 class TimeLimit(object):
 	UNLIMITED = -1
