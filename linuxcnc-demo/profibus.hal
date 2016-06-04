@@ -22,22 +22,22 @@ loadusr -Wn profibus pyprofibus-linuxcnc-hal pyprofibus.conf
 # So all output pins connected below, should be activated here by writing
 # a '1' to the '.active' pin.
 # Deactivated output pins will not be forwarded from LinuxCNC to the PROFIBUS.
-setp	profibus.slave.0.output.bit.0.0.active		1
-setp	profibus.slave.0.output.bit.0.1.active		1
-setp	profibus.slave.0.output.bit.0.2.active		1
-setp	profibus.slave.0.output.bit.0.3.active		1
-#setp	profibus.slave.0.output.float.4.active		1
-#setp	profibus.slave.0.output.float.8.active		1
-#setp	profibus.slave.0.output.float.12.active		1
+setp	profibus.slave.8.output.bit.0.0.active		1
+setp	profibus.slave.8.output.bit.0.1.active		1
+setp	profibus.slave.8.output.bit.0.2.active		1
+setp	profibus.slave.8.output.bit.0.3.active		1
+#setp	profibus.slave.8.output.float.4.active		1
+#setp	profibus.slave.8.output.float.8.active		1
+#setp	profibus.slave.8.output.float.12.active		1
 
 # --- Connect output pins ---
-net	heartbeat		=> profibus.slave.0.output.bit.0.0
-net	estop-out-not		=> profibus.slave.0.output.bit.0.1
-net	spindle-cw		=> profibus.slave.0.output.bit.0.2
-net	spindle-ccw		=> profibus.slave.0.output.bit.0.3
-#net	xpos-cmd		=> profibus.slave.0.output.float.4
-#net	ypos-cmd		=> profibus.slave.0.output.float.8
-#net	zpos-cmd		=> profibus.slave.0.output.float.12
+net	heartbeat		=> profibus.slave.8.output.bit.0.0
+net	estop-out-not		=> profibus.slave.8.output.bit.0.1
+net	spindle-cw		=> profibus.slave.8.output.bit.0.2
+net	spindle-ccw		=> profibus.slave.8.output.bit.0.3
+#net	xpos-cmd		=> profibus.slave.8.output.float.4
+#net	ypos-cmd		=> profibus.slave.8.output.float.8
+#net	zpos-cmd		=> profibus.slave.8.output.float.12
 
 
 # --- Enable the used input pins ---
@@ -45,16 +45,16 @@ net	spindle-ccw		=> profibus.slave.0.output.bit.0.3
 # So all input pins connected below, should be activated here by writing
 # a '1' to the '.active' pin.
 # Deactivated input pins will not be forwarded from the PROFIBUS to LinuxCNC.
-setp	profibus.slave.0.input.bit.0.0.active		1
-setp	profibus.slave.0.input.bit.0.1.active		1
-setp	profibus.slave.0.input.bit.0.2.active		1
-setp	profibus.slave.0.input.bit.0.3.active		1
+setp	profibus.slave.8.input.bit.0.0.active		1
+setp	profibus.slave.8.input.bit.0.1.active		1
+setp	profibus.slave.8.input.bit.0.2.active		1
+setp	profibus.slave.8.input.bit.0.3.active		1
 
 # --- Connect input pins ---
-net	limit-x			<= profibus.slave.0.input.bit.0.0
-net	limit-y			<= profibus.slave.0.input.bit.0.1
-net	limit-z			<= profibus.slave.0.input.bit.0.2
-net	estop-in-not		<= profibus.slave.0.input.bit.0.3
+net	limit-x			<= profibus.slave.8.input.bit.0.0
+net	limit-y			<= profibus.slave.8.input.bit.0.1
+net	limit-z			<= profibus.slave.8.input.bit.0.2
+net	estop-in-not		<= profibus.slave.8.input.bit.0.3
 
 
 

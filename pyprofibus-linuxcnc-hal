@@ -36,6 +36,247 @@ from pyprofibus.dp import DpTelegram_SetPrm_Req
 from pyprofibus.conf import PbConf, PbConfError
 
 
+class SigBit(object):
+	def __init__(self, hal, halName, byteOffset, bitOffset):
+		self.hal = hal
+		self.halName = halName
+		self.byteOffset = byteOffset
+		self.bitOffset = bitOffset
+		self.setMask = 1 << bitOffset
+		self.clrMask = ~(1 << bitOffset)
+
+	def fromHal(self, destBuf):
+		if self.hal[self.halName]:
+			destBuf[self.byteOffset] |= self.setMask
+		else:
+			destBuf[self.byteOffset] &= self.clrMask
+
+	def toHal(self, srcBuf):
+		self.hal[self.halName] = (srcBuf[self.byteOffset] >> self.bitOffset) & 1
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigU8(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		destBuf[self.offset] = self.hal[self.halName] & 0xFF
+
+	def toHal(self, srcBuf):
+		self.hal[self.halName] = srcBuf[self.offset] & 0xFF
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigU16(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		word = self.hal[self.halName] & 0xFFFF
+		destBuf[self.offset] = (word >> 8) & 0xFF
+		destBuf[self.offset + 1] = word & 0xFF
+
+	def toHal(self, srcBuf):
+		word = (srcBuf[self.offset] << 8) |\
+		       srcBuf[self.offset + 1]
+		self.hal[self.halName] = word & 0xFFFF
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigS16(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		word = self.hal[self.halName] & 0xFFFF
+		destBuf[self.offset] = (word >> 8) & 0xFF
+		destBuf[self.offset + 1] = word & 0xFF
+
+	def toHal(self, srcBuf):
+		word = (srcBuf[self.offset] << 8) |\
+		       srcBuf[self.offset + 1]
+		self.hal[self.halName] = wordToSignedPyInt(word)
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigU31(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		dword = self.hal[self.halName] & 0x7FFFFFFF
+		destBuf[self.offset] = (dword >> 24) & 0xFF
+		destBuf[self.offset + 1] = (dword >> 16) & 0xFF
+		destBuf[self.offset + 2] = (dword >> 8) & 0xFF
+		destBuf[self.offset + 3] = dword & 0xFF
+
+	def toHal(self, srcBuf):
+		dword = (srcBuf[self.offset] << 24) |\
+		        (srcBuf[self.offset + 1] << 16) |\
+		        (srcBuf[self.offset + 2] << 8) |\
+		        srcBuf[self.offset + 3]
+		self.hal[self.halName] = dword & 0x7FFFFFFF
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigS32(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		dword = self.hal[self.halName] & 0xFFFFFFFF
+		destBuf[self.offset] = (dword >> 24) & 0xFF
+		destBuf[self.offset + 1] = (dword >> 16) & 0xFF
+		destBuf[self.offset + 2] = (dword >> 8) & 0xFF
+		destBuf[self.offset + 3] = dword & 0xFF
+
+	def toHal(self, srcBuf):
+		dword = (srcBuf[self.offset] << 24) |\
+		        (srcBuf[self.offset + 1] << 16) |\
+		        (srcBuf[self.offset + 2] << 8) |\
+		        srcBuf[self.offset + 3]
+		self.hal[self.halName] = dwordToSignedPyInt(dword)
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class SigFloat(object):
+	def __init__(self, hal, halName, offset):
+		self.hal = hal
+		self.halName = halName
+		self.offset = offset
+
+	def fromHal(self, destBuf):
+		dword = pyFloatToDWord(self.hal[self.halName])
+		destBuf[self.offset] = (dword >> 24) & 0xFF
+		destBuf[self.offset + 1] = (dword >> 16) & 0xFF
+		destBuf[self.offset + 2] = (dword >> 8) & 0xFF
+		destBuf[self.offset + 3] = dword & 0xFF
+
+	def toHal(self, srcBuf):
+		dword = (srcBuf[self.offset] << 24) |\
+		        (srcBuf[self.offset + 1] << 16) |\
+		        (srcBuf[self.offset + 2] << 8) |\
+		        srcBuf[self.offset + 3]
+		self.hal[self.halName] = dwordToPyFloat(dword)
+
+	def __str__(self):
+		return "profibus.%s" % self.halName
+
+class Worker(object):
+	def __init__(self, hal, master):
+		self.__configDone = False
+		self.hal = hal
+		self.master = master
+		self.slaves = master.getSlaveList()
+
+	def __buildTable(self, slaveAddr, direction, size):
+		tab = []
+		for i in range(0, size):
+			for bitNr in range(8):
+				halName = "slave.%d.%s.bit.%d.%d" % (
+					slaveAddr, direction, i, bitNr)
+				if self.hal[halName + ".active"]:
+					tab.append(SigBit(self.hal, halName,
+							  i, bitNr))
+			halName = "slave.%d.%s.u8.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigU8(self.hal, halName, i))
+			if i % 2:
+				continue
+			if size - i < 2:
+				continue
+
+			halName = "slave.%d.%s.u16.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigU16(self.hal, halName, i))
+			halName = "slave.%d.%s.s16.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigS16(self.hal, halName, i))
+			if size - i < 4:
+				continue
+
+			halName = "slave.%d.%s.u31.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigU31(self.hal, halName, i))
+			halName = "slave.%d.%s.s32.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigS32(self.hal, halName, i))
+			halName = "slave.%d.%s.float.%d" % (
+				slaveAddr, direction, i)
+			if self.hal[halName + ".active"]:
+				tab.append(SigFloat(self.hal, halName, i))
+		return tab
+
+	def __tryBuildConfig(self):
+		if not self.hal["config.ready"]:
+			return
+
+		for slave in self.slaves:
+			slaveConf = slave._slaveConf
+
+			activePbInputs = self.__buildTable(
+				slave.slaveAddr, "input", slaveConf.inputSize)
+
+			activePbOutputs = self.__buildTable(
+				slave.slaveAddr, "output", slaveConf.outputSize)
+
+			slave._activePbInputs = activePbInputs
+			slave._activePbOutputs = activePbOutputs
+
+			printInfo("Active DP slave %d pins:" % slave.slaveAddr)
+			for sig in activePbInputs:
+				printInfo("DP input:   " + str(sig))
+			for sig in activePbOutputs:
+				printInfo("DP output:  " + str(sig))
+
+		self.__configDone = True
+		printInfo("HAL configuration done")
+
+	def mainLoop(self):
+		master = self.master
+		while watchdog() and not self.__configDone:
+			self.__tryBuildConfig()
+			time.sleep(0.1)
+		while watchdog():
+			for slave in self.slaves:
+				slaveConf = slave._slaveConf
+				outputSize, inputSize = \
+					slaveConf.outputSize, slaveConf.inputSize
+
+				txData = bytearray((0,) * outputSize)
+				for sig in slave._activePbOutputs:
+					sig.fromHal(txData)
+				rxData = master.runSlave(slave, txData)
+				if rxData is not None:
+					if len(rxData) > inputSize:
+						rxData = rxData[0 : inputSize]
+					if len(rxData) < inputSize:
+						rxData += b'\0' * (inputSize - len(rxData))
+					for sig in slave._activePbInputs:
+						sig.toHal(rxData)
+
 class LinuxCNC_NotRunning(Exception):
 	pass
 
@@ -63,105 +304,95 @@ def watchdog():
 		   "(Use '--watchdog off' to disable this check.)")
 	raise LinuxCNC_NotRunning()
 
-def mainLoop(master):
-	slaves = master.getSlaveList()
-	while watchdog():
-		for slave in slaves:
-			pass#TODO
-			txData = None
-			rxData = master.runSlave(slave, txData)
-			if rxData is not None:
-				pass#TODO
-
 # Create the LinuxCNC HAL pins
-def createHalPins(hal, slaveIndex, outputSize, inputSize):
+def createHalPins(hal, slaveAddr, outputSize, inputSize):
 	HAL_BIT, HAL_U32, HAL_S32, HAL_FLOAT = \
 		LinuxCNC_HAL.HAL_BIT, LinuxCNC_HAL.HAL_U32, \
 		LinuxCNC_HAL.HAL_S32, LinuxCNC_HAL.HAL_FLOAT
 	HAL_IN, HAL_OUT, HAL_RO, HAL_RW = \
 		LinuxCNC_HAL.HAL_IN, LinuxCNC_HAL.HAL_OUT, \
 		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
-	idx = slaveIndex
+	addr = slaveAddr
 
 	printInfo("Mapping %d bytes of PROFIBUS slave %d output data." % (
-		outputSize, idx))
+		outputSize, addr))
 	printInfo("Mapping %d bytes of PROFIBUS slave %d input data." % (
-		inputSize, idx))
+		inputSize, addr))
 
 	# Create the input pins
 	for i in range(0, inputSize):
 		for bit in range(8):
-			hal.newpin("slave.%d.input.bit.%d.%d" % (idx, i, bit),
+			hal.newpin("slave.%d.input.bit.%d.%d" % (addr, i, bit),
 				   HAL_BIT, HAL_OUT)
-			hal.newparam("slave.%d.input.bit.%d.%d.active" % (idx, i, bit),
+			hal.newparam("slave.%d.input.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.u8.%d" % (idx, i),
+		hal.newpin("slave.%d.input.u8.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.input.u8.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
 		if inputSize - i < 2:
 			continue
-		hal.newpin("slave.%d.input.u16.%d" % (idx, i),
+		hal.newpin("slave.%d.input.u16.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.input.u16.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.s16.%d" % (idx, i),
+		hal.newpin("slave.%d.input.s16.%d" % (addr, i),
 			   HAL_S32, HAL_OUT)
-		hal.newparam("slave.%d.input.s16.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if inputSize - i < 4:
 			continue
-		hal.newpin("slave.%d.input.u31.%d" % (idx, i),
+		hal.newpin("slave.%d.input.u31.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.input.u31.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.s32.%d" % (idx, i),
+		hal.newpin("slave.%d.input.s32.%d" % (addr, i),
 			   HAL_S32, HAL_OUT)
-		hal.newparam("slave.%d.input.s32.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.float.%d" % (idx, i),
+		hal.newpin("slave.%d.input.float.%d" % (addr, i),
 			   HAL_FLOAT, HAL_OUT)
-		hal.newparam("slave.%d.input.float.%d.active" % (idx, i),
+		hal.newparam("slave.%d.input.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
 	# Create the output pins
 	for i in range(0, outputSize):
 		for bit in range(8):
-			hal.newpin("slave.%d.output.bit.%d.%d" % (idx, i, bit),
+			hal.newpin("slave.%d.output.bit.%d.%d" % (addr, i, bit),
 				   HAL_BIT, HAL_IN)
-			hal.newparam("slave.%d.output.bit.%d.%d.active" % (idx, i, bit),
+			hal.newparam("slave.%d.output.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.u8.%d" % (idx, i),
+		hal.newpin("slave.%d.output.u8.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.output.u8.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
 		if outputSize < 2:
 			continue
-		hal.newpin("slave.%d.output.u16.%d" % (idx, i),
+		hal.newpin("slave.%d.output.u16.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.output.u16.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.s16.%d" % (idx, i),
+		hal.newpin("slave.%d.output.s16.%d" % (addr, i),
 			   HAL_S32, HAL_IN)
-		hal.newparam("slave.%d.output.s16.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if outputSize < 4:
 			continue
-		hal.newpin("slave.%d.output.u31.%d" % (idx, i),
+		hal.newpin("slave.%d.output.u31.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.output.u31.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.s32.%d" % (idx, i),
+		hal.newpin("slave.%d.output.s32.%d" % (addr, i),
 			   HAL_S32, HAL_IN)
-		hal.newparam("slave.%d.output.s32.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.float.%d" % (idx, i),
+		hal.newpin("slave.%d.output.float.%d" % (addr, i),
 			   HAL_FLOAT, HAL_IN)
-		hal.newparam("slave.%d.output.float.%d.active" % (idx, i),
+		hal.newparam("slave.%d.output.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
 	hal.newparam("config.ready", HAL_BIT, HAL_RW)
@@ -263,9 +494,9 @@ def main():
 		hal = LinuxCNC_HAL.component("profibus")
 
 		# Create the HAL pins.
-		for i, slaveConf in enumerate(config.slaveConfs):
+		for slaveConf in config.slaveConfs:
 			createHalPins(hal = hal,
-				      slaveIndex = i,
+				      slaveAddr = slaveConf.addr,
 				      inputSize = slaveConf.inputSize,
 				      outputSize = slaveConf.outputSize)
 
@@ -306,16 +537,18 @@ def main():
 			slave.setFreezeMode(slaveConf.freezeMode)
 			slave.setGroupMask(slaveConf.groupMask)
 			slave.setWatchdog(slaveConf.watchdogMs)
+			slave._slaveConf = slaveConf
 			master.addSlave(slave)
 
-		printInfo("Running PROFIBUS...")
+		printInfo("Running PROFIBUS-DP master...")
 		master.initialize()
+		worker = Worker(hal, master)
 		hal.ready()
 		printInfo("ready.")
 		lastExceptionTime = None
 		while True:
 			try:
-				mainLoop(master)
+				worker.mainLoop()
 			except ProfibusError as e:
 				now = time.time()
 				if lastExceptionTime is not None and\
