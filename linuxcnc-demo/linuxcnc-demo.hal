@@ -3,6 +3,7 @@ loadrt	[EMCMOT]EMCMOT			base_period_nsec=[EMCMOT]BASE_PERIOD servo_period_nsec=[
 
 loadrt	stepgen				step_type=0,0,0
 loadrt	charge_pump
+loadrt	comp				count=3
 loadusr -W hal_manualtoolchange
 
 # Base thread
@@ -14,6 +15,9 @@ addf	motion-command-handler		servo-thread
 addf	motion-controller		servo-thread
 addf	stepgen.update-freq		servo-thread
 addf	charge-pump			servo-thread
+addf	comp.0				servo-thread
+addf	comp.1				servo-thread
+addf	comp.2				servo-thread
 
 # Spindle control
 net	spindle-cw			<= motion.spindle-forward
@@ -84,3 +88,24 @@ net	zenable				axis.2.amp-enable-out => stepgen.2.enable
 net	home-z				=> axis.2.home-sw-in
 net	limit-z				=> axis.2.neg-lim-sw-in
 net	limit-z				=> axis.2.pos-lim-sw-in
+
+# Simulate home switches
+net	xpos-cmd			=> comp.0.in0
+setp	comp.0.in1			0
+setp	comp.0.hyst			0.1
+net	home-x				<= comp.0.out
+
+net	ypos-cmd			=> comp.1.in0
+setp	comp.1.in1			0
+setp	comp.1.hyst			0.1
+net	home-y				<= comp.1.out
+
+net	zpos-cmd			=> comp.2.in0
+setp	comp.2.in1			0
+setp	comp.2.hyst			0.1
+net	home-z				<= comp.2.out
+
+# Simulate hardware limit switches
+sets	limit-x				0
+sets	limit-y				0
+sets	limit-z				0

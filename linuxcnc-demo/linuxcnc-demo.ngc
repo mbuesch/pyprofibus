@@ -3,8 +3,8 @@
 ( Fontfile: romanc.cxf )
 #1000 = 0.0100  ( Safe Z )
 #1001 = -0.0100  ( Engraving Depth Z )
-#1002 = 0.0000  ( X Start )
-#1003 = 0.0000  ( Y Start )
+#1002 = -6.7000  ( X Start )
+#1003 = -3.0000  ( Y Start )
 #1004 = 0.0400  ( X Scale )
 #1005 = 0.0400  ( Y Scale )
 #1006 = 0.0000  ( Angle )
@@ -861,7 +861,7 @@ G0 Z#1000
 
 
 
-#1003 = -0.6000  ( Y Start )
+#1003 = -3.6000  ( Y Start )
 
 (character 'h')
 G0 Z#1000
