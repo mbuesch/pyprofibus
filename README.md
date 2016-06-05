@@ -1,7 +1,7 @@
 pyprofibus - PROFIBUS-DP stack
 ==============================
 
-pyprofibus is a [https://en.wikipedia.org/wiki/Profibus](PROFIBUS-DP)
+pyprofibus is a [PROFIBUS-DP](https://en.wikipedia.org/wiki/Profibus)
 stack written in Python.
 
 Dependencies
@@ -12,5 +12,6 @@ Dependencies
 License
 -------
 Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+
 Licensed under the terms of the GNU General Public License version 2,
 or (at your option) any later version.
