@@ -43,3 +43,37 @@ Depends: ${misc:Depends},
          ${shlibs:Depends}
 Description: PROFIBUS-DP stack (PyPy)
  pyprofibus is a PROFIBUS-DP stack written in Python.
+
+
+Package: profisniff
+Architecture: any
+Depends: python3-pyprofibus,
+         ${misc:Depends},
+         ${python3:Depends},
+         ${shlibs:Depends}
+Suggests: python-pyprofibus,
+          pypy-pyprofibus
+Description: PROFIBUS-DP telegram sniffer (Python 3)
+ PROFIBUS-DP telegram sniffer based on pyprofibus.
+
+
+Package: gsdparser
+Architecture: any
+Depends: python3-pyprofibus,
+         ${misc:Depends},
+         ${python3:Depends},
+         ${shlibs:Depends}
+Suggests: python-pyprofibus,
+          pypy-pyprofibus
+Description: PROFIBUS-DP GSD file parser (Python 3)
+ PROFIBUS-DP GSD file parser based on pyprofibus.
+
+
+Package: pyprofibus-linuxcnc-hal
+Architecture: any
+Depends: python-pyprofibus,
+         ${misc:Depends},
+         ${python:Depends},
+         ${shlibs:Depends}
+Description: PROFIBUS-DP LinuxCNC HAL module (Python 2)
+ PROFIBUS-DP LinuxCNC HAL module based on pyprofibus.
