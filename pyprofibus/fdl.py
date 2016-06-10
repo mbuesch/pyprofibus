@@ -402,6 +402,12 @@ class FdlTelegram_FdlStat_Req(FdlTelegram_stat0):
 			fc=FdlTelegram.FC_REQ |\
 			   FdlTelegram.FC_FDL_STAT)
 
+class FdlTelegram_FdlStat_Con(FdlTelegram_stat0):
+	def __init__(self, da, sa,
+		     fc=FdlTelegram.FC_OK |
+		        FdlTelegram.FC_SLAVE):
+		FdlTelegram_stat0.__init__(self, da=da, sa=sa, fc=fc)
+
 class FdlTelegram_Ident_Req(FdlTelegram_stat0):
 	def __init__(self, da, sa):
 		FdlTelegram_stat0.__init__(self, da=da, sa=sa,
