@@ -38,7 +38,7 @@ try:
 	gsd.setConfiguredModule("6ES7 131-4BD01-0AA0  4DI DC24V")
 
 	# Create a PHY (layer 1) interface object
-	phy = pyprofibus.phy_serial.CpPhySerial(port = "/dev/ttyAMA0",
+	phy = pyprofibus.phy_serial.CpPhySerial(port = "/dev/ttyS0",
 						debug = False)
 	phy.setConfig(19200)
 
