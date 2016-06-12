@@ -29,7 +29,7 @@ import getopt
 
 from pyprofibus import DPM1, DPM2, DpSlaveDesc
 from pyprofibus import ProfibusError, FdlError, DpError
-from pyprofibus.util import fileExists
+from pyprofibus.util import fileExists, monotonic_time
 from pyprofibus.phy_serial import CpPhySerial
 from pyprofibus.gsd.interp import GsdInterp
 from pyprofibus.dp import DpTelegram_SetPrm_Req
@@ -548,7 +548,7 @@ def main():
 			try:
 				worker.mainLoop()
 			except ProfibusError as e:
-				now = time.time()
+				now = monotonic_time()
 				if lastExceptionTime is not None and\
 				   now - lastExceptionTime < 1.0:
 					# The last fault is less than one second
