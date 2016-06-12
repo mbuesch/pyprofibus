@@ -7,6 +7,9 @@
 # or (at your option) any later version.
 #
 
+from __future__ import division, absolute_import, print_function, unicode_literals
+from pyprofibus.compat import *
+
 import time
 import sys
 
