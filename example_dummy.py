@@ -11,59 +11,63 @@ from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
 
 master = None
 try:
-	# Parse the GSD file.
-	# And select the plugged modules.
-	gsd = pyprofibus.GsdInterp.fromFile("dummy.gsd", debug = False)
-	gsd.setConfiguredModule("dummy output module")
-	gsd.setConfiguredModule("dummy output module")
-	gsd.setConfiguredModule("dummy input module")
+	# Parse the config file.
+	config = pyprofibus.PbConf.fromFile("example_dummy.conf")
 
 	# Create a PHY (layer 1) interface object
 	phy = pyprofibus.phy_dummy.CpPhyDummySlave(debug = False)
-	phy.setConfig(19200)
+	phy.setConfig(baudrate = config.phyBaud)
 
 	# Create a DP class 1 master with DP address 1
 	master = pyprofibus.DPM1(phy = phy,
-				 masterAddr = 2,
+				 masterAddr = config.dpMasterAddr,
 				 debug = True)
 
-	# Create a slave description.
-	slaveDesc = pyprofibus.DpSlaveDesc(identNumber = gsd.getIdentNumber(),
-					   slaveAddr = 8)
+	# Create a slave descriptions.
+	for slaveConf in config.slaveConfs:
+		gsd = slaveConf.gsd
 
-	# Create Chk_Cfg telegram elements
-	slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
+		slaveDesc = pyprofibus.DpSlaveDesc(
+				identNumber = gsd.getIdentNumber(),
+				slaveAddr = slaveConf.addr)
 
-	# Set User_Prm_Data
-	dp1PrmMask = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
-				0x00))
-	dp1PrmSet  = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
-				0x00))
-	slaveDesc.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
-						    dp1PrmSet = dp1PrmSet))
+		# Create Chk_Cfg telegram elements
+		slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
 
-	# Set various standard parameters
-	slaveDesc.setSyncMode(True)	# Sync-mode supported
-	slaveDesc.setFreezeMode(True)	# Freeze-mode supported
-	slaveDesc.setGroupMask(1)	# Group-ident 1
-	slaveDesc.setWatchdog(300)	# Watchdog: 300 ms
+		# Set User_Prm_Data
+		dp1PrmMask = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		dp1PrmSet  = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		slaveDesc.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
+							    dp1PrmSet = dp1PrmSet))
 
-	# Register the slave at the DPM
-	master.addSlave(slaveDesc)
+		# Set various standard parameters
+		slaveDesc.setSyncMode(slaveConf.syncMode)
+		slaveDesc.setFreezeMode(slaveConf.freezeMode)
+		slaveDesc.setGroupMask(slaveConf.groupMask)
+		slaveDesc.setWatchdog(slaveConf.watchdogMs)
+
+		# Register the slave at the DPM
+		master.addSlave(slaveDesc)
+
+	# Initialize the DPM
+	master.initialize()
+	slaveDescs = master.getSlaveList()
 
 	# Run the slave state machine.
-	master.initialize()
 	outData = bytearray( (0x42, 0x24,) )
 	rtSum, runtimes, nextPrint = 0, [ 0, ] * 512, monotonic_time() + 1.0
 	while True:
 		start = monotonic_time()
 
-		# Run slave state machine.
-		inData = master.runSlave(slaveDesc, outData)
-		if inData is not None:
-			outData = bytearray( (inData[1], inData[0]) )
+		# Run slave state machines.
+		for slaveDesc in slaveDescs:
+			inData = master.runSlave(slaveDesc, outData)
+			if inData is not None:
+				outData = bytearray( (inData[1], inData[0]) )
 
 		# Print statistics.
 		end = monotonic_time()

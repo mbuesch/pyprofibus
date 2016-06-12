@@ -1,4 +1,5 @@
 include example_*.py
+include example_*.conf
 include COPYING
 include README.md
 graft doc

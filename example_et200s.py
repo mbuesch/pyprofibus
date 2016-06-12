@@ -29,53 +29,53 @@ from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
 
 master = None
 try:
-	# Parse the GSD file.
-	# And select the plugged modules.
-	gsd = pyprofibus.GsdInterp.fromFile("si03806a.gse", debug = False)
-	gsd.setConfiguredModule("6ES7 138-4CA01-0AA0 PM-E DC24V")
-	gsd.setConfiguredModule("6ES7 132-4BB30-0AA0  2DO DC24V")
-	gsd.setConfiguredModule("6ES7 132-4BB30-0AA0  2DO DC24V")
-	gsd.setConfiguredModule("6ES7 131-4BD01-0AA0  4DI DC24V")
+	# Parse the config file.
+	config = pyprofibus.PbConf.fromFile("example_et200s.conf")
 
 	# Create a PHY (layer 1) interface object
-	phy = pyprofibus.phy_serial.CpPhySerial(port = "/dev/ttyS0",
+	phy = pyprofibus.phy_serial.CpPhySerial(port = config.phyDev,
 						debug = False)
-	phy.setConfig(19200)
+	phy.setConfig(baudrate = config.phyBaud)
 
 	# Create a DP class 1 master with DP address 1
 	master = pyprofibus.DPM1(phy = phy,
-				 masterAddr = 2,
+				 masterAddr = config.dpMasterAddr,
 				 debug = True)
 
-	# Create a slave description for an ET-200S.
-	# The ET-200S has got the DP address 8 set via DIP-switches.
-	et200s = pyprofibus.DpSlaveDesc(identNumber = gsd.getIdentNumber(),
-					slaveAddr = 8)
+	# Create a slave descriptions.
+	for slaveConf in config.slaveConfs:
+		gsd = slaveConf.gsd
 
-	# Create Chk_Cfg telegram
-	et200s.setCfgDataElements(gsd.getCfgDataElements())
+		# Create a slave description for an ET-200S.
+		# The ET-200S has got the DP address 8 set via DIP-switches.
+		slaveDesc = pyprofibus.DpSlaveDesc(identNumber = gsd.getIdentNumber(),
+						   slaveAddr = slaveConf.addr)
 
-	# Set User_Prm_Data
-	dp1PrmMask = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
-				0x00))
-	dp1PrmSet  = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
-				0x00))
-	et200s.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
-						 dp1PrmSet = dp1PrmSet))
+		# Create Chk_Cfg telegram
+		slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
 
-	# Set various standard parameters
-	et200s.setSyncMode(True)		# Sync-mode supported
-	et200s.setFreezeMode(True)		# Freeze-mode supported
-	et200s.setGroupMask(1)			# Group-ident 1
-	et200s.setWatchdog(300)			# Watchdog: 300 ms
+		# Set User_Prm_Data
+		dp1PrmMask = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		dp1PrmSet  = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		slaveDesc.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
+							    dp1PrmSet = dp1PrmSet))
 
-	# Register the ET-200S slave at the DPM
-	master.addSlave(et200s)
+		# Set various standard parameters
+		slaveDesc.setSyncMode(slaveConf.syncMode)
+		slaveDesc.setFreezeMode(slaveConf.freezeMode)
+		slaveDesc.setGroupMask(slaveConf.groupMask)
+		slaveDesc.setWatchdog(slaveConf.watchdogMs)
+
+		# Register the ET-200S slave at the DPM
+		master.addSlave(slaveDesc)
 
 	# Initialize the DPM
 	master.initialize()
+	slaveDescs = master.getSlaveList()
 
 	# Cyclically run Data_Exchange.
 	# 4 input bits from the 4-DI module are copied to
@@ -85,11 +85,12 @@ try:
 	while True:
 		start = monotonic_time()
 
-		# Run slave state machine.
-		outData = [inData & 3, (inData >> 2) & 3]
-		inDataTmp = master.runSlave(et200s, outData)
-		if inDataTmp is not None:
-			inData = inDataTmp[0]
+		# Run slave state machines.
+		for slaveDesc in slaveDescs:
+			outData = [inData & 3, (inData >> 2) & 3]
+			inDataTmp = master.runSlave(slaveDesc, outData)
+			if inDataTmp is not None:
+				inData = inDataTmp[0]
 
 		# Print statistics.
 		end = monotonic_time()
