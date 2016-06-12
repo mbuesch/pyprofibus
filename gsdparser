@@ -20,7 +20,9 @@ import getopt
 
 
 def usage():
-	print("gsdparser [OPTIONS] [ACTIONS] FILE.GSD")
+	print("GSD file parser")
+	print("")
+	print("Usage: gsdparser [OPTIONS] [ACTIONS] FILE.GSD")
 	print("")
 	print("FILE.GSD is the GSD file to parse.")
 	print("")
