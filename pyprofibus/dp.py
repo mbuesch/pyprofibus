@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # PROFIBUS DP - Layer 7
 #

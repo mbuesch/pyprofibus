@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # PROFIBUS - Layer 2 - Fieldbus Data Link (FDL)
 #

@@ -1,4 +1,4 @@
-"""
+# -*- coding: utf-8 -*-
 #
 # PROFIBUS - GSD file parser
 #
@@ -7,7 +7,6 @@
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
 #
-"""
 
 from __future__ import division, absolute_import, print_function, unicode_literals
 
