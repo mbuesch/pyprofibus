@@ -18,7 +18,9 @@ import getopt
 
 
 def usage():
-	print("profisniff DEVICE")
+	print("PROFIBUS bus sniffer")
+	print("")
+	print("Usage: profisniff [OPTIONS] DEVICE")
 	print("")
 	print("DEVICE is the PHY device /dev/ttySx")
 	print("")
