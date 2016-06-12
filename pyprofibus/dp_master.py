@@ -210,7 +210,7 @@ class DpMaster(object):
 
 		# Create the transceivers
 		self.fdlTrans = FdlTransceiver(self.phy)
-		self.dpTrans = DpTransceiver(self.fdlTrans)
+		self.dpTrans = DpTransceiver(self.fdlTrans, thisIsMaster = True)
 
 		# Do we have the token?
 		self.__haveToken = True

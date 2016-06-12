@@ -15,17 +15,19 @@ class DpError(ProfibusError):
 	pass
 
 class DpTransceiver(object):
-	def __init__(self, fdlTrans):
+	def __init__(self, fdlTrans, thisIsMaster):
 		self.fdlTrans = fdlTrans
+		self.thisIsMaster = thisIsMaster
 
-	def poll(self, timeout=0):
+	def poll(self, timeout = 0):
 		retTelegram = None
 		ok, fdlTelegram = self.fdlTrans.poll(timeout)
 		if ok and fdlTelegram:
 			if fdlTelegram.sd in {FdlTelegram.SD1,
 					      FdlTelegram.SD2,
 					      FdlTelegram.SD3}:
-				retTelegram = DpTelegram.fromFdlTelegram(fdlTelegram)
+				retTelegram = DpTelegram.fromFdlTelegram(
+						fdlTelegram, self.thisIsMaster)
 			elif fdlTelegram.sd in {FdlTelegram.SC,
 						FdlTelegram.SD4}:
 				retTelegram = fdlTelegram
@@ -113,8 +115,10 @@ class DpTelegram(object):
 					return aeByte & 0x3F
 		return None
 
+	# Create a DP telegram from an FDL telegram.
+	# If thisIsMaster is True, the local station is a master.
 	@classmethod
-	def fromFdlTelegram(cls, fdl):
+	def fromFdlTelegram(cls, fdl, thisIsMaster):
 		dsap, ssap = cls.extractSAP(fdl.dae), cls.extractSAP(fdl.sae)
 
 		# Handle telegrams without SSAP/DSAP
@@ -129,15 +133,28 @@ class DpTelegram(object):
 			raise DpError("Telegram with DSAP, but without SSAP")
 
 		# Handle telegrams with SSAP/DSAP
-		if dsap == DpTelegram.SSAP_MS0:
-			if ssap == DpTelegram.DSAP_SLAVE_DIAG:
-				return DpTelegram_SlaveDiag_Con.fromFdlTelegram(fdl)
-			elif ssap == DpTelegram.DSAP_GET_CFG:
-				return DpTelegram_GetCfg_Con.fromFdlTelegram(fdl)
+		if thisIsMaster:
+			if dsap == DpTelegram.SSAP_MS0:
+				if ssap == DpTelegram.DSAP_SLAVE_DIAG:
+					return DpTelegram_SlaveDiag_Con.fromFdlTelegram(fdl)
+				elif ssap == DpTelegram.DSAP_GET_CFG:
+					return DpTelegram_GetCfg_Con.fromFdlTelegram(fdl)
+				else:
+					raise DpError("Unknown SSAP: %d" % ssap)
+			else:
+				raise DpError("Unknown DSAP: %d" % dsap)
+		else:
+			if ssap == DpTelegram.SSAP_MS0:
+				if dsap == DpTelegram.DSAP_SLAVE_DIAG:
+					return DpTelegram_SlaveDiag_Req.fromFdlTelegram(fdl)
+				elif dsap == DpTelegram.DSAP_SET_PRM:
+					return DpTelegram_SetPrm_Req.fromFdlTelegram(fdl)
+				elif dsap == DpTelegram.DSAP_CHK_CFG:
+					return DpTelegram_ChkCfg_Req.fromFdlTelegram(fdl)
+				else:
+					raise DpError("Unknown DSAP: %d" % dsap)
 			else:
 				raise DpError("Unknown SSAP: %d" % ssap)
-		else:
-			raise DpError("Unknown DSAP: %d" % dsap)
 
 	# Get Data-Unit.
 	# This function is overloaded in subclasses.
@@ -196,7 +213,12 @@ class DpTelegram_SlaveDiag_Req(DpTelegram):
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
-		pass#TODO
+		dp = cls(da=fdl.da,
+			 sa=fdl.sa,
+			 fc=fdl.fc,
+			 dsap=cls.extractSAP(fdl.dae),
+			 ssap=cls.extractSAP(fdl.sae))
+		return dp
 
 class DpTelegram_SlaveDiag_Con(DpTelegram):
 	# Flags byte 0
@@ -359,7 +381,23 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
-		pass#TODO
+		dp = cls(da=fdl.da,
+			 sa=fdl.sa,
+			 fc=fdl.fc,
+			 dsap=cls.extractSAP(fdl.dae),
+			 ssap=cls.extractSAP(fdl.sae))
+		try:
+			du = fdl.du
+			dp.stationStatus = du[0]
+			dp.wdFact1 = du[1]
+			dp.wdFact2 = du[2]
+			dp.minTSDR = du[3]
+			dp.identNumber = (du[4] << 8) | du[5]
+			dp.groupIdent = du[6]
+			dp.userPrmData = du[7:]
+		except IndexError:
+			raise DpError("Invalid SetPrm telegram format")
+		return dp
 
 	def clearUserPrmData(self):
 		self.userPrmData = []
