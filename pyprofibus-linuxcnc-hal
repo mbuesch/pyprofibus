@@ -34,6 +34,7 @@ from pyprofibus.phy_serial import CpPhySerial
 from pyprofibus.gsd.interp import GsdInterp
 from pyprofibus.dp import DpTelegram_SetPrm_Req
 from pyprofibus.conf import PbConf, PbConfError
+from pyprofibus.version import *
 
 
 class SigBit(object):
