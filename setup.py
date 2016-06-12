@@ -3,11 +3,11 @@
 from __future__ import print_function
 
 from distutils.core import setup
-from pyprofibus.version import VERSION_MAJOR, VERSION_MINOR
+from pyprofibus.version import VERSION_STRING
 
 
 setup(	name		= "pyprofibus",
-	version		= "%d.%d" % (VERSION_MAJOR, VERSION_MINOR),
+	version		= VERSION_STRING,
 	description	= "Python PROFIBUS module",
 	license		= "GNU General Public License v2 or later",
 	author		= "Michael Buesch",
@@ -36,7 +36,7 @@ setup(	name		= "pyprofibus",
 		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
 		"Programming Language :: Python :: Implementation :: CPython",
-#		"Programming Language :: Python :: Implementation :: PyPy",
+		"Programming Language :: Python :: Implementation :: PyPy",
 #		"Programming Language :: Python :: Implementation :: Jython",
 #		"Programming Language :: Python :: Implementation :: IronPython",
 		"Topic :: Education",
