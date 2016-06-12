@@ -5,18 +5,15 @@
 #
 
 import sys
-import pyprofibus
-import pyprofibus.phy_dummy
-from pyprofibus import ProfibusError, monotonic_time
-from pyprofibus.gsd.interp import GsdInterp
-from pyprofibus.dp import DpTelegram_SetPrm_Req
+import pyprofibus, pyprofibus.phy_dummy
+from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
 
 
 master = None
 try:
 	# Parse the GSD file.
 	# And select the plugged modules.
-	gsd = GsdInterp.fromFile("dummy.gsd", debug = False)
+	gsd = pyprofibus.GsdInterp.fromFile("dummy.gsd", debug = False)
 	gsd.setConfiguredModule("dummy output module")
 	gsd.setConfiguredModule("dummy output module")
 	gsd.setConfiguredModule("dummy input module")
@@ -60,13 +57,15 @@ try:
 	master.initialize()
 	outData = bytearray( (0x42, 0x24,) )
 	rtSum, runtimes, nextPrint = 0, [ 0, ] * 512, monotonic_time() + 1.0
-	while 1:
+	while True:
 		start = monotonic_time()
 
+		# Run slave state machine.
 		inData = master.runSlave(slaveDesc, outData)
 		if inData is not None:
 			outData = bytearray( (inData[1], inData[0]) )
 
+		# Print statistics.
 		end = monotonic_time()
 		runtimes.append(end - start)
 		rtSum = rtSum - runtimes.pop(0) + runtimes[-1]
@@ -75,7 +74,7 @@ try:
 			sys.stderr.write("pyprofibus cycle time = %.3f ms\n" %\
 				(rtSum / len(runtimes) * 1000.0))
 
-except ProfibusError as e:
+except pyprofibus.ProfibusError as e:
 	print("Terminating: %s" % str(e))
 finally:
 	if master:
