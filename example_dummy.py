@@ -6,6 +6,7 @@
 
 import pyprofibus
 import pyprofibus.phy_dummy
+from pyprofibus import ProfibusError
 from pyprofibus.gsd.interp import GsdInterp
 from pyprofibus.dp import DpTelegram_SetPrm_Req
 
