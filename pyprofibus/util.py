@@ -49,8 +49,14 @@ def fileExists(filename):
 		return None
 	return True
 
+# Monotonic time. Returns a float second count.
+monotonic_time = getattr(time, "monotonic", time.clock)
+
 class TimeLimit(object):
-	UNLIMITED = -1
+	"""Generic timeout helper.
+	"""
+
+	UNLIMITED = -1	# No limit
 
 	# limit => The time limit, in seconds.
 	#          Negative value = unlimited.
@@ -60,22 +66,26 @@ class TimeLimit(object):
 
 	# (Re-)start the time.
 	def start(self, limit = None):
-		if limit is not None:
-			self.__limit = limit
-		self.__startTime = time.time()
-		self.__endTime = self.__startTime + self.__limit
+		if limit is None:
+			limit = self.__limit
+		self.__limit = limit
+		if limit >= 0:
+			self.__startTime = monotonic_time()
+			self.__endTime = self.__startTime + limit
+		else:
+			self.__startTime = self.__endTime = -1
 
 	# Add seconds to the limit
 	def add(self, seconds):
-		self.__limit += seconds
-		self.__endTime = self.__startTime + self.__limit
+		if self.__limit >= 0:
+			self.__limit += seconds
+			self.__endTime = self.__startTime + self.__limit
 
 	# Returns True, if the time limit exceed.
 	def exceed(self):
 		if self.__limit < 0:
-			# Unlimited
-			return False
-		return time.time() >= self.__endTime
+			return False	# Unlimited
+		return monotonic_time() >= self.__endTime
 
 class FaultDebouncer(object):
 	"""Fault counter/debouncer.
