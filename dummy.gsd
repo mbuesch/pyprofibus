@@ -1,0 +1,88 @@
+;
+; pyprofibus - Dummy GSD file
+;
+
+#Profibus_DP
+
+GSD_Revision=1
+Slave_Family=3@Digital@24V
+Vendor_Name="PYPROFIBUS"
+Model_Name="PYPROFIBUS DUMMY"
+OrderNumber="42-42-42"
+Revision="42"
+Hardware_Release="42"
+Software_Release="42"
+Ident_Number=0x4224
+Protocol_Ident=0
+Station_Type=0
+Fail_Safe=1
+DPV1_Slave=1
+
+
+PrmText=1
+Text(0)="disabled"
+Text(1)="enabled"
+EndPrmText
+
+ExtUserPrmData=1 "dummy feature 1"
+Bit(2) 0 0-1
+Prm_Text_Ref=1
+EndExtUserPrmData
+
+ExtUserPrmData=2 "dummy feature 2"
+Bit(3) 0 0-1
+Prm_Text_Ref=1
+EndExtUserPrmData
+
+
+Auto_Baud_supp=1
+9.6_supp=1
+19.2_supp=1
+45.45_supp=1
+93.75_supp=1
+187.5_supp=1
+500_supp=1
+1.5M_supp=1
+3M_supp=1
+6M_supp=1
+12M_supp=1
+MaxTsdr_9.6=60
+MaxTsdr_19.2=60
+MaxTsdr_45.45=250
+MaxTsdr_93.75=60
+MaxTsdr_187.5=60
+MaxTsdr_500=100
+MaxTsdr_1.5M=150
+MaxTsdr_3M=250
+MaxTsdr_6M=450
+MaxTsdr_12M=800
+
+Min_Slave_Intervall=10
+
+Max_Diag_Data_Len=128
+
+User_Prm_Data_Len=4
+User_Prm_Data = 0x00,0x00,0x00,0x42
+Max_User_Prm_Data_Len=16
+Ext_User_Prm_Data_Const(0)=0x00,0x00,0x00,0x42
+Ext_User_Prm_Data_Ref(3)=1
+Ext_User_Prm_Data_Ref(3)=2
+
+
+Modular_Station=1
+Modul_Offset=1
+Max_Module=32
+FixPresetModules=1
+Max_Input_Len=249
+Max_Output_Len=249
+Max_Data_Len=498
+
+Module="fixed module" 0x00
+Preset=1
+EndModule
+
+Module="dummy input module" 0x10
+EndModule
+
+Module="dummy output module" 0x20
+EndModule
