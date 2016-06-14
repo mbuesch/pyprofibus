@@ -13,9 +13,9 @@ from pyprofibus.compat import *
 
 from pyprofibus.phy import *
 from pyprofibus.fdl import FdlTelegram
+from pyprofibus.util import *
 
 import sys
-import time
 import binascii
 
 try:
@@ -40,6 +40,7 @@ class CpPhySerial(CpPhy):
 		super(CpPhySerial, self).__init__(debug = debug)
 		self.__port = port
 		self.__serial = None
+		self.__discardTimeout = None
 		self.setConfig()
 
 	def close(self):
@@ -53,16 +54,30 @@ class CpPhySerial(CpPhy):
 		super(CpPhySerial, self).close()
 
 	def __discard(self):
-		if self.__serial:
-			self.__serial.flushInput()
-			self.__serial.flushOutput()
+		s = self.__serial
+		if s:
+			s.flushInput()
+			s.flushOutput()
+		if monotonic_time() >= self.__discardTimeout:
+			self.__discardTimeout = None
+
+	def __startDiscard(self):
+		self.__discardTimeout = monotonic_time() + 0.01
 
 	# Poll for received packet.
 	# timeout => In seconds. 0 = none, Negative = unlimited.
 	def poll(self, timeout = 0):
+		timeoutStamp = monotonic_time() + timeout
 		ret, rxBuf, s, size = None, self.__rxBuf, self.__serial, -1
 		getSize = FdlTelegram.getSizeFromRaw
-		timeoutStamp = time.clock() + timeout
+
+		if self.__discardTimeout is not None:
+			while self.__discardTimeout is not None:
+				self.__discard()
+				if timeout >= 0 and\
+				   monotonic_time() >= timeoutStamp:
+					return None
+
 		try:
 			while True:
 				if len(rxBuf) < 1:
@@ -79,7 +94,7 @@ class CpPhySerial(CpPhy):
 						size = getSize(rxBuf)
 					except ProfibusError:
 						rxBuf = bytearray()
-						self.__discard()
+						self.__startDiscard()
 						raise PhyError("PHY-serial: "
 							"Failed to get received "
 							"telegram size:\n"
@@ -92,11 +107,11 @@ class CpPhySerial(CpPhy):
 					break
 
 				if timeout >= 0 and\
-				   time.clock() >= timeoutStamp:
+				   monotonic_time() >= timeoutStamp:
 					break
 		except serial.SerialException as e:
 			rxBuf = bytearray()
-			self.__discard()
+			self.__startDiscard()
 			raise PhyError("PHY-serial: Failed to receive "
 				"telegram:\n" + str(e))
 		finally:
@@ -142,6 +157,8 @@ class CpPhySerial(CpPhy):
 				str(e))
 
 	def profibusSend_SDN(self, telegramData):
+		if self.__discardTimeout is not None:
+			return
 		try:
 			telegramData = bytearray(telegramData)
 			if self.debug:
