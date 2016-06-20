@@ -5,6 +5,7 @@ include README.md
 graft doc
 graft debian
 graft linuxcnc-demo
+graft tests
 
 prune build
 prune ./build
