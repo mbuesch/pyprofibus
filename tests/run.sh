@@ -40,9 +40,12 @@ run_testdir()
 
 	export PYTHONPATH=
 	run_nose python2 "$(which nosetests)" "$test_dir"
+
 	export PYTHONPATH=
 	run_nose python3 "$(which nosetests3)" "$test_dir"
-	export PYTHONPATH="$(python -c 'import sys; print(":".join(sys.path))')"
+
+	local p='import sys; print(":".join(p for p in sys.path if p.startswith("/usr/")))'
+	export PYTHONPATH="$(python -c "$p")"
 	run_nose pypy "$(which nosetests)" "$test_dir"
 }
 
