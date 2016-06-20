@@ -45,7 +45,7 @@ run_testdir()
 	run_nose python3 "$(which nosetests3)" "$test_dir"
 
 	local p='import sys; print(":".join(p for p in sys.path if p.startswith("/usr/")))'
-	export PYTHONPATH="$(python -c "$p")"
+	export PYTHONPATH="$(pypy -c "$p"):$(python2 -c "$p")"
 	run_nose pypy "$(which nosetests)" "$test_dir"
 }
 
