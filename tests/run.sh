@@ -14,6 +14,18 @@ die()
 	exit 1
 }
 
+# $1=executable_name
+find_executable()
+{
+	local executable_name="$1"
+
+	local executable_path="$(which "$executable_name")"
+	[ -n "$executable_path" ] ||\
+		die "$executable_name executable not found."\
+		    "Please install $executable_name."
+	RET="$executable_path"
+}
+
 # $1=interpreter
 # $2=nose
 # $3=test_dir
@@ -38,15 +50,20 @@ run_testdir()
 {
 	local test_dir="$1"
 
-	export PYTHONPATH=
-	run_nose python2 "$(which nosetests)" "$test_dir"
+	find_executable nosetests
+	local nosetests="$RET"
+	find_executable nosetests3
+	local nosetests3="$RET"
 
 	export PYTHONPATH=
-	run_nose python3 "$(which nosetests3)" "$test_dir"
+	run_nose python2 "$nosetests" "$test_dir"
+
+	export PYTHONPATH=
+	run_nose python3 "$nosetests3" "$test_dir"
 
 	local p='import sys; print(":".join(p for p in sys.path if p.startswith("/usr/")))'
 	export PYTHONPATH="$(pypy -c "$p"):$(python2 -c "$p")"
-	run_nose pypy "$(which nosetests)" "$test_dir"
+	run_nose pypy "$nosetests" "$test_dir"
 }
 
 run_tests()
