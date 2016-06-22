@@ -459,7 +459,7 @@ class DpMaster(object):
 				slave.pendingReq = None
 				slave.faultDeb.faultless()
 				slave.restartStateTimeout()
-		else:
+		if not slave.pendingReq:
 			try:
 				self.__send(slave,
 					telegram = DpTelegram_DataExchange_Req(
