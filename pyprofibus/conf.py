@@ -106,7 +106,7 @@ class PbConf(object):
 			self.phyDev = get("PHY", "dev",
 					  fallback = "/dev/ttyS0")
 			self.phyBaud = getint("PHY", "baud",
-					      fallback = 19200)
+					      fallback = 9600)
 
 			# [DP]
 			self.dpMasterClass = getint("DP", "master_class",

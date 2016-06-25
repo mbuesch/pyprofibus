@@ -45,7 +45,7 @@ class CpPhyDummySlave(CpPhy):
 			binascii.b2a_hex(bytearray(telegramData)).decode())
 		return telegramData
 
-	def setConfig(self, baudrate = CpPhy.BAUD_19200):
+	def setConfig(self, baudrate = CpPhy.BAUD_9600):
 		self.__msg("Baudrate = %d" % baudrate)
 		self.__pollQueue = []
 

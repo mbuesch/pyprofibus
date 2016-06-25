@@ -47,7 +47,7 @@ class CpPhy(object):
 	def poll(self, timeout = 0):
 		raise NotImplementedError
 
-	def setConfig(self, baudrate = BAUD_19200):
+	def setConfig(self, baudrate = BAUD_9600):
 		raise NotImplementedError
 
 	def profibusSend_SDN(self, telegramData):
