@@ -20,6 +20,7 @@ import binascii
 
 try:
 	import serial
+	import serial.rs485
 except ImportError as e:
 	if "PyPy" in sys.version and\
 	   sys.version_info[0] == 2:
@@ -28,6 +29,7 @@ except ImportError as e:
 		import glob
 		sys.path.extend(glob.glob("/usr/lib/python2*/*-packages/"))
 		import serial
+		import serial.rs485
 	else:
 		raise e
 
@@ -36,21 +38,46 @@ class CpPhySerial(CpPhy):
 	"""pyserial based PROFIBUS CP PHYsical layer
 	"""
 
-	def __init__(self, port, debug = False):
+	def __init__(self, port, debug = False, useRS485Class = False):
+		"""port => "/dev/ttySx"
+		debug => enable/disable debugging.
+		useRS485Class => Use serial.rs485.RS485, if True. (might be slower).
+		"""
 		super(CpPhySerial, self).__init__(debug = debug)
-		self.__port = port
-		self.__serial = None
 		self.__discardTimeout = None
-		self.setConfig()
+		try:
+			if useRS485Class:
+				self.__serial = serial.rs485.RS485()
+			else:
+				self.__serial = serial.Serial()
+			self.__serial.port = port
+			self.__serial.baudrate = CpPhy.BAUD_9600
+			self.__serial.bytesize = 8
+			self.__serial.parity = serial.PARITY_EVEN
+			self.__serial.stopbits = serial.STOPBITS_ONE
+			self.__serial.timeout = 0
+			self.__serial.xonxoff = False
+			self.__serial.rtscts = False
+			self.__serial.dsrdtr = True
+			if useRS485Class:
+				self.__serial.rs485_mode = serial.rs485.RS485Settings(
+					rts_level_for_tx = True,
+					rts_level_for_rx = False,
+					loopback = False,
+					delay_before_tx = 0.0,
+					delay_before_rx = 0.0
+				)
+			self.__serial.open()
+		except (serial.SerialException, ValueError) as e:
+			raise PhyError("Failed to open "
+				"serial port:\n" + str(e))
 
 	def close(self):
-		if self.__serial:
-			try:
-				self.__serial.close()
-			except serial.SerialException as e:
-				pass
-			self.__serial = None
-			self.__rxBuf = bytearray()
+		try:
+			self.__serial.close()
+		except serial.SerialException as e:
+			pass
+		self.__rxBuf = bytearray()
 		super(CpPhySerial, self).close()
 
 	def __discard(self):
@@ -121,21 +148,26 @@ class CpPhySerial(CpPhy):
 			      binascii.b2a_hex(ret).decode())
 		return ret
 
-	def setConfig(self, baudrate = CpPhy.BAUD_19200):
-		self.close()
+	def setConfig(self, baudrate = CpPhy.BAUD_9600):
+		wellSuppBaud = (9600, 19200)
+		if baudrate not in wellSuppBaud:
+			# The hw/driver might silently ignore the baudrate
+			# and use the already set value from __init__().
+			print("PHY-serial: Warning: The configured baud rate %d baud "
+			      "might not be supported by the hardware. "
+			      "Note that some hardware silently falls back "
+			      "to 9600 baud for unsupported rates. "
+			      "Commonly well supported baud rates by serial "
+			      "hardware are: %s." % (
+			      baudrate,
+			      ", ".join(str(b) for b in wellSuppBaud)))
 		try:
-			self.__serial = serial.Serial(
-				port = self.__port,
-				baudrate = baudrate,
-				bytesize = 8,
-				parity = serial.PARITY_EVEN,
-				stopbits = serial.STOPBITS_ONE,
-				timeout = 0,
-				xonxoff = False,
-				rtscts = False,
-				dsrdtr = False)
-			self.__rxBuf = bytearray()
-		except serial.SerialException as e:
+			if baudrate != self.__serial.baudrate:
+				self.__serial.close()
+				self.__serial.baudrate = baudrate
+				self.__serial.open()
+				self.__rxBuf = bytearray()
+		except (serial.SerialException, ValueError) as e:
 			raise PhyError("Failed to set CP-PHY "
 				"configuration:\n" + str(e))
 		self.__setConfigPiLC(baudrate)
