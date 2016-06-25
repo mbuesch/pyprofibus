@@ -4,7 +4,7 @@ include COPYING
 include README.md
 graft doc
 graft debian
-graft linuxcnc-demo
+graft linuxcnc-demo-et200s
 graft tests
 
 prune build
