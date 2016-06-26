@@ -23,7 +23,7 @@
 #
 
 import sys
-import pyprofibus, pyprofibus.phy_serial
+import pyprofibus
 from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
 
 
