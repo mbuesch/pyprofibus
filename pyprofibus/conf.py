@@ -159,3 +159,22 @@ class PbConf(object):
 				"error:\n%s" % str(e))
 		except GsdError as e:
 			raise PbConfError("Failed to parse GSD file:\n%s" % str(e))
+
+	def makePhy(self):
+		"""Create a CP-PHY instance based on the configuration.
+		"""
+		phyType = self.phyType.lower().strip()
+		if phyType == "serial":
+			import pyprofibus.phy_serial
+			phy = pyprofibus.phy_serial.CpPhySerial(
+				debug = (self.debug >= 2),
+				port = self.phyDev)
+		elif phyType in {"dummyslave", "dummy_slave", "dummy-slave"}:
+			import pyprofibus.phy_dummy
+			phy = pyprofibus.phy_dummy.CpPhyDummySlave(
+				debug = (self.debug >= 2))
+		else:
+			raise PbConfError("Invalid phyType parameter value: "
+					  "%s" % self.phyType)
+		phy.setConfig(baudrate = self.phyBaud)
+		return phy

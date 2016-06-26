@@ -33,9 +33,7 @@ try:
 	config = pyprofibus.PbConf.fromFile("example_et200s.conf")
 
 	# Create a PHY (layer 1) interface object
-	phy = pyprofibus.phy_serial.CpPhySerial(port = config.phyDev,
-						debug = False)
-	phy.setConfig(baudrate = config.phyBaud)
+	phy = config.makePhy()
 
 	# Create a DP class 1 master with DP address 1
 	master = pyprofibus.DPM1(phy = phy,

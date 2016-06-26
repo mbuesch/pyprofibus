@@ -500,13 +500,7 @@ def main():
 				      outputSize = slaveConf.outputSize)
 
 		# Setup the PROFIBUS stack.
-		if config.phyType.lower().strip() == "serial":
-			phy = CpPhySerial(port = config.phyDev,
-					  debug = (opt_loglevel >= 5))
-		else:
-			printError("Invalid PHY type '%s'." % conf.phyType)
-			return 1
-		phy.setConfig(baudrate = config.phyBaud)
+		phy = config.makePhy()
 		if config.dpMasterClass == 1:
 			DPM = DPM1
 		else:
@@ -563,6 +557,9 @@ def main():
 	except LinuxCNC_NotRunning as e:
 		result = 1
 	except KeyboardInterrupt as e:
+		result = 1
+	except PbConfError as e:
+		printError("Profibus configuration error:\n%s" % str(e))
 		result = 1
 	except ProfibusError as e:
 		printError("Fatal PROFIBUS fault:\n%s" % str(e))
