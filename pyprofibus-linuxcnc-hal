@@ -26,8 +26,9 @@ import sys
 import os
 import time
 import getopt
+import struct
 
-from pyprofibus import DPM1, DPM2, DpSlaveDesc
+from pyprofibus import DPM1, DPM2, DpSlaveDesc, isPy2Compat
 from pyprofibus import ProfibusError, FdlError, DpError
 from pyprofibus.util import fileExists, monotonic_time
 from pyprofibus.phy_serial import CpPhySerial
@@ -106,7 +107,10 @@ class SigS16(object):
 	def toHal(self, srcBuf):
 		word = (srcBuf[self.offset] << 8) |\
 		       srcBuf[self.offset + 1]
-		self.hal[self.halName] = wordToSignedPyInt(word)
+		if word & 0x8000:
+			self.hal[self.halName] = -((~word + 1) & 0xFFFF)
+		else:
+			self.hal[self.halName] = word & 0xFFFF
 
 	def __str__(self):
 		return "profibus.%s" % self.halName
@@ -152,30 +156,49 @@ class SigS32(object):
 		        (srcBuf[self.offset + 1] << 16) |\
 		        (srcBuf[self.offset + 2] << 8) |\
 		        srcBuf[self.offset + 3]
-		self.hal[self.halName] = dwordToSignedPyInt(dword)
+		if dword & 0x80000000:
+			self.hal[self.halName] = -((~dword + 1) & 0xFFFFFFFF)
+		else:
+			self.hal[self.halName] = dword & 0xFFFFFFFF
 
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
 class SigFloat(object):
+	floatStruct = struct.Struct(str('>f'))
+
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
 		self.offset = offset
 
 	def fromHal(self, destBuf):
-		dword = pyFloatToDWord(self.hal[self.halName])
-		destBuf[self.offset] = (dword >> 24) & 0xFF
-		destBuf[self.offset + 1] = (dword >> 16) & 0xFF
-		destBuf[self.offset + 2] = (dword >> 8) & 0xFF
-		destBuf[self.offset + 3] = dword & 0xFF
+		buf = self.floatStruct.pack(self.hal[self.halName])
+		if isPy2Compat:
+			buf = [ ord(b) for b in buf ]
+		destBuf[self.offset : self.offset + 4] = buf[0 : 4]
 
 	def toHal(self, srcBuf):
 		dword = (srcBuf[self.offset] << 24) |\
 		        (srcBuf[self.offset + 1] << 16) |\
 		        (srcBuf[self.offset + 2] << 8) |\
 		        srcBuf[self.offset + 3]
-		self.hal[self.halName] = dwordToPyFloat(dword)
+		if isPy2Compat:
+			value = self.floatStruct.unpack(
+				chr((dword >> 24) & 0xFF) +\
+				chr((dword >> 16) & 0xFF) +\
+				chr((dword >> 8) & 0xFF) +\
+				chr(dword & 0xFF)
+			)[0]
+		else:
+			value = self.floatStruct.unpack(
+				bytes( ((dword >> 24) & 0xFF,
+					(dword >> 16) & 0xFF,
+					(dword >> 8) & 0xFF,
+					dword & 0xFF)
+				)
+			)[0]
+		self.hal[self.halName] = value
 
 	def __str__(self):
 		return "profibus.%s" % self.halName
@@ -246,7 +269,7 @@ class Worker(object):
 			slave._activePbInputs = activePbInputs
 			slave._activePbOutputs = activePbOutputs
 
-			printInfo("Active DP slave %d pins:" % slave.slaveAddr)
+			printInfo("Active DP slave (addr=%d) pins:" % slave.slaveAddr)
 			for sig in activePbInputs:
 				printInfo("DP input:   " + str(sig))
 			for sig in activePbOutputs:
