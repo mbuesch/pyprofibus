@@ -47,6 +47,7 @@ class CpPhySerial(CpPhy):
 		"""
 		super(CpPhySerial, self).__init__(debug = debug)
 		self.__discardTimeout = None
+		self.__rxBuf = bytearray()
 		try:
 			if useRS485Class:
 				if not hasattr(serial, "rs485"):
