@@ -5,6 +5,7 @@ include README.md
 graft doc
 graft debian
 graft linuxcnc-demo-et200s
+graft linuxcnc-demo-dummyphy
 graft tests
 
 prune build

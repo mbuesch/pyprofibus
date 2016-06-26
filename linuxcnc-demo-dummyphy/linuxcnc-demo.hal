@@ -1,0 +1,111 @@
+loadrt	trivkins
+loadrt	[EMCMOT]EMCMOT			base_period_nsec=[EMCMOT]BASE_PERIOD servo_period_nsec=[EMCMOT]SERVO_PERIOD traj_period_nsec=[EMCMOT]SERVO_PERIOD key=[EMCMOT]SHMEM_KEY num_joints=[TRAJ]AXES
+
+loadrt	stepgen				step_type=0,0,0
+loadrt	charge_pump
+loadrt	comp				count=3
+loadusr -W hal_manualtoolchange
+
+# Base thread
+addf	stepgen.make-pulses		base-thread
+
+# Servo thread
+addf	stepgen.capture-position	servo-thread
+addf	motion-command-handler		servo-thread
+addf	motion-controller		servo-thread
+addf	stepgen.update-freq		servo-thread
+addf	charge-pump			servo-thread
+addf	comp.0				servo-thread
+addf	comp.1				servo-thread
+addf	comp.2				servo-thread
+
+# Spindle control
+net	spindle-cw			<= motion.spindle-forward
+net	spindle-ccw			<= motion.spindle-reverse
+
+# Coolant control
+net	coolant-mist			<= iocontrol.0.coolant-mist
+net	coolant-flood			<= iocontrol.0.coolant-flood
+
+# heartbeat generator
+setp	charge-pump.enable		1
+net	heartbeat			<= charge-pump.out-4
+
+# Emergency stop logic
+net	estop-out-not			<= iocontrol.0.user-enable-out
+net	estop-in-not			=> iocontrol.0.emc-enable-in
+
+# Manual tool change
+net	tool-change			iocontrol.0.tool-change		=> hal_manualtoolchange.change
+net	tool-changed			iocontrol.0.tool-changed	<= hal_manualtoolchange.changed
+net	tool-number			iocontrol.0.tool-prep-number	=> hal_manualtoolchange.number
+net	tool-prepare-loopback		iocontrol.0.tool-prepare	=> iocontrol.0.tool-prepared
+
+# X joint
+setp	stepgen.0.position-scale	[AXIS_0]SCALE
+setp	stepgen.0.steplen		[STEPCONF]STEPLEN
+setp	stepgen.0.stepspace		[STEPCONF]STEPSPACE
+setp	stepgen.0.dirhold		[STEPCONF]DIRHOLD
+setp	stepgen.0.dirsetup		[STEPCONF]DIRSETUP
+setp	stepgen.0.maxaccel		[AXIS_0]STEPGEN_MAXACCEL
+net	xpos-cmd			axis.0.motor-pos-cmd => stepgen.0.position-cmd
+net	xpos-fb				stepgen.0.position-fb => axis.0.motor-pos-fb
+net	xstep				<= stepgen.0.step
+net	xdir				<= stepgen.0.dir
+net	xenable				axis.0.amp-enable-out => stepgen.0.enable
+net	home-x				=> axis.0.home-sw-in
+net	limit-x				=> axis.0.neg-lim-sw-in
+net	limit-x				=> axis.0.pos-lim-sw-in
+
+# Y joint
+setp	stepgen.1.position-scale	[AXIS_1]SCALE
+setp	stepgen.1.steplen		[STEPCONF]STEPLEN
+setp	stepgen.1.stepspace		[STEPCONF]STEPSPACE
+setp	stepgen.1.dirhold		[STEPCONF]DIRHOLD
+setp	stepgen.1.dirsetup		[STEPCONF]DIRSETUP
+setp	stepgen.1.maxaccel		[AXIS_1]STEPGEN_MAXACCEL
+net	ypos-cmd			axis.1.motor-pos-cmd => stepgen.1.position-cmd
+net	ypos-fb				stepgen.1.position-fb => axis.1.motor-pos-fb
+net	ystep				<= stepgen.1.step
+net	ydir				<= stepgen.1.dir
+net	yenable				axis.1.amp-enable-out => stepgen.1.enable
+net	home-y				=> axis.1.home-sw-in
+net	limit-y				=> axis.1.neg-lim-sw-in
+net	limit-y				=> axis.1.pos-lim-sw-in
+
+# Z joint
+setp	stepgen.2.position-scale	[AXIS_2]SCALE
+setp	stepgen.2.steplen		[STEPCONF]STEPLEN
+setp	stepgen.2.stepspace		[STEPCONF]STEPSPACE
+setp	stepgen.2.dirhold		[STEPCONF]DIRHOLD
+setp	stepgen.2.dirsetup		[STEPCONF]DIRSETUP
+setp	stepgen.2.maxaccel		[AXIS_2]STEPGEN_MAXACCEL
+net	zpos-cmd			axis.2.motor-pos-cmd => stepgen.2.position-cmd
+net	zpos-fb				stepgen.2.position-fb => axis.2.motor-pos-fb
+net	zstep				<= stepgen.2.step
+net	zdir				<= stepgen.2.dir
+net	zenable				axis.2.amp-enable-out => stepgen.2.enable
+net	home-z				=> axis.2.home-sw-in
+net	limit-z				=> axis.2.neg-lim-sw-in
+net	limit-z				=> axis.2.pos-lim-sw-in
+
+# Simulate home switches
+net	xpos-cmd			=> comp.0.in0
+setp	comp.0.in1			0
+setp	comp.0.hyst			0.1
+net	home-x				<= comp.0.out
+
+net	ypos-cmd			=> comp.1.in0
+setp	comp.1.in1			0
+setp	comp.1.hyst			0.1
+net	home-y				<= comp.1.out
+
+net	zpos-cmd			=> comp.2.in0
+setp	comp.2.in1			0
+setp	comp.2.hyst			0.1
+net	home-z				<= comp.2.out
+
+# Simulate hardware limit switches
+sets	limit-x				0
+sets	limit-y				0
+sets	limit-z				0

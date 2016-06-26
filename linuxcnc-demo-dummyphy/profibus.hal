@@ -1,0 +1,88 @@
+# ---------------------------------------
+# --- PROFIBUS DP
+# --- LinuxCNC HAL configuration file
+# ------
+
+
+# --- Load the pyprofibus HAL userspace module ---
+#
+# Parameters:
+#  --loglevel LVL	: Change the log level.
+#
+#  --nice NICE		: Renice the process. -20 <= NICE <= 19.
+#			  Default: Do not renice.
+#
+# The last parameter is the configuration file describing the PROFIBUS.
+#
+loadusr -Wn profibus pyprofibus-linuxcnc-hal pyprofibus.conf
+
+
+# --- Enable the used output pins ---
+# All output pins are deactivated by default.
+# So all output pins connected below, should be activated here by writing
+# a '1' to the '.active' pin.
+# Deactivated output pins will not be forwarded from LinuxCNC to the PROFIBUS.
+setp	profibus.slave.8.output.bit.0.0.active		1
+setp	profibus.slave.8.output.bit.0.1.active		1
+setp	profibus.slave.8.output.bit.1.0.active		1
+setp	profibus.slave.8.output.bit.1.1.active		1
+setp	profibus.slave.8.output.bit.1.2.active		1
+setp	profibus.slave.8.output.bit.1.3.active		1
+setp	profibus.slave.8.output.bit.1.4.active		1
+setp	profibus.slave.8.output.float.4.active		1
+setp	profibus.slave.8.output.float.8.active		1
+setp	profibus.slave.8.output.float.12.active		1
+setp	profibus.slave.8.output.u8.16.active		1
+setp	profibus.slave.8.output.u16.18.active		1
+setp	profibus.slave.8.output.s16.20.active		1
+setp	profibus.slave.8.output.u31.22.active		1
+setp	profibus.slave.8.output.s32.26.active		1
+
+# --- Connect output pins ---
+net	heartbeat		=> profibus.slave.8.output.bit.0.0
+net	estop-out-not		=> profibus.slave.8.output.bit.0.1
+net	spindle-cw		=> profibus.slave.8.output.bit.1.0
+net	spindle-ccw		=> profibus.slave.8.output.bit.1.1
+net	xpos-cmd		=> profibus.slave.8.output.float.4
+net	ypos-cmd		=> profibus.slave.8.output.float.8
+net	zpos-cmd		=> profibus.slave.8.output.float.12
+
+setp	profibus.slave.8.output.bit.1.2			1 # limit-x inverted dummy loopback
+setp	profibus.slave.8.output.bit.1.3			1 # limit-y inverted dummy loopback
+setp	profibus.slave.8.output.bit.1.4			1 # limit-z inverted dummy loopback
+setp	profibus.slave.8.output.bit.1.5			0 # estop-in-not inverted dummy loopback
+
+
+# --- Enable the used input pins ---
+# All input pins are deactivated by default.
+# So all input pins connected below, should be activated here by writing
+# a '1' to the '.active' pin.
+# Deactivated input pins will not be forwarded from the PROFIBUS to LinuxCNC.
+setp	profibus.slave.8.input.bit.0.0.active		1
+setp	profibus.slave.8.input.bit.0.1.active		1
+setp	profibus.slave.8.input.bit.1.0.active		1
+setp	profibus.slave.8.input.bit.1.1.active		1
+setp	profibus.slave.8.input.bit.1.2.active		1
+setp	profibus.slave.8.input.bit.1.3.active		1
+setp	profibus.slave.8.input.bit.1.4.active		1
+setp	profibus.slave.8.input.bit.1.5.active		1
+setp	profibus.slave.8.input.float.4.active		1
+setp	profibus.slave.8.input.float.8.active		1
+setp	profibus.slave.8.input.float.12.active		1
+setp	profibus.slave.8.input.u8.16.active		1
+setp	profibus.slave.8.input.u16.18.active		1
+setp	profibus.slave.8.input.s16.20.active		1
+setp	profibus.slave.8.input.u31.22.active		1
+setp	profibus.slave.8.input.s32.26.active		1
+
+# --- Connect input pins ---
+net	limit-x			<= profibus.slave.8.input.bit.1.2
+net	limit-y			<= profibus.slave.8.input.bit.1.3
+net	limit-z			<= profibus.slave.8.input.bit.1.4
+net	estop-in-not		<= profibus.slave.8.input.bit.1.5
+
+
+
+# Always keep this at the end of this file.
+# This will activate data transfer between pyprofibus and LinuxCNC.
+setp	profibus.config.ready	1
