@@ -20,7 +20,6 @@ import binascii
 
 try:
 	import serial
-	import serial.rs485
 except ImportError as e:
 	if "PyPy" in sys.version and\
 	   sys.version_info[0] == 2:
@@ -29,9 +28,12 @@ except ImportError as e:
 		import glob
 		sys.path.extend(glob.glob("/usr/lib/python2*/*-packages/"))
 		import serial
-		import serial.rs485
 	else:
 		raise e
+try:
+	import serial.rs485
+except ImportError:
+	pass
 
 
 class CpPhySerial(CpPhy):
@@ -47,6 +49,10 @@ class CpPhySerial(CpPhy):
 		self.__discardTimeout = None
 		try:
 			if useRS485Class:
+				if not hasattr(serial, "rs485"):
+					raise PhyError("Module serial.rs485 "
+						"is not available. "
+						"Please use useRS485Class=False.")
 				self.__serial = serial.rs485.RS485()
 			else:
 				self.__serial = serial.Serial()
