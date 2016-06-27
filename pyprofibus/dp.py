@@ -292,13 +292,34 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 			(self.identNumber >> 8) & 0xFF,
 			self.identNumber & 0xFF]
 
+	def notExist(self):
+		return (self.b0 & self.B0_STANOEX) != 0
+
+	def notReady(self):
+		return (self.b0 & self.B0_STANORDY) != 0
+
+	def cfgFault(self):
+		return (self.b0 & self.B0_CFGFLT) != 0
+
+	def hasExtDiag(self):
+		return (self.b0 & self.B0_EXTDIAG) != 0
+
+	def isNotSupp(self):
+		return (self.b0 & self.B0_NOSUPP) != 0
+
+	def prmFault(self):
+		return (self.b0 & self.B0_PRMFLT) != 0
+
+	def masterLock(self):
+		return (self.b0 & self.B0_MLOCK) != 0
+
+	def hasOnebit(self):
+		return (self.b1 & self.B1_ONE) != 0
+
 	def needsNewPrmCfg(self):
 		return ((self.b0 & self.B0_CFGFLT) != 0 or\
 			(self.b0 & self.B0_PRMFLT) != 0 or\
 			(self.b1 & self.B1_PRMREQ) != 0)
-
-	def hasExtDiag(self):
-		return (self.b0 & self.B0_EXTDIAG) != 0
 
 	def isReadyDataEx(self):
 		return not ((self.b0 & (\

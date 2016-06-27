@@ -223,6 +223,9 @@ class DpMaster(object):
 		if self.debug:
 			print("DPM%d: %s" % (self.dpmClass, msg))
 
+	def __errorMsg(self, msg):
+		print("DPM%d:  >ERROR<  %s" % (self.dpmClass, msg))
+
 	def destroy(self):
 		if self.phy:
 			self.phy.close()
@@ -416,6 +419,33 @@ class DpMaster(object):
 
 		for telegram in slave.getRxQueue():
 			if DpTelegram_SlaveDiag_Con.checkType(telegram):
+				if telegram.notExist():
+					self.__errorMsg("Slave %d is not reachable "
+						"via this line." %\
+						slave.slaveDesc.slaveAddr)
+				if telegram.cfgFault():
+					self.__errorMsg("Slave %d reports a faulty "
+						"configuration (Chk_Cfg)." %\
+						slave.slaveDesc.slaveAddr)
+				if telegram.prmFault():
+					self.__errorMsg("Slave %d reports a faulty "
+						"parameterization (Set_Prm)." %\
+						slave.slaveDesc.slaveAddr)
+				if telegram.isNotSupp():
+					self.__errorMsg("Slave %d replied with "
+						"\"function not supported\". "
+						"The parameters should be checked "
+						"(Set_Prm)." %\
+						slave.slaveDesc.slaveAddr)
+				if telegram.masterLock():
+					self.__errorMsg("Slave %d is already controlled "
+						"(locked to) another DP-master." %\
+						slave.slaveDesc.slaveAddr)
+				if telegram.hasOnebit():
+					self.__debugMsg("Slave %d diagnostic "
+						"always-one-bit is zero." %\
+						slave.slaveDesc.slaveAddr)
+
 				if telegram.hasExtDiag():
 					pass#TODO turn on red DIAG-LED
 				if telegram.isReadyDataEx():
