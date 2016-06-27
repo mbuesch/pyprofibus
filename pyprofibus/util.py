@@ -16,6 +16,9 @@ import errno
 class ProfibusError(Exception):
 	pass
 
+def bytesToHex(b, sep = " "):
+	return sep.join("%02X" % c for c in bytearray(b))
+
 def intToHex(val):
 	if val is None:
 		return "None"

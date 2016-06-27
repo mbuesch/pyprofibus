@@ -16,7 +16,6 @@ from pyprofibus.fdl import FdlTelegram
 from pyprofibus.util import *
 
 import sys
-import binascii
 
 try:
 	import serial
@@ -151,8 +150,7 @@ class CpPhySerial(CpPhy):
 		finally:
 			self.__rxBuf = rxBuf
 		if self.debug and ret:
-			print("PHY-serial: RX %s" %\
-			      binascii.b2a_hex(ret).decode())
+			print("PHY-serial: RX   %s" % bytesToHex(ret))
 		return ret
 
 	def setConfig(self, baudrate = CpPhy.BAUD_9600):
@@ -201,8 +199,7 @@ class CpPhySerial(CpPhy):
 		try:
 			telegramData = bytearray(telegramData)
 			if self.debug:
-				print("PHY-serial: TX %s" %\
-				      binascii.b2a_hex(telegramData).decode())
+				print("PHY-serial: TX   %s" % bytesToHex(telegramData))
 			self.__serial.write(telegramData)
 		except serial.SerialException as e:
 			raise PhyError("PHY-serial: Failed to transmit "

@@ -15,8 +15,6 @@ from pyprofibus.phy import *
 from pyprofibus.fdl import *
 from pyprofibus.dp import *
 
-import binascii
-
 
 class CpPhyDummySlave(CpPhy):
 	"""Dummy slave PROFIBUS CP PHYsical layer
@@ -41,8 +39,7 @@ class CpPhyDummySlave(CpPhy):
 			telegramData = self.__pollQueue.pop(0)
 		except IndexError as e:
 			return None
-		self.__msg("Receiving %s" %\
-			binascii.b2a_hex(bytearray(telegramData)).decode())
+		self.__msg("Receiving    %s" % bytesToHex(telegramData))
 		return telegramData
 
 	def setConfig(self, baudrate = CpPhy.BAUD_9600):
@@ -92,12 +89,10 @@ class CpPhyDummySlave(CpPhy):
 
 	def profibusSend_SDN(self, telegramData):
 		telegramData = bytearray(telegramData)
-		self.__msg("Sending SDN %s" %\
-			binascii.b2a_hex(telegramData).decode())
+		self.__msg("Sending SDN  %s" % bytesToHex(telegramData))
 		self.__mockSend(telegramData, srd = False)
 
 	def profibusSend_SRD(self, telegramData):
 		telegramData = bytearray(telegramData)
-		self.__msg("Sending SRD %s" %\
-			binascii.b2a_hex(telegramData).decode())
+		self.__msg("Sending SRD  %s" % bytesToHex(telegramData))
 		self.__mockSend(telegramData, srd = True)
