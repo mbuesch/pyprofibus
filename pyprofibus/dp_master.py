@@ -471,6 +471,7 @@ class DpMaster(object):
 			slave.faultDeb.fault()
 			slave.pendingReq = None
 
+		suppressSend = False
 		if slave.pendingReq:
 			for telegram in slave.getRxQueue():
 				if not DpTelegram_DataExchange_Con.checkType(telegram):
@@ -482,7 +483,10 @@ class DpMaster(object):
 				resFunc = telegram.fc & FdlTelegram.FC_RESFUNC_MASK
 				if resFunc in {FdlTelegram.FC_DH,
 					       FdlTelegram.FC_RDH}:
+					self.__debugMsg("Slave %d requested diagnostics." %\
+						slave.slaveDesc.slaveAddr)
 					slave.setState(slave.STATE_WDXRDY, 1.0)
+					suppressSend = True
 				elif resFunc == FdlTelegram.FC_RS:
 					raise DpError("Service not active "
 						"on slave %d" % slave.slaveDesc.slaveAddr)
@@ -491,7 +495,7 @@ class DpMaster(object):
 				slave.pendingReq = None
 				slave.faultDeb.faultless()
 				slave.restartStateTimeout()
-		if not slave.pendingReq:
+		if not slave.pendingReq and not suppressSend:
 			try:
 				self.__send(slave,
 					telegram = DpTelegram_DataExchange_Req(
@@ -505,9 +509,12 @@ class DpMaster(object):
 		faultCount = slave.faultDeb.get()
 		if faultCount >= 5:
 			# communication lost
+			self.__debugMsg("Communication lost in Data_Exchange.")
 			slave.setState(slave.STATE_INIT)
 		elif faultCount >= 3:
 			# Diagnose the slave
+			self.__debugMsg("Many errors in Data_Exchange. "
+				"Requesting diagnostic information...")
 			slave.setState(slave.STATE_WDXRDY, 1.0)
 
 		return dataExInData
@@ -528,6 +535,9 @@ class DpMaster(object):
 
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
 		if slave.stateHasTimeout():
+			self.__debugMsg("State machine timeout! "
+				"Trying to re-initializing slave %d..." %\
+				slave.slaveDesc.slaveAddr)
 			slave.setState(slave.STATE_INIT)
 			dataExInData = None
 		else:
