@@ -366,6 +366,7 @@ class DpMaster(object):
 			return None
 
 		if slave.shortAckReceived:
+			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WCFG, 0.5)
 		return None
 
@@ -390,6 +391,7 @@ class DpMaster(object):
 			return None
 
 		if slave.shortAckReceived:
+			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WDXRDY, 1.0)
 		return None
 
