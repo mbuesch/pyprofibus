@@ -57,16 +57,16 @@ try:
 	slaveDescs = master.getSlaveList()
 
 	# Run the slave state machine.
-	outData = bytearray( (0x42, 0x24,) )
+	slaveData = [ bytearray((0x42, 0x24,)) ] * len(slaveDescs)
 	rtSum, runtimes, nextPrint = 0, [ 0, ] * 512, monotonic_time() + 1.0
 	while True:
 		start = monotonic_time()
 
 		# Run slave state machines.
-		for slaveDesc in slaveDescs:
-			inData = master.runSlave(slaveDesc, outData)
+		for i, slaveDesc in enumerate(slaveDescs):
+			inData = master.runSlave(slaveDesc, slaveData[i])
 			if inData is not None:
-				outData = bytearray( (inData[1], inData[0]) )
+				slaveData[i] = bytearray((inData[1], inData[0]))
 
 		# Print statistics.
 		end = monotonic_time()
