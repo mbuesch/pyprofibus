@@ -15,7 +15,7 @@ X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.4
 Vcs-Git: git://git.bues.ch/pyprofibus.git
 Vcs-Browser: https://bues.ch/gitweb?p=pyprofibus.git
-Homepage: https://bues.ch/h/profibus
+Homepage: https://bues.ch/a/profibus
 
 
 Package: python-pyprofibus
