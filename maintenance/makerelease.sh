@@ -30,6 +30,14 @@ hook_post_checkout()
 	rm -r "$1"/maintenance
 }
 
+hook_regression_tests()
+{
+	default_hook_regression_tests "$@"
+
+	# Run selftests
+	sh "$1/tests/run.sh"
+}
+
 project=pyprofibus
 default_archives=py-sdist-bz2
 makerelease "$@"
