@@ -97,8 +97,6 @@ class CpPhy(object):
 		self.__secPerFrame = symLen * float(1 + 8 + 1 + 1)
 
 	def __allocateBus(self, nrSendOctets, nrReplyOctets):
-		return True#TODO
-
 		now = monotonic_time()
 		if now < self.__allocUntil:
 			return False
