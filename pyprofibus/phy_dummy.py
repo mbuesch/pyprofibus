@@ -29,12 +29,25 @@ class CpPhyDummySlave(CpPhy):
 			print("CpPhyDummySlave: %s" % message)
 
 	def close(self):
+		"""Close the PHY device.
+		"""
 		self.__pollQueue = []
 		super(CpPhyDummySlave, self).close()
 
-	# Poll for received packet.
-	# timeout => In seconds. 0 = none, Negative = unlimited.
-	def poll(self, timeout = 0):
+	def sendData(self, telegramData, srd):
+		"""Send data to the physical line.
+		"""
+		telegramData = bytearray(telegramData)
+		self.__msg("Sending %s  %s" % ("SRD" if srd else "SDN",
+					       bytesToHex(telegramData)))
+		self.__mockSend(telegramData, srd = srd)
+
+	def pollData(self, timeout = 0):
+		"""Poll received data from the physical line.
+		timeout => timeout in seconds.
+			   0 = no timeout, return immediately.
+			   negative = unlimited.
+		"""
 		try:
 			telegramData = self.__pollQueue.pop(0)
 		except IndexError as e:
@@ -45,6 +58,7 @@ class CpPhyDummySlave(CpPhy):
 	def setConfig(self, baudrate = CpPhy.BAUD_9600):
 		self.__msg("Baudrate = %d" % baudrate)
 		self.__pollQueue = []
+		super(CpPhyDummySlave, self).setConfig(baudrate = baudrate)
 
 	def __mockSend(self, telegramData, srd):
 		if not srd:
@@ -86,13 +100,3 @@ class CpPhyDummySlave(CpPhy):
 			text = "SRD mock-send error: %s" % str(e)
 			self.__msg(text)
 			raise PhyError(text)
-
-	def profibusSend_SDN(self, telegramData):
-		telegramData = bytearray(telegramData)
-		self.__msg("Sending SDN  %s" % bytesToHex(telegramData))
-		self.__mockSend(telegramData, srd = False)
-
-	def profibusSend_SRD(self, telegramData):
-		telegramData = bytearray(telegramData)
-		self.__msg("Sending SRD  %s" % bytesToHex(telegramData))
-		self.__mockSend(telegramData, srd = True)

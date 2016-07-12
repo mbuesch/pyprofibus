@@ -99,7 +99,7 @@ class CpPhySerial(CpPhy):
 
 	# Poll for received packet.
 	# timeout => In seconds. 0 = none, Negative = unlimited.
-	def poll(self, timeout = 0):
+	def pollData(self, timeout = 0):
 		timeoutStamp = monotonic_time() + timeout
 		ret, rxBuf, s, size = None, self.__rxBuf, self.__serial, -1
 		getSize = FdlTelegram.getSizeFromRaw
@@ -153,6 +153,18 @@ class CpPhySerial(CpPhy):
 			print("PHY-serial: RX   %s" % bytesToHex(ret))
 		return ret
 
+	def sendData(self, telegramData, srd):
+		if self.__discardTimeout is not None:
+			return
+		try:
+			telegramData = bytearray(telegramData)
+			if self.debug:
+				print("PHY-serial: TX   %s" % bytesToHex(telegramData))
+			self.__serial.write(telegramData)
+		except serial.SerialException as e:
+			raise PhyError("PHY-serial: Failed to transmit "
+				"telegram:\n" + str(e))
+
 	def setConfig(self, baudrate = CpPhy.BAUD_9600):
 		wellSuppBaud = (9600, 19200)
 		if baudrate not in wellSuppBaud:
@@ -176,6 +188,7 @@ class CpPhySerial(CpPhy):
 			raise PhyError("Failed to set CP-PHY "
 				"configuration:\n" + str(e))
 		self.__setConfigPiLC(baudrate)
+		super(CpPhySerial, self).setConfig(baudrate = baudrate)
 
 	def __setConfigPiLC(self, baudrate):
 		"""Reconfigure the PiLC HAT, if available.
@@ -192,17 +205,3 @@ class CpPhySerial(CpPhy):
 		except raspi_hat_conf.PilcConf.Error as e:
 			raise PhyError("Failed to configure PiLC HAT:\n%s" %\
 				str(e))
-
-	def profibusSend_SDN(self, telegramData):
-		if self.__discardTimeout is not None:
-			return
-		try:
-			telegramData = bytearray(telegramData)
-			if self.debug:
-				print("PHY-serial: TX   %s" % bytesToHex(telegramData))
-			self.__serial.write(telegramData)
-		except serial.SerialException as e:
-			raise PhyError("PHY-serial: Failed to transmit "
-				"telegram:\n" + str(e))
-
-	profibusSend_SRD = profibusSend_SDN

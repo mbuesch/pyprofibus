@@ -18,7 +18,8 @@ from pyprofibus.util import *
 
 
 class PhyError(ProfibusError):
-	pass
+	"""PHY exception.
+	"""
 
 class CpPhy(object):
 	"""PROFIBUS CP PHYsical layer base class.
@@ -38,20 +39,79 @@ class CpPhy(object):
 
 	def __init__(self, debug = False):
 		self.debug = debug
+		self.__close()
 
 	def close(self):
-		pass
+		"""Close the PHY device.
+		This method may be reimplemented in the PHY driver.
+		"""
+		self.__close()
 
-	# Poll for received packet.
-	# timeout => In seconds. 0 = none, Negative = unlimited.
-	def poll(self, timeout = 0):
+	def __close(self):
+		self.__txQueue = []
+		self.__allocUntil = monotonic_time()
+		self.__secPerFrame = 0.0
+
+	def sendData(self, telegramData, srd):
+		"""Send data to the physical line.
+		Reimplement this method in the PHY driver.
+		"""
 		raise NotImplementedError
+
+	def pollData(self, timeout):
+		"""Poll received data from the physical line.
+		timeout => timeout in seconds.
+			   0 = no timeout, return immediately.
+			   negative = unlimited.
+		Reimplement this method in the PHY driver.
+		"""
+		raise NotImplementedError
+
+	def poll(self, timeout = 0):
+		"""timeout => timeout in seconds.
+			      0 = no timeout, return immediately.
+			      negative = unlimited.
+		"""
+		if self.__txQueue:
+			self.__send()
+		return self.pollData(timeout)
+
+	def __send(self):
+		telegramData, srd, maxReplyLen = self.__txQueue[0]
+		if self.__allocateBus(len(telegramData), maxReplyLen):
+			self.__txQueue.pop(0)
+			self.sendData(telegramData, srd)
+
+	def send(self, telegramData, srd, maxReplyLen = -1):
+		if maxReplyLen < 0 or maxReplyLen > 255:
+			maxReplyLen = 255
+
+		self.__txQueue.append((telegramData, srd, maxReplyLen))
+		self.__send()
 
 	def setConfig(self, baudrate = BAUD_9600):
-		raise NotImplementedError
+		"""Set the PHY configuration.
+		This method may be reimplemented in the PHY driver.
+		"""
+		symLen = 1.0 / baudrate
+		self.__secPerFrame = symLen * float(1 + 8 + 1 + 1)
 
-	def profibusSend_SDN(self, telegramData):
-		raise NotImplementedError
+	def __allocateBus(self, nrSendOctets, nrReplyOctets):
+		return True#TODO
 
-	def profibusSend_SRD(self, telegramData):
-		raise NotImplementedError
+		now = monotonic_time()
+		if now < self.__allocUntil:
+			return False
+		secPerFrame = self.__secPerFrame
+		seconds = secPerFrame * nrSendOctets
+		if nrReplyOctets:
+			pass#TODO IFS
+			seconds += secPerFrame * nrReplyOctets
+		pass#TODO
+		self.__allocUntil = now + seconds
+		return True
+
+	def releaseBus(self):
+		self.__allocUntil = monotonic_time()
+		if self.__txQueue:
+			self.__send()
