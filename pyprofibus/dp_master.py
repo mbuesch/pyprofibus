@@ -36,7 +36,7 @@ class DpSlaveState(object):
 		STATE_WDIAG	: "wait for diag",
 		STATE_WPRM	: "wait for Prm",
 		STATE_WCFG	: "wait for Cfg",
-		STATE_WDXRDY	: "wait for Data_Exchange ready",
+		STATE_WDXRDY	: "wait for Data_Exchange-ready",
 		STATE_DX	: "Data_Exchange",
 	}
 
@@ -537,7 +537,7 @@ class DpMaster(object):
 			dataExInData = handler(self, slave, dataExOutData)
 
 			if slave.stateIsChanging():
-				self.__debugMsg("slave[%02X].state --> %s" % (
+				self.__debugMsg("slave[%02X].state --> '%s'" % (
 					slave.slaveDesc.slaveAddr,
 					slave.state2name[slave.getNextState()]))
 		slave.applyState()
