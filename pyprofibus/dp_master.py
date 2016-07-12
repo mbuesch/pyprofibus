@@ -18,7 +18,7 @@ from pyprofibus.util import *
 import math
 
 
-class DpSlaveState():
+class DpSlaveState(object):
 	"""Run time state of a DP slave that is managed by a DPM instance.
 	"""
 
@@ -40,7 +40,8 @@ class DpSlaveState():
 		STATE_DX	: "Data_Exchange",
 	}
 
-	def __init__(self, slaveDesc):
+	def __init__(self, master, slaveDesc):
+		self.master = master
 		self.slaveDesc = slaveDesc
 
 		# Fault counter
@@ -59,7 +60,6 @@ class DpSlaveState():
 		# Currently running request telegram
 		self.pendingReq = None
 		self.pendingReqTimeout = TimeLimit()
-		self.busLock = False
 		self.shortAckReceived = False
 
 		# Received telegrams
@@ -79,7 +79,7 @@ class DpSlaveState():
 	def setState(self, state, stateTimeout = TimeLimit.UNLIMITED):
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeout)
-		self.busLock = False
+		self.master._releaseSlave(self)
 
 	def applyState(self):
 		# Enter the new state
@@ -89,7 +89,6 @@ class DpSlaveState():
 		if self.stateJustEntered() or\
 		   not self.pendingReq:
 			self.pendingReq = None
-			self.busLock = False
 
 	def stateJustEntered(self):
 		# Returns True, if the state was just entered.
@@ -200,10 +199,12 @@ class DpMaster(object):
 		self.masterAddr = masterAddr
 		self.debug = debug
 
+		self.__activeSlave = None
+
 		mcastSlaveDesc = DpSlaveDesc(
 			identNumber = 0,
 			slaveAddr = FdlTelegram.ADDRESS_MCAST)
-		mcastSlave = DpSlaveState(mcastSlaveDesc)
+		mcastSlave = DpSlaveState(self, mcastSlaveDesc)
 
 		self.__slaveDescs = {
 			FdlTelegram.ADDRESS_MCAST : mcastSlaveDesc,
@@ -239,7 +240,7 @@ class DpMaster(object):
 		   slaveAddr in self.__slaveStates:
 			raise DpError("Slave %d is already registered." % slaveAddr)
 		self.__slaveDescs[slaveAddr] = slaveDesc
-		self.__slaveStates[slaveAddr] = DpSlaveState(slaveDesc)
+		self.__slaveStates[slaveAddr] = DpSlaveState(self, slaveDesc)
 
 	def getSlaveList(self):
 		"""Get a list of registered DpSlaveDescs, sorted by address."""
@@ -248,18 +249,11 @@ class DpMaster(object):
 						       key = lambda x: x[0])
 			 if addr != FdlTelegram.ADDRESS_MCAST ]
 
-	def __busIsLocked(self):
-		# Returns True, if any slave locked the bus.
-		return any(slave.busLock
-			   for slave in self.__slaveStates.values())
-
-	def __send(self, slave, telegram,
-		   timeout = 0.1, busLock = False):
+	def __send(self, slave, telegram, timeout = 0.1):
 		"""Asynchronously send a telegram to a slave.
 		"""
 		slave.pendingReq = telegram
 		slave.pendingReqTimeout.start(timeout)
-		slave.busLock = busLock
 		slave.shortAckReceived = False
 		try:
 			if FdlTelegram.checkType(telegram):
@@ -271,11 +265,16 @@ class DpMaster(object):
 		except ProfibusError as e:
 			slave.pendingReq = None
 			raise e
+		self.__activeSlave = slave
+
+	def _releaseSlave(self, slave):
+		if slave is self.__activeSlave:
+			self.__activeSlave = None
+			self.phy.releaseBus()
 
 	def __runSlave_init(self, slave, dataExOutData):
 		if (not slave.pendingReq or\
-		    slave.pendingReqTimeout.exceed()) and\
-		   not self.__busIsLocked():
+		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Trying to initialize slave %d..." % (
 				slave.slaveDesc.slaveAddr))
 
@@ -316,8 +315,7 @@ class DpMaster(object):
 		return None
 
 	def __runSlave_waitDiag(self, slave, dataExOutData):
-		if not slave.pendingReq and\
-		   not self.__busIsLocked():
+		if not slave.pendingReq:
 			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -349,8 +347,7 @@ class DpMaster(object):
 		return None
 
 	def __runSlave_waitPrm(self, slave, dataExOutData):
-		if not slave.pendingReq and\
-		   not self.__busIsLocked():
+		if not slave.pendingReq:
 			self.__debugMsg("Sending Set_Prm to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -358,8 +355,7 @@ class DpMaster(object):
 			try:
 				slave.slaveDesc.setPrmTelegram.sa = self.masterAddr
 				self.__send(slave,
-					telegram = slave.slaveDesc.setPrmTelegram,
-					busLock = True)
+					telegram = slave.slaveDesc.setPrmTelegram)
 			except ProfibusError as e:
 				self.__debugMsg("Set_Prm failed: %s" % str(e))
 				return None
@@ -374,17 +370,15 @@ class DpMaster(object):
 		return None
 
 	def __runSlave_waitCfg(self, slave, dataExOutData):
-		if not slave.pendingReq and\
-		   not self.__busIsLocked():
-			self.__debugMsg("Sending Ckh_Cfg to slave %d..." %\
+		if not slave.pendingReq:
+			self.__debugMsg("Sending Chk_Cfg to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
 			try:
 				slave.slaveDesc.chkCfgTelegram.sa = self.masterAddr
 				self.__send(slave,
 					telegram = slave.slaveDesc.chkCfgTelegram,
-					timeout = 0.3,
-					busLock = True)
+					timeout = 0.3)
 			except ProfibusError as e:
 				self.__debugMsg("Chk_Cfg failed: %s" % str(e))
 				return None
@@ -399,8 +393,7 @@ class DpMaster(object):
 		return None
 
 	def __runSlave_waitDxRdy(self, slave, dataExOutData):
-		if not slave.pendingReq and\
-		   not self.__busIsLocked():
+		if not slave.pendingReq:
 			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -471,7 +464,6 @@ class DpMaster(object):
 			slave.faultDeb.fault()
 			slave.pendingReq = None
 
-		suppressSend = False
 		if slave.pendingReq:
 			for telegram in slave.getRxQueue():
 				if not DpTelegram_DataExchange_Con.checkType(telegram):
@@ -486,7 +478,6 @@ class DpMaster(object):
 					self.__debugMsg("Slave %d requested diagnostics." %\
 						slave.slaveDesc.slaveAddr)
 					slave.setState(slave.STATE_WDXRDY, 1.0)
-					suppressSend = True
 				elif resFunc == FdlTelegram.FC_RS:
 					raise DpError("Service not active "
 						"on slave %d" % slave.slaveDesc.slaveAddr)
@@ -495,7 +486,8 @@ class DpMaster(object):
 				slave.pendingReq = None
 				slave.faultDeb.faultless()
 				slave.restartStateTimeout()
-		if not slave.pendingReq and not suppressSend:
+				self._releaseSlave(slave)
+		else:
 			try:
 				self.__send(slave,
 					telegram = DpTelegram_DataExchange_Req(
