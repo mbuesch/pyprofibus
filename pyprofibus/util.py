@@ -60,7 +60,8 @@ class TimeLimit(object):
 	"""Generic timeout helper.
 	"""
 
-	UNLIMITED = -1	# No limit
+	UNLIMITED	= -1	# No limit
+	DEFAULT		= -2
 
 	# limit => The time limit, in seconds.
 	#          Negative value = unlimited.

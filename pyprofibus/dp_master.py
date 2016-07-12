@@ -40,6 +40,15 @@ class DpSlaveState(object):
 		STATE_DX	: "Data_Exchange",
 	}
 
+	defaultTimeLimits = {
+		STATE_INIT	: TimeLimit.UNLIMITED,
+		STATE_WDIAG	: 1.0,
+		STATE_WPRM	: 0.5,
+		STATE_WCFG	: 0.5,
+		STATE_WDXRDY	: 1.0,
+		STATE_DX	: 0.3,
+	}
+
 	def __init__(self, master, slaveDesc):
 		self.master = master
 		self.slaveDesc = slaveDesc
@@ -76,7 +85,9 @@ class DpSlaveState(object):
 	def getNextState(self):
 		return self.__nextState
 
-	def setState(self, state, stateTimeout = TimeLimit.UNLIMITED):
+	def setState(self, state, stateTimeout = TimeLimit.DEFAULT):
+		if stateTimeout == TimeLimit.DEFAULT:
+			stateTimeout = self.defaultTimeLimits[state]
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeout)
 		self.master._releaseSlave(self)
@@ -308,7 +319,7 @@ class DpMaster(object):
 							slave.slaveDesc.slaveAddr,
 							stype))
 				else:
-					slave.setState(slave.STATE_WDIAG, 1.0)
+					slave.setState(slave.STATE_WDIAG)
 			else:
 				self.__debugMsg("Slave %d replied with a "
 					"weird telegram:\n%s" % str(telegram))
@@ -338,7 +349,7 @@ class DpMaster(object):
 
 		for telegram in slave.getRxQueue():
 			if DpTelegram_SlaveDiag_Con.checkType(telegram):
-				slave.setState(slave.STATE_WPRM, 0.5)
+				slave.setState(slave.STATE_WPRM)
 				break
 			else:
 				self.__debugMsg("Received spurious "
@@ -366,7 +377,7 @@ class DpMaster(object):
 
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
-			slave.setState(slave.STATE_WCFG, 0.5)
+			slave.setState(slave.STATE_WCFG)
 		return None
 
 	def __runSlave_waitCfg(self, slave, dataExOutData):
@@ -389,7 +400,7 @@ class DpMaster(object):
 
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
-			slave.setState(slave.STATE_WDXRDY, 1.0)
+			slave.setState(slave.STATE_WDXRDY)
 		return None
 
 	def __runSlave_waitDxRdy(self, slave, dataExOutData):
@@ -442,7 +453,7 @@ class DpMaster(object):
 				if telegram.hasExtDiag():
 					pass#TODO turn on red DIAG-LED
 				if telegram.isReadyDataEx():
-					slave.setState(slave.STATE_DX, 0.3)
+					slave.setState(slave.STATE_DX)
 				elif telegram.needsNewPrmCfg():
 					slave.setState(slave.STATE_INIT)
 				break
@@ -477,7 +488,7 @@ class DpMaster(object):
 					       FdlTelegram.FC_RDH}:
 					self.__debugMsg("Slave %d requested diagnostics." %\
 						slave.slaveDesc.slaveAddr)
-					slave.setState(slave.STATE_WDXRDY, 1.0)
+					slave.setState(slave.STATE_WDXRDY)
 				elif resFunc == FdlTelegram.FC_RS:
 					raise DpError("Service not active "
 						"on slave %d" % slave.slaveDesc.slaveAddr)
@@ -507,7 +518,7 @@ class DpMaster(object):
 			# Diagnose the slave
 			self.__debugMsg("Many errors in Data_Exchange. "
 				"Requesting diagnostic information...")
-			slave.setState(slave.STATE_WDXRDY, 1.0)
+			slave.setState(slave.STATE_WDXRDY)
 
 		return dataExInData
 
