@@ -343,9 +343,6 @@ class DpMaster(object):
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
 
-		if slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-			return None
 
 		for telegram in slave.getRxQueue():
 			if DpTelegram_SlaveDiag_Con.checkType(telegram):
@@ -354,6 +351,9 @@ class DpMaster(object):
 			else:
 				self.__debugMsg("Received spurious "
 					"telegram:\n%s" % str(telegram))
+		else:
+			if slave.pendingReqTimeout.exceed():
+				slave.setState(slave.STATE_INIT)
 
 		return None
 
@@ -371,13 +371,12 @@ class DpMaster(object):
 				self.__debugMsg("Set_Prm failed: %s" % str(e))
 				return None
 
-		if slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-			return None
-
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WCFG)
+		elif slave.pendingReqTimeout.exceed():
+			slave.setState(slave.STATE_INIT)
+
 		return None
 
 	def __runSlave_waitCfg(self, slave, dataExOutData):
@@ -394,13 +393,12 @@ class DpMaster(object):
 				self.__debugMsg("Chk_Cfg failed: %s" % str(e))
 				return None
 
-		if slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-			return None
-
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WDXRDY)
+		elif slave.pendingReqTimeout.exceed():
+			slave.setState(slave.STATE_INIT)
+
 		return None
 
 	def __runSlave_waitDxRdy(self, slave, dataExOutData):
@@ -416,10 +414,6 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
-
-		if slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-			return None
 
 		for telegram in slave.getRxQueue():
 			if DpTelegram_SlaveDiag_Con.checkType(telegram):
@@ -460,6 +454,10 @@ class DpMaster(object):
 			else:
 				self.__debugMsg("Received spurious "
 					"telegram:\n%s" % str(telegram))
+		else:
+			if slave.pendingReqTimeout.exceed():
+				slave.setState(slave.STATE_INIT)
+
 		return None
 
 	def __runSlave_dataExchange(self, slave, dataExOutData):
