@@ -439,7 +439,7 @@ class DpMaster(object):
 					self.__errorMsg("Slave %d is already controlled "
 						"(locked to) another DP-master." %\
 						slave.slaveDesc.slaveAddr)
-				if telegram.hasOnebit():
+				if not telegram.hasOnebit():
 					self.__debugMsg("Slave %d diagnostic "
 						"always-one-bit is zero." %\
 						slave.slaveDesc.slaveAddr)
