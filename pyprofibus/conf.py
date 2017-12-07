@@ -94,7 +94,11 @@ class PbConf(object):
 			return fallback
 		try:
 			p = _ConfigParser()
-			p.readfp(StringIO(text), filename)
+			textIO = StringIO(text)
+			if hasattr(p, "read_file"):
+				p.read_file(textIO, filename)
+			else:
+				p.readfp(textIO, filename)
 
 			# [PROFIBUS]
 			self.debug = getint("PROFIBUS", "debug",
