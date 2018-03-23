@@ -54,7 +54,7 @@ def fileExists(filename):
 	return True
 
 # Monotonic time. Returns a float second count.
-monotonic_time = getattr(time, "monotonic", time.clock)
+monotonic_time = getattr(time, "monotonic", time.time)
 
 class TimeLimit(object):
 	"""Generic timeout helper.
