@@ -2,6 +2,7 @@ include example_*.py
 include example_*.conf
 include COPYING
 include README.md
+include dummy.gsd
 graft doc
 graft debian
 graft linuxcnc-demo-et200s
