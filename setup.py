@@ -2,9 +2,22 @@
 
 from __future__ import print_function
 
-from distutils.core import setup
-from pyprofibus.version import VERSION_STRING
+import sys, os
+basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Add the basedir to PYTHONPATH before we try to import pyprofibus.version
+sys.path.insert(0, os.getcwd())
+sys.path.insert(0, basedir)
+
+from pyprofibus.version import VERSION_STRING
+from distutils.core import setup
+import warnings
+
+
+warnings.filterwarnings("ignore", r".*'long_description_content_type'.*")
+
+with open(os.path.join(basedir, "README.md"), "rb") as fd:
+	readmeText = fd.read().decode("UTF-8")
 
 setup(	name		= "pyprofibus",
 	version		= VERSION_STRING,
@@ -37,8 +50,6 @@ setup(	name		= "pyprofibus",
 		"Programming Language :: Python :: 3",
 		"Programming Language :: Python :: Implementation :: CPython",
 		"Programming Language :: Python :: Implementation :: PyPy",
-#		"Programming Language :: Python :: Implementation :: Jython",
-#		"Programming Language :: Python :: Implementation :: IronPython",
 		"Topic :: Education",
 		"Topic :: Home Automation",
 		"Topic :: Scientific/Engineering",
@@ -48,5 +59,6 @@ setup(	name		= "pyprofibus",
 		"Topic :: System :: Hardware :: Hardware Drivers",
 		"Topic :: System :: Networking",
 	],
-	long_description = open("README.md").read()
+	long_description=readmeText,
+	long_description_content_type="text/markdown",
 )
