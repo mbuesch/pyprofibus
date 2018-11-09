@@ -111,6 +111,10 @@ class PbConf(object):
 					  fallback = "/dev/ttyS0")
 			self.phyBaud = getint("PHY", "baud",
 					      fallback = 9600)
+			self.phyRtsCts = getboolean("PHY", "rtscts",
+					      fallback = False)
+			self.phyDsrDtr = getboolean("PHY", "dsrdtr",
+					      fallback = False)
 
 			# [DP]
 			self.dpMasterClass = getint("DP", "master_class",
@@ -180,5 +184,5 @@ class PbConf(object):
 		else:
 			raise PbConfError("Invalid phyType parameter value: "
 					  "%s" % self.phyType)
-		phy.setConfig(baudrate = self.phyBaud)
+		phy.setConfig(baudrate = self.phyBaud, rtscts = self.phyRtsCts, dsrdtr = self.phyDsrDtr)
 		return phy

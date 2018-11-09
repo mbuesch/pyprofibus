@@ -64,7 +64,7 @@ class CpPhySerial(CpPhy):
 			self.__serial.timeout = 0
 			self.__serial.xonxoff = False
 			self.__serial.rtscts = False
-			self.__serial.dsrdtr = True
+			self.__serial.dsrdtr = False
 			if useRS485Class:
 				self.__serial.rs485_mode = serial.rs485.RS485Settings(
 					rts_level_for_tx = True,
@@ -165,7 +165,7 @@ class CpPhySerial(CpPhy):
 			raise PhyError("PHY-serial: Failed to transmit "
 				"telegram:\n" + str(e))
 
-	def setConfig(self, baudrate = CpPhy.BAUD_9600):
+	def setConfig(self, baudrate = CpPhy.BAUD_9600, rtscts = False, dsrdtr = False):
 		wellSuppBaud = (9600, 19200)
 		if baudrate not in wellSuppBaud:
 			# The hw/driver might silently ignore the baudrate
@@ -179,9 +179,11 @@ class CpPhySerial(CpPhy):
 			      baudrate,
 			      ", ".join(str(b) for b in wellSuppBaud)))
 		try:
-			if baudrate != self.__serial.baudrate:
+			if baudrate != self.__serial.baudrate or rtscts != self.__serial.rtscts or dsrdtr != self.__serial.dsrdtr:
 				self.__serial.close()
 				self.__serial.baudrate = baudrate
+				self.__serial.rtscts = rtscts
+				self.__serial.dsrdtr = dsrdtr
 				self.__serial.open()
 				self.__rxBuf = bytearray()
 		except (serial.SerialException, ValueError) as e:
