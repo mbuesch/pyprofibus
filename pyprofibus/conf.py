@@ -51,6 +51,8 @@ class PbConf(object):
 	phyType		= None
 	phyDev		= None
 	phyBaud		= None
+	phyRtsCts	= None
+	phyDsrDtr	= None
 	# [DP] section
 	dpMasterClass	= None
 	dpMasterAddr	= None
