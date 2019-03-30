@@ -177,14 +177,18 @@ class PbConf(object):
 		if phyType == "serial":
 			import pyprofibus.phy_serial
 			phy = pyprofibus.phy_serial.CpPhySerial(
-				debug = (self.debug >= 2),
-				port = self.phyDev)
+				debug=(self.debug >= 2),
+				port=self.phyDev
+			)
 		elif phyType in {"dummyslave", "dummy_slave", "dummy-slave"}:
 			import pyprofibus.phy_dummy
 			phy = pyprofibus.phy_dummy.CpPhyDummySlave(
-				debug = (self.debug >= 2))
+				debug=(self.debug >= 2)
+			)
 		else:
 			raise PbConfError("Invalid phyType parameter value: "
 					  "%s" % self.phyType)
-		phy.setConfig(baudrate = self.phyBaud, rtscts = self.phyRtsCts, dsrdtr = self.phyDsrDtr)
+		phy.setConfig(baudrate=self.phyBaud,
+			      rtscts=self.phyRtsCts,
+			      dsrdtr=self.phyDsrDtr)
 		return phy

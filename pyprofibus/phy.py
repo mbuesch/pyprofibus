@@ -89,7 +89,7 @@ class CpPhy(object):
 		self.__txQueue.append((telegramData, srd, maxReplyLen))
 		self.__send()
 
-	def setConfig(self, baudrate = BAUD_9600):
+	def setConfig(self, baudrate=BAUD_9600, *args, **kwargs):
 		"""Set the PHY configuration.
 		This method may be reimplemented in the PHY driver.
 		"""

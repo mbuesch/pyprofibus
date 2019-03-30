@@ -55,10 +55,10 @@ class CpPhyDummySlave(CpPhy):
 		self.__msg("Receiving    %s" % bytesToHex(telegramData))
 		return telegramData
 
-	def setConfig(self, baudrate = CpPhy.BAUD_9600):
+	def setConfig(self, baudrate=CpPhy.BAUD_9600, *args, **kwargs):
 		self.__msg("Baudrate = %d" % baudrate)
 		self.__pollQueue = []
-		super(CpPhyDummySlave, self).setConfig(baudrate = baudrate)
+		super(CpPhyDummySlave, self).setConfig(baudrate=baudrate, *args, **kwargs)
 
 	def __mockSend(self, telegramData, srd):
 		if not srd:

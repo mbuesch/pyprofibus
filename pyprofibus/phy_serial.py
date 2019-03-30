@@ -165,7 +165,7 @@ class CpPhySerial(CpPhy):
 			raise PhyError("PHY-serial: Failed to transmit "
 				"telegram:\n" + str(e))
 
-	def setConfig(self, baudrate = CpPhy.BAUD_9600, rtscts = False, dsrdtr = False):
+	def setConfig(self, baudrate=CpPhy.BAUD_9600, rtscts=False, dsrdtr=False, *args, **kwargs):
 		wellSuppBaud = (9600, 19200)
 		if baudrate not in wellSuppBaud:
 			# The hw/driver might silently ignore the baudrate
@@ -190,7 +190,10 @@ class CpPhySerial(CpPhy):
 			raise PhyError("Failed to set CP-PHY "
 				"configuration:\n" + str(e))
 		self.__setConfigPiLC(baudrate)
-		super(CpPhySerial, self).setConfig(baudrate = baudrate)
+		super(CpPhySerial, self).setConfig(baudrate=baudrate,
+						   rtscts=rtscts,
+						   dsrdtr=dsrdtr,
+						   *args, **kwargs)
 
 	def __setConfigPiLC(self, baudrate):
 		"""Reconfigure the PiLC HAT, if available.
