@@ -25,10 +25,13 @@ class CpPhyFPGA(CpPhy):
 
 	PFX = "PHY-fpga: "
 
-	def __init__(self, debug=False):
-		super(CpPhyFPGA, self).__init__(debug=debug)
+	def __init__(self, spiBus, spiCS, spiSpeedHz, *args, **kwargs):
+		super(CpPhyFPGA, self).__init__(*args, **kwargs)
 		self.__rxDeque = deque()
 		self.__driver = None
+		self.__spiBus = spiBus
+		self.__spiCS = spiCS
+		self.__spiSpeedHz = spiSpeedHz
 
 	def close(self):
 		"""Close the PHY device.
@@ -81,8 +84,9 @@ class CpPhyFPGA(CpPhy):
 		super(CpPhyFPGA, self).setConfig(baudrate=baudrate, *args, **kwargs)
 		self.close()
 		try:
-			self.__driver = ProfiPHYDriver()
-			#TODO SPI
+			self.__driver = ProfiPHYDriver(spiDev=self.__spiBus,
+						       spiChipSelect=self.__spiCS,
+						       spiSpeedHz=self.__spiSpeedHz)
 			#TODO baud
 		except ProfiPHYError as e:
 			raise PhyError(self.PFX + ("Failed to setup driver:\n%s" % str(e)))

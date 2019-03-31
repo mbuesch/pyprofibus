@@ -39,12 +39,12 @@ class CpPhySerial(CpPhy):
 	"""pyserial based PROFIBUS CP PHYsical layer
 	"""
 
-	def __init__(self, port, debug = False, useRS485Class = False):
+	def __init__(self, port, useRS485Class=False, *args, **kwargs):
 		"""port => "/dev/ttySx"
 		debug => enable/disable debugging.
 		useRS485Class => Use serial.rs485.RS485, if True. (might be slower).
 		"""
-		super(CpPhySerial, self).__init__(debug = debug)
+		super(CpPhySerial, self).__init__(*args, **kwargs)
 		self.__discardTimeout = None
 		self.__rxBuf = bytearray()
 		try:
