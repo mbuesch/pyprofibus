@@ -53,6 +53,9 @@ class PbConf(object):
 	phyBaud		= None
 	phyRtsCts	= None
 	phyDsrDtr	= None
+	phySpiBus	= None
+	phySpiCS	= None
+	phySpiSpeedHz	= None
 	# [DP] section
 	dpMasterClass	= None
 	dpMasterAddr	= None
@@ -104,27 +107,33 @@ class PbConf(object):
 
 			# [PROFIBUS]
 			self.debug = getint("PROFIBUS", "debug",
-					    fallback = 0)
+					    fallback=0)
 
 			# [PHY]
 			self.phyType = get("PHY", "type",
-					   fallback = "serial")
+					   fallback="serial")
 			self.phyDev = get("PHY", "dev",
-					  fallback = "/dev/ttyS0")
+					  fallback="/dev/ttyS0")
 			self.phyBaud = getint("PHY", "baud",
-					      fallback = 9600)
+					      fallback=9600)
 			self.phyRtsCts = getboolean("PHY", "rtscts",
-					      fallback = False)
+						    fallback=False)
 			self.phyDsrDtr = getboolean("PHY", "dsrdtr",
-					      fallback = False)
+						    fallback=False)
+			self.phySpiBus = getint("PHY", "spiBus",
+						fallback=0)
+			self.phySpiCS = getint("PHY", "spiCS",
+					       fallback=0)
+			self.phySpiSpeedHz = getint("PHY", "spiSpeedHz",
+						    fallback=1000000)
 
 			# [DP]
 			self.dpMasterClass = getint("DP", "master_class",
-						    fallback = 1)
+						    fallback=1)
 			if self.dpMasterClass not in {1, 2}:
 				raise ValueError("Invalid master_class")
 			self.dpMasterAddr = getint("DP", "master_addr",
-						   fallback = 0x02)
+						   fallback=0x02)
 			if self.dpMasterAddr < 0 or self.dpMasterAddr > 127:
 				raise ValueError("Invalid master_addr")
 
@@ -138,15 +147,15 @@ class PbConf(object):
 				s.gsd = GsdInterp.fromFile(
 					get(section, "gsd"))
 				s.syncMode = getboolean(section, "sync_mode",
-							fallback = False)
+							fallback=False)
 				s.freezeMode = getboolean(section, "freeze_mode",
-							  fallback = False)
+							  fallback=False)
 				s.groupMask = getboolean(section, "group_mask",
-							 fallback = 1)
+							 fallback=1)
 				if s.groupMask < 0 or s.groupMask > 0xFF:
 					raise ValueError("Invalid group_mask")
 				s.watchdogMs = getint(section, "watchdog_ms",
-						      fallback = 5000)
+						      fallback=5000)
 				if s.watchdogMs < 0 or s.watchdogMs > 255 * 255:
 					raise ValueError("Invalid watchdog_ms")
 				s.inputSize = getint(section, "input_size")
@@ -176,22 +185,21 @@ class PbConf(object):
 		phyType = self.phyType.lower().strip()
 		if phyType == "serial":
 			import pyprofibus.phy_serial
-			phy = pyprofibus.phy_serial.CpPhySerial(
-				debug=(self.debug >= 2),
-				port=self.phyDev
-			)
+			phyClass = pyprofibus.phy_serial.CpPhySerial
 		elif phyType in {"dummyslave", "dummy_slave", "dummy-slave"}:
 			import pyprofibus.phy_dummy
-			phy = pyprofibus.phy_dummy.CpPhyDummySlave(
-				debug=(self.debug >= 2)
-			)
+			phyClass = pyprofibus.phy_dummy.CpPhyDummySlave
 		elif phyType == "fpga":
 			import pyprofibus.phy_fpga
-			phy = pyprofibus.phy_fpga.CpPhyFPGA(
-				debug=(self.debug >= 2))
+			phyClass = pyprofibus.phy_fpga.CpPhyFPGA
 		else:
 			raise PbConfError("Invalid phyType parameter value: "
 					  "%s" % self.phyType)
+		phy = phyClass(debug=(self.debug >= 2),
+			       port=self.phyDev,
+			       spiBus=self.phySpiBus,
+			       spiCS=self.phySpiCS,
+			       spiSpeedHz=self.phySpiSpeedHz)
 		phy.setConfig(baudrate=self.phyBaud,
 			      rtscts=self.phyRtsCts,
 			      dsrdtr=self.phyDsrDtr)
