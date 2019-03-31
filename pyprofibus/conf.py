@@ -185,6 +185,10 @@ class PbConf(object):
 			phy = pyprofibus.phy_dummy.CpPhyDummySlave(
 				debug=(self.debug >= 2)
 			)
+		elif phyType == "fpga":
+			import pyprofibus.phy_fpga
+			phy = pyprofibus.phy_fpga.CpPhyFPGA(
+				debug=(self.debug >= 2))
 		else:
 			raise PbConfError("Invalid phyType parameter value: "
 					  "%s" % self.phyType)
