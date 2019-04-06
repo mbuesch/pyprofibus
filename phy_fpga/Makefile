@@ -1,6 +1,6 @@
+NAME		:= pyprofibus
 TARGET		:= tinyfpga_bx
-
-NAME		:= pyprofibus_fpga_phy
+TARGET_NAME	:= $(TARGET)_$(NAME)
 
 YOSYS		:= yosys
 NEXTPNR		:= nextpnr
@@ -31,14 +31,14 @@ else
 $(error TARGET $(TARGET) is invalid)
 endif
 
-YOSYS_LOG	:= yosys.log
-NEXTPNR_LOG	:= nextpnr.log
-ICEPACK_LOG	:= icepack.log
-ICETIME_LOG	:= icetime.log
+YOSYS_LOG	:= $(TARGET_NAME)_yosys.log
+NEXTPNR_LOG	:= $(TARGET_NAME)_nextpnr.log
+ICEPACK_LOG	:= $(TARGET_NAME)_icepack.log
+ICETIME_LOG	:= $(TARGET_NAME)_icetime.log
 LOG		= >$(1) 2>&1 || ( $(CAT) $(1); $(FALSE) )
 
 .DEFAULT_GOAL := all
-all: $(NAME).bin $(NAME).rpt
+all: $(TARGET_NAME).bin $(TARGET_NAME).rpt
 
 crc8_func.v: crcgen.py
 	$(PYTHON) crcgen.py --nr-bits 8 --polynomial 0x07 --verilog-function --name crc8 > $@
@@ -49,7 +49,7 @@ crc8_func.v: crcgen.py
 		$(call LOG,$(YOSYS_LOG))
 
 %.asc: $(PCF_FILE) %.blif
-	$(NEXTPNR)-$(NEXTPNR_ARCH) --$(DEVICE) --package $(PNR_PACKAGE) --json $(NAME).json --pcf $< --asc $@ \
+	$(NEXTPNR)-$(NEXTPNR_ARCH) --$(DEVICE) --package $(PNR_PACKAGE) --json $(TARGET_NAME).json --pcf $< --asc $@ \
 		$(call LOG,$(NEXTPNR_LOG))
 
 %.bin: %.asc
@@ -66,7 +66,7 @@ crc8_func.v: crcgen.py
 	-@$(ECHO)
 	-@$(GREP) -A6 -i -e 'Device utilisation' $(NEXTPNR_LOG)
 
-install: $(NAME).bin
+install: $(TARGET_NAME).bin
 	$(TINYPROG) -p $<
 
 boot:
