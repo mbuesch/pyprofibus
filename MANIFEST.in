@@ -1,13 +1,15 @@
-include example_*.py
-include example_*.conf
+graft debian
+graft doc
+graft linuxcnc-demo-dummyphy
+graft linuxcnc-demo-et200s
+graft phy_fpga
+graft tests
+
 include COPYING
 include README.md
 include dummy.gsd
-graft doc
-graft debian
-graft linuxcnc-demo-et200s
-graft linuxcnc-demo-dummyphy
-graft tests
+include example_*.conf
+include example_*.py
 
-prune build
 prune ./build
+prune build
