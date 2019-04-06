@@ -38,6 +38,31 @@ hook_regression_tests()
 	sh "$1/tests/run.sh"
 }
 
+do_build()
+{
+	local target="$1"
+	local checkout_dir="$2"
+
+	local builddir="$checkout_dir/phy_fpga"
+	local bindir="$builddir/bin/$target"
+
+	make -C "$builddir" TARGET="$target"
+	mkdir -p "$bindir"
+	for ftype in .bin .asc .blif .rpt .json _yosys.log _nextpnr.log; do
+		local binfile="${target}_pyprofibusphy${ftype}"
+		cp "$builddir/$binfile" "$bindir/$binfile"
+	done
+	make -C "$builddir" TARGET="$target" clean
+}
+
+hook_pre_archives()
+{
+	local archive_dir="$1"
+	local checkout_dir="$2"
+
+	do_build tinyfpga_bx "$checkout_dir"
+}
+
 project=pyprofibus
 default_archives=py-sdist-xz
 makerelease "$@"

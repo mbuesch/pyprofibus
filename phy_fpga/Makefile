@@ -1,4 +1,4 @@
-NAME		:= pyprofibus
+NAME		:= pyprofibusphy
 TARGET		:= tinyfpga_bx
 TARGET_NAME	:= $(TARGET)_$(NAME)
 
