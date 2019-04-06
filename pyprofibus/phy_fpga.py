@@ -14,9 +14,14 @@ from pyprofibus.compat import *
 from pyprofibus.phy import *
 from pyprofibus.fdl import *
 from pyprofibus.dp import *
-from pyprofibus.fpga import ProfiPHYDriver, ProfiPHYError
+from pyprofibus.phy_fpga_driver import *
 
 from collections import deque
+
+
+__all__ = [
+	"CpPhyFPGA",
+]
 
 
 class CpPhyFPGA(CpPhy):
