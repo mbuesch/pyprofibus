@@ -39,5 +39,5 @@ hook_regression_tests()
 }
 
 project=pyprofibus
-default_archives=py-sdist-bz2
+default_archives=py-sdist-xz
 makerelease "$@"
