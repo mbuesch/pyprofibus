@@ -73,8 +73,8 @@ class CpPhyFPGA(CpPhy):
 			count = len(telegramDataList)
 			if count >= 1:
 				telegramData = telegramDataList[0]
-			if count >= 2:
-				self.__rxDeque.extend(telegramDataList[1:])
+				if count >= 2:
+					self.__rxDeque.extend(telegramDataList[1:])
 
 		if self.debug and telegramData:
 			print(self.PFX + ("RX   %s" % bytesToHex(telegramData)))
@@ -87,6 +87,6 @@ class CpPhyFPGA(CpPhy):
 			self.__driver = ProfiPHYDriver(spiDev=self.__spiBus,
 						       spiChipSelect=self.__spiCS,
 						       spiSpeedHz=self.__spiSpeedHz)
-			#TODO baud
+			self.__driver.setBaudRate(baudrate)
 		except ProfiPHYError as e:
 			raise PhyError(self.PFX + ("Failed to setup driver:\n%s" % str(e)))

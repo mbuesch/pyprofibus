@@ -33,8 +33,8 @@ class ProfiPHYMsg(object):
 
 	SPI_FLG_START	= 0
 	SPI_FLG_CTRL	= 1
-	SPI_FLG_TX_OVR	= 2
-	SPI_FLG_RX_OVR	= 3
+	SPI_FLG_TX_OVR	= 2 #TODO
+	SPI_FLG_RX_OVR	= 3 #TODO
 	SPI_FLG_UNUSED4	= 4
 	SPI_FLG_UNUSED5	= 5
 	SPI_FLG_UNUSED7	= 6
@@ -101,10 +101,14 @@ class ProfiPHYMsg(object):
 		return cls.LEN_UNKNOWN
 
 class ProfiPHYMsgCtrl(ProfiPHYMsg):
-	SPICTRL_NOP	= 0
-	SPICTRL_PING	= 1
-	SPICTRL_PONG	= 2
-	SPICTRL_RESULT	= 3
+	SPICTRL_NOP		= 0
+	SPICTRL_PING		= 1
+	SPICTRL_PONG		= 2
+	SPICTRL_SOFTRESET	= 3
+	SPICTRL_GETERRORS	= 4
+	SPICTRL_ERRORS		= 5
+	SPICTRL_GETBAUD		= 6
+	SPICTRL_BAUD		= 7
 
 	CTRL_LEN = 8
 
@@ -129,17 +133,11 @@ class ProfiPHYMsgCtrl(ProfiPHYMsg):
 	@classmethod
 	def fromBytes(cls, data):
 		if data[0] != cls.SPI_SM_MAGIC:
-			print("CTRL MAGIC ERROR")
-			assert(0)#XXX
 			return None
 		flg = data[1]
 		if cls.parity(flg):
-			print("CTRL FLG MISMATCH")
-			assert(0)#XXX
 			return None
 		if not (flg & (1 << cls.SPI_FLG_CTRL)):
-			print("CTRL FLG not CTRL")
-			assert(0)#XXX
 			return None
 		ctrl = data[2]
 		ctrlData = data[3] << 24
@@ -149,8 +147,6 @@ class ProfiPHYMsgCtrl(ProfiPHYMsg):
 		crc = data[7]
 		crcExpected = cls.crc8(data[2:7])
 		if crc != crcExpected:
-			print("CRC ERROR")
-			assert(0)#XXX
 			return None
 		return cls(ctrl, ctrlData, flg)
 
@@ -296,11 +292,12 @@ class ProfiPHYProc(multiprocessing.Process):
 
 			# The first byte must be the magic byte.
 			if rxData[0] != ProfiPHYMsg.SPI_SM_MAGIC:
-				print("Wrong magic")
+				# Magic mismatch. Try to find the magic byte.
 				rxData = rxData[1:]
 				while rxData and rxData[0] != ProfiPHYMsg.SPI_SM_MAGIC:
 					rxData = rxData[1:]
 				if not rxData:
+					# Magic byte not found.
 					continue
 
 			# If the remaining data is not enough, get more bytes.
@@ -310,7 +307,7 @@ class ProfiPHYProc(multiprocessing.Process):
 			# Get and check the received flags field.
 			flgField = rxData[1]
 			if ProfiPHYMsg.parity(flgField):
-				print("FLG MISMATCH")#XXX
+				# Parity mismatch.
 				continue
 
 			if flgField & (1 << ProfiPHYMsg.SPI_FLG_CTRL):
@@ -342,13 +339,8 @@ class ProfiPHYProc(multiprocessing.Process):
 
 				# Get the raw PB data.
 				rawDataLen = rxData[10]
-				if rawDataLen <= 0:
-					print("NO LEN")
-					assert(0)#XXX
-					continue
-				if rawDataLen > 8:
-					print("INVALID LEN FIELD")
-					assert(0)#XXX
+				if rawDataLen <= 0 or rawDataLen > 8:
+					# Invalid length.
 					continue
 				rawData = rxData[2 : 2 + rawDataLen]
 				rxDataBuf += rawData
@@ -358,10 +350,10 @@ class ProfiPHYProc(multiprocessing.Process):
 					telegramLen = ProfiPHYMsg.calcLen(rxDataBuf)
 					if (telegramLen == ProfiPHYMsg.LEN_ERROR or
 					    telegramLen == ProfiPHYMsg.LEN_UNKNOWN):
-						print("PB length error")
-						#assert(0)#XXX
+						# Could not determine telegram length.
 						continue
 					if telegramLen == ProfiPHYMsg.LEN_NEEDMORE:
+						# Need more telegram bytes.
 						continue
 					expectedRxLength = telegramLen
 
@@ -499,6 +491,8 @@ class ProfiPHYDriver(object):
 	"""Driver for FPGA based PROFIBUS PHY.
 	"""
 
+	FPGA_CLK_HZ = 16000000
+
 	def __init__(self, spiDev=0, spiChipSelect=0, spiSpeedHz=1000000):
 		self.__ioProc = None
 		self.__startup(spiDev, spiChipSelect, spiSpeedHz)
@@ -513,8 +507,18 @@ class ProfiPHYDriver(object):
 		if not self.__ioProc.start():
 			raise ProfiPHYError("Failed to start I/O process.")
 
-		# Try to ping the FPGA.
-		for i in range(2, -1, -1):
+		# Reset the FPGA.
+		# But first ping the device to make sure SPI communication works.
+		self.__ping()
+		self.__controlSend(ProfiPHYMsgCtrl(ProfiPHYMsgCtrl.SPICTRL_SOFTRESET))
+		time.sleep(0.01)
+		self.__ping()
+
+	def __ping(self, tries=3, shutdown=True):
+		"""Ping the FPGA and check if a pong can be received.
+		Calls shutdown() and raises a ProfiPHYError on failure.
+		"""
+		for i in range(tries - 1, -1, -1):
 			try:
 				pingMsg = ProfiPHYMsgCtrl(ProfiPHYMsgCtrl.SPICTRL_PING)
 				pongMsg = self.__controlTransferSync(pingMsg,
@@ -525,10 +529,11 @@ class ProfiPHYDriver(object):
 				break
 			except ProfiPHYError as e:
 				if i <= 0:
-					try:
-						self.shutdown()
-					except ProfiPHYError as e:
-						pass
+					if shutdown:
+						try:
+							self.shutdown()
+						except ProfiPHYError as e:
+							pass
 					raise e
 
 	def shutdown(self):
@@ -538,6 +543,25 @@ class ProfiPHYDriver(object):
 			return
 		self.__ioProc.shutdownProc()
 		self.__ioProc = None
+
+	def setBaudRate(self, baudrate):
+		"""Configure the PHY baud rate.
+		"""
+		if self.__ioProc is None:
+			raise ProfiPHYError("Cannot set baud rate. "
+					    "Driver not initialized.")
+		if baudrate < 9600 or baudrate > 12000000:
+			raise ProfiPHYError("Invalid baud rate %d." % baudrate)
+
+		clksPerSym = int(round(self.FPGA_CLK_HZ / baudrate))
+		assert(1 <= clksPerSym <= 0xFFFFFF)
+		#TODO calculate the baud rate error and reject if too big.
+
+		txMsg = ProfiPHYMsgCtrl(ProfiPHYMsgCtrl.SPICTRL_BAUD,
+					ctrlData=clksPerSym)
+		rxMsg = self.__controlTransferSync(txMsg, ProfiPHYMsgCtrl.SPICTRL_BAUD)
+		if not rxMsg or rxMsg.ctrlData != txMsg.ctrlData:
+			raise ProfiPHYError("Failed to set baud rate.")
 
 	def __controlTransferSync(self, ctrlMsg, rxCtrlMsgId):
 		"""Transfer a control message and wait for a reply.
