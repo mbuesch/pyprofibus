@@ -267,14 +267,18 @@ class CrcGen(object):
 
 if __name__ == "__main__":
 	try:
+		def argInt(string):
+			if string.startswith("0x"):
+				return int(string[2:], 16)
+			return int(string)
 		p = argparse.ArgumentParser()
 		g = p.add_mutually_exclusive_group()
 		g.add_argument("-p", "--python", action="store_true", help="Generate Python code")
 		g.add_argument("-v", "--verilog-function", action="store_true", help="Generate Verilog function")
 		g.add_argument("-m", "--verilog-module", action="store_true", help="Generate Verilog module")
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
-		p.add_argument("-P", "--polynomial", type=int, default=0x07, help="CRC polynomial")
-		p.add_argument("-B", "--nr-bits", type=int, choices=[8,], default=8, help="Number of bits")
+		p.add_argument("-P", "--polynomial", type=argInt, default=0x07, help="CRC polynomial")
+		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8,], default=8, help="Number of bits")
 		p.add_argument("-n", "--name", type=str, default="crc", help="Generated function/module name")
 		p.add_argument("-D", "--data-param", type=str, default="data", help="Generated function/module data parameter name")
 		p.add_argument("-C", "--crc-in-param", type=str, default="crcIn", help="Generated function/module crc input parameter name")
