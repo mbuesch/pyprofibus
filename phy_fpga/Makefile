@@ -10,12 +10,13 @@ TINYPROG	:= tinyprog
 PYTHON		:= python3
 CAT		:= cat
 GREP		:= grep
-ECHO		:= echo
+PRINTF		:= printf
 RM		:= rm
 FALSE		:= false
+TR		:= tr
 
-TARGET_LOWER	:= $(shell printf '%s' '$(TARGET)' | tr A-Z a-z)
-TARGET_UPPER	:= $(shell printf '%s' '$(TARGET)' | tr a-z A-Z)
+TARGET_LOWER	:= $(shell $(PRINTF) '%s' '$(TARGET)' | $(TR) A-Z a-z)
+TARGET_UPPER	:= $(shell $(PRINTF) '%s' '$(TARGET)' | $(TR) a-z A-Z)
 
 TOP_FILE	:= main.v
 TOP_MODULE	:= top_module
@@ -58,12 +59,12 @@ crc8_func.v: crcgen.py
 %.rpt: %.asc %.bin
 	$(ICETIME) -d $(DEVICE) -p $(PCF_FILE) -m -t -r $@ $< \
 		$(call LOG,$(ICETIME_LOG))
-	-@$(ECHO)
+	-@$(PRINTF) '\n'
 	-@$(GREP) -i -e 'Total' $@
 	-@$(GREP) -i -Ee 'Max frequency|Max delay' $(NEXTPNR_LOG)
-	-@$(ECHO)
+	-@$(PRINTF) '\n'
 	-@$(GREP) --color=auto -H -n -i -e 'Warning' $(YOSYS_LOG) $(NEXTPNR_LOG) $(ICEPACK_LOG)
-	-@$(ECHO)
+	-@$(PRINTF) '\n'
 	-@$(GREP) -A6 -i -e 'Device utilisation' $(NEXTPNR_LOG)
 
 install: $(TARGET_NAME).bin
