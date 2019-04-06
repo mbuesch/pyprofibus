@@ -22,6 +22,8 @@
 `include "profibus_phy_mod.v"
 
 
+`ifdef TARGET_TINYFPGA_BX
+
 module top_module(
 	input CLK,
 	input SPI_SS,
@@ -91,3 +93,7 @@ module top_module(
 
 	assign USBPU = 0; // Disable USB
 endmodule
+
+`else /* TARGET */
+`ERROR____TARGET_is_not_known
+`endif /* TARGET */
