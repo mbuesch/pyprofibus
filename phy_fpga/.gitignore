@@ -1,0 +1,7 @@
+*.blif
+*.json
+*.asc
+*.bin
+*.rpt
+*.log
+crc8_func.v
