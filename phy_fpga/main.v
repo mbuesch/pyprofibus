@@ -20,6 +20,7 @@
  */
 
 `include "profibus_phy_mod.v"
+`include "led_blink_mod.v"
 
 
 `ifdef TARGET_TINYFPGA_BX
@@ -70,6 +71,7 @@ module top_module(
 );
 	wire pb_rx_active;
 	wire pb_tx_active;
+
 	profibus_phy pb(
 		.clk(CLK),
 		.n_reset(PIN_19),
@@ -88,8 +90,19 @@ module top_module(
 		.tx_error(PIN_17),
 		.debug(PIN_1),
 	);
-	assign LED = pb_tx_active | pb_rx_active;
 
+	wire led_enable;
+	assign led_enable = pb_tx_active | pb_rx_active;
+
+	led_blink #(
+		.BLINK_ON_CLKS(16000000/10),
+		.BLINK_OFF_CLKS(16000000/35),
+	) led_blink (
+		.clk(CLK),
+		.n_reset(1),
+		.enable(led_enable),
+		.led(LED),
+	);
 
 	assign USBPU = 0; // Disable USB
 endmodule
