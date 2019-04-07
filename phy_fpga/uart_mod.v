@@ -52,10 +52,14 @@ module uart_symclk (
 	output reg sample,			/* Setup point (center) */
 	output reg symend,			/* End edge (trailing) */
 );
+	localparam CLKS_PER_SYM_MIN = 4; /* lower limit for clks_per_sym */
+
 	reg [23:0] count;
+	wire [23:0] clks_per_sym_limited;
 	wire [23:0] clks_per_sym_half;
 
-	assign clks_per_sym_half = clks_per_sym >> 1;
+	assign clks_per_sym_limited = (clks_per_sym >= CLKS_PER_SYM_MIN) ? clks_per_sym : CLKS_PER_SYM_MIN;
+	assign clks_per_sym_half = clks_per_sym_limited >> 1;
 
 	initial begin
 		count <= 0;
@@ -76,7 +80,7 @@ module uart_symclk (
 				setup <= 0;
 				sample <= 1;
 				symend <= 0;
-			end else if (count >= clks_per_sym - 1) begin
+			end else if (count >= clks_per_sym_limited - 1) begin
 				count <= 0;
 				setup <= 0;
 				sample <= 0;
