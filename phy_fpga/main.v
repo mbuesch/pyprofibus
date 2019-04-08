@@ -23,8 +23,100 @@
 `include "led_blink_mod.v"
 
 
+module common_main_module #(
+	parameter CLK_HZ = 0,
+) (
+	input clk,
+	input n_reset,
+
+	/* SPI bus */
+	input spi_mosi,
+	output spi_miso,
+	output spi_miso_outen,
+	input spi_sck,
+	input spi_ss,
+
+	/* Profibus and status */
+	input pb_rx,
+	output pb_rx_error,
+	output pb_rx_irq_edge,
+	output pb_rx_irq_level,
+	output pb_tx,
+	output pb_tx_error,
+
+	/* Status and debugging */
+	output led,
+`ifdef DEBUG
+	output debug,
+`endif
+);
+	wire miso;
+	wire miso_outen;
+	wire sck;
+	wire ss;
+	wire rx_error;
+	wire rx_irq_edge;
+	wire rx_irq_level;
+	wire tx;
+	wire tx_error;
+	wire rx_active;
+	wire tx_active;
+`ifdef DEBUG
+	wire debug_w;
+`endif
+
+	profibus_phy pb(
+		.clk(clk),
+		.n_reset(n_reset),
+		.rx_irq_edge(rx_irq_edge),
+		.rx_irq_level(rx_irq_level),
+		.mosi(spi_mosi),
+		.miso(miso),
+		.miso_outen(miso_outen),
+		.sck(spi_sck),
+		.ss(spi_ss),
+		.rx(pb_rx),
+		.rx_active(rx_active),
+		.rx_error(rx_error),
+		.tx(tx),
+		.tx_active(tx_active),
+		.tx_error(tx_error),
+`ifdef DEBUG
+		.debug(debug_w),
+`endif
+	);
+
+	bufif1(spi_miso,		miso,			miso_outen);
+	bufif1(spi_miso_outen,	miso_outen,		1);
+	bufif1(pb_rx_error,		rx_error,		1);
+	bufif1(pb_rx_irq_edge,	rx_irq_edge,	1);
+	bufif1(pb_rx_irq_level,	rx_irq_level,	1);
+	bufif1(pb_tx,			tx,				1);
+	bufif1(pb_tx_error,		tx_error,		1);
+`ifdef DEBUG
+	bufif1(debug,			debug_w,		1);
+`endif
+
+	wire led_w;
+	wire led_enable;
+	assign led_enable = tx_active | rx_active;
+
+	led_blink #(
+		.BLINK_ON_CLKS(CLK_HZ / 10),
+		.BLINK_OFF_CLKS(CLK_HZ / 35),
+	) led_blink (
+		.clk(clk),
+		.n_reset(n_reset),
+		.enable(led_enable),
+		.led(led_w),
+	);
+	bufif1(led, led_w, 1);
+endmodule
+
+
 `ifdef TARGET_TINYFPGA_BX
 
+/* TinyFPGA BX */
 module top_module(
 	input CLK,
 	input SPI_SS,
@@ -37,7 +129,11 @@ module top_module(
 	input USBN,
 	output USBPU,
 	output LED,
+`ifndef DEBUG
+	input PIN_1,
+`else
 	output PIN_1,
+`endif
 	input PIN_2,
 	input PIN_3,
 	input PIN_4,
@@ -69,42 +165,29 @@ module top_module(
 	input PIN_30,
 	input PIN_31,
 );
-	wire pb_rx_active;
-	wire pb_tx_active;
-
-	profibus_phy pb(
+	common_main_module #(
+		.CLK_HZ(16000000),
+	) common (
 		.clk(CLK),
 		.n_reset(PIN_19),
-		.rx_irq_edge(PIN_22),
-		.rx_irq_level(PIN_23),
-		.mosi(PIN_13),
-		.miso(PIN_12),
-//		.miso_outen(),
-		.sck(PIN_11),
-		.ss(PIN_10),
-		.rx(PIN_14),
-		.rx_active(pb_rx_active),
-		.rx_error(PIN_16),
-		.tx(PIN_15),
-		.tx_active(pb_tx_active),
-		.tx_error(PIN_17),
-		.debug(PIN_1),
-	);
-
-	wire led_enable;
-	assign led_enable = pb_tx_active | pb_rx_active;
-
-	led_blink #(
-		.BLINK_ON_CLKS(16000000/10),
-		.BLINK_OFF_CLKS(16000000/35),
-	) led_blink (
-		.clk(CLK),
-		.n_reset(1),
-		.enable(led_enable),
+		.spi_mosi(PIN_13),
+		.spi_miso(PIN_12),
+//TODO	.spi_miso_outen(),
+		.spi_sck(PIN_11),
+		.spi_ss(PIN_10),
+		.pb_rx(PIN_14),
+		.pb_rx_error(PIN_16),
+		.pb_rx_irq_edge(PIN_22),
+		.pb_rx_irq_level(PIN_23),
+		.pb_tx(PIN_15),
+		.pb_tx_error(PIN_17),
 		.led(LED),
+`ifdef DEBUG
+		.debug(PIN_1),
+`endif
 	);
 
-	assign USBPU = 0; // Disable USB
+	assign USBPU = 0; /* Disable USB */
 endmodule
 
 `else /* TARGET */
