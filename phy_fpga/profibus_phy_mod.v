@@ -192,15 +192,18 @@ module profibus_phy #(
 ) (
 	input clk,							/* clock */
 	input n_reset,						/* Not reset */
+
 	/* Host parallel interface: */
 	output rx_irq_edge,					/* Received data available (edge trigger) */
 	output rx_irq_level,				/* Received data available (level trigger) */
+
 	/* Host SPI bus interface: */
 	input mosi,							/* SPI bus MOSI signal */
 	output miso,						/* SPI bus MISO signal */
 	output miso_outen,					/* SPI bus MISO output enable */
 	input sck,							/* SPI bus clock signal */
 	input ss,							/* SPI bus slave select signal */
+
 	/* Profibus RS485 bus: */
 	input rx,							/* Raw receive signal line */
 	output rx_active,					/* PB receive in progress (optional) */
@@ -208,8 +211,11 @@ module profibus_phy #(
 	output tx,							/* Raw transmit signal line */
 	output tx_active,					/* PB transmit in progress (optional) */
 	output tx_error,					/* PB transmit error (optional) */
+
+`ifdef DEBUG
 	/* Debug interface: */
 	output reg debug,
+`endif
 );
 	`include "parity_func.v"
 	`include "crc8_func.v"
