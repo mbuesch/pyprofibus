@@ -2,6 +2,8 @@ NAME		:= pyprofibusphy
 TARGET		:= tinyfpga_bx
 TARGET_NAME	:= $(TARGET)_$(NAME)
 
+DEBUG		:= 0
+
 YOSYS		:= yosys
 NEXTPNR		:= nextpnr
 ICEPACK		:= icepack
@@ -45,7 +47,7 @@ crc8_func.v: crcgen.py
 	$(PYTHON) crcgen.py --nr-bits 8 --polynomial 0x07 --verilog-function --name crc8 > $@
 
 %.blif: $(TOP_FILE) $(wildcard *.v) $(GENERATED_V)
-	$(YOSYS) -p 'read_verilog -DTARGET_$(TARGET_UPPER)=1 $<' \
+	$(YOSYS) -p 'read_verilog -DTARGET_$(TARGET_UPPER)=1 $(if $(filter-out 0,$(DEBUG)),-DDEBUG=1) $<' \
 		-p $(YOSYS_SYNTH_CMD) \
 		$(call LOG,$(YOSYS_LOG))
 
