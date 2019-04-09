@@ -246,8 +246,6 @@ module profibus_phy #(
 	localparam SPICTRL_GETBAUD		= 6;
 	localparam SPICTRL_BAUD			= 7;
 
-	integer i;
-
 
 	/***********************************************************/
 	/* Data buffer: Profibus transmit buffer                   */
@@ -692,19 +690,8 @@ module profibus_phy #(
 						SPICTRL_PING: begin
 							/* PING command. Send PONG. */
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
-								spitx_ctrl_reply[0] <= SPI_SM_MAGIC;
-								spitx_ctrl_reply[1][SPI_FLG_START] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_CTRL] <= 1;
-								spitx_ctrl_reply[1][SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED4] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED5] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED6] <= 0;
-								spitx_ctrl_reply[2] <= SPICTRL_PONG;
-								spitx_ctrl_reply[3] <= 8'h00;
-								spitx_ctrl_reply[4] <= 8'h00;
-								spitx_ctrl_reply[5] <= 8'h00;
-								spitx_ctrl_reply[6] <= 8'h00;
+								spitx_ctrl_reply <= SPICTRL_PONG;
+								spitx_ctrl_reply_data <= 0;
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								spirx_state <= SPIRX_BEGIN;
@@ -720,24 +707,14 @@ module profibus_phy #(
 						end
 						SPICTRL_GETERRORS: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
-								spitx_ctrl_reply[0] <= SPI_SM_MAGIC;
-								spitx_ctrl_reply[1][SPI_FLG_START] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_CTRL] <= 1;
-								spitx_ctrl_reply[1][SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED4] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED5] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED6] <= 0;
-								spitx_ctrl_reply[2] <= SPICTRL_ERRORS;
-								spitx_ctrl_reply[3] <= 8'h00;
-								spitx_ctrl_reply[4] <= 8'h00;
-								spitx_ctrl_reply[5] <= 8'h00;
-								spitx_ctrl_reply[6] <= 8'h00;
+								spitx_ctrl_reply <= SPICTRL_ERRORS;
+								spitx_ctrl_reply_data <= 0;
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								/* Reset all error states. */
 								rx_buf_overflow_reset();
 								tx_buf_overflow_reset();
+
 								spirx_state <= SPIRX_BEGIN;
 							end
 						end
@@ -747,19 +724,9 @@ module profibus_phy #(
 						end
 						SPICTRL_GETBAUD: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
-								spitx_ctrl_reply[0] <= SPI_SM_MAGIC;
-								spitx_ctrl_reply[1][SPI_FLG_START] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_CTRL] <= 1;
-								spitx_ctrl_reply[1][SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED4] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED5] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED6] <= 0;
-								spitx_ctrl_reply[2] <= SPICTRL_BAUD;
-								spitx_ctrl_reply[3] <= 8'h00;
-								spitx_ctrl_reply[4] <= spirx_ctrl_data[23:16];
-								spitx_ctrl_reply[5] <= spirx_ctrl_data[15:8];
-								spitx_ctrl_reply[6] <= spirx_ctrl_data[7:0];
+								spitx_ctrl_reply <= SPICTRL_BAUD;
+								spitx_ctrl_reply_data[31:24] <= 0;
+								spitx_ctrl_reply_data[23:0] <= spirx_ctrl_data[23:0];
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								spirx_state <= SPIRX_BEGIN;
@@ -767,19 +734,9 @@ module profibus_phy #(
 						end
 						SPICTRL_BAUD: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
-								spitx_ctrl_reply[0] <= SPI_SM_MAGIC;
-								spitx_ctrl_reply[1][SPI_FLG_START] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_CTRL] <= 1;
-								spitx_ctrl_reply[1][SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED4] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED5] <= 0;
-								spitx_ctrl_reply[1][SPI_FLG_UNUSED6] <= 0;
-								spitx_ctrl_reply[2] <= SPICTRL_BAUD;
-								spitx_ctrl_reply[3] <= 8'h00;
-								spitx_ctrl_reply[4] <= spirx_ctrl_data[23:16];
-								spitx_ctrl_reply[5] <= spirx_ctrl_data[15:8];
-								spitx_ctrl_reply[6] <= spirx_ctrl_data[7:0];
+								spitx_ctrl_reply <= SPICTRL_BAUD;
+								spitx_ctrl_reply_data[31:24] <= 0;
+								spitx_ctrl_reply_data[23:0] <= spirx_ctrl_data[23:0];
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								/* Set the new baud rate. */
@@ -833,7 +790,8 @@ module profibus_phy #(
 	/* from the Profibus receive buffer.                       */
 	/***********************************************************/
 
-	reg [7:0] spitx_ctrl_reply [6:0];
+	reg [7:0] spitx_ctrl_reply;
+	reg [31:0] spitx_ctrl_reply_data;
 	reg spitx_ctrl_pending;
 	reg spitx_ctrl_pending_ack;
 	reg [7:0] spitx_bytecount;
@@ -844,9 +802,8 @@ module profibus_phy #(
 	reg [7:0] spitx_crc;
 
 	initial begin
-		for (i = 0; i < 7; i = i + 1) begin
-			spitx_ctrl_reply[i] <= 0;
-		end
+		spitx_ctrl_reply <= 0;
+		spitx_ctrl_reply_data <= 0;
 		spitx_ctrl_pending <= 0;
 		spitx_ctrl_pending_ack <= 0;
 		spitx_bytecount <= 0;
@@ -863,34 +820,74 @@ module profibus_phy #(
 			if (~spitx_data_running &&
 			    spitx_ctrl_pending != spitx_ctrl_pending_ack) begin
 				if (spi_tx_irq) begin
-					if (spitx_bytecount >= 7) begin
-						spi_tx_data <= spitx_crc;
-						spitx_bytecount <= 0;
-						spitx_bytecount <= spitx_bytecount + 1;
-						spitx_ctrl_running <= 0;
-						spitx_ctrl_pending_ack <= spitx_ctrl_pending;
-					end else begin
-						if (spitx_bytecount <= 1) begin
-							spitx_crc <= 8'hFF;
-						end else begin
-							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply[spitx_bytecount]);
+					case (spitx_bytecount)
+						0: begin
+							spi_tx_data <= SPI_SM_MAGIC;
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
 						end
-						if (spitx_bytecount == 1) begin
-							spi_tx_data[6:0] <= spitx_ctrl_reply[spitx_bytecount][6:0];
+						1: begin
+							spi_tx_data[SPI_FLG_START] <= 0;
+							spi_tx_data[SPI_FLG_CTRL] <= 1;
+							spi_tx_data[SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
+							spi_tx_data[SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
+							spi_tx_data[SPI_FLG_UNUSED4] <= 0;
+							spi_tx_data[SPI_FLG_UNUSED5] <= 0;
+							spi_tx_data[SPI_FLG_UNUSED6] <= 0;
 							spi_tx_data[SPI_FLG_PARITY] <= parity8(ODD, 0,
-											spitx_ctrl_reply[spitx_bytecount][0],
-											spitx_ctrl_reply[spitx_bytecount][1],
-											spitx_ctrl_reply[spitx_bytecount][2],
-											spitx_ctrl_reply[spitx_bytecount][3],
-											spitx_ctrl_reply[spitx_bytecount][4],
-											spitx_ctrl_reply[spitx_bytecount][5],
-											spitx_ctrl_reply[spitx_bytecount][6]);
-						end else begin
-							spi_tx_data <= spitx_ctrl_reply[spitx_bytecount];
+											0,
+											1,
+											tx_buf_overflow_get(),
+											rx_buf_overflow_get(),
+											0,
+											0,
+											0);
+							spitx_crc <= 8'hFF;
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
 						end
-						spitx_bytecount <= spitx_bytecount + 1;
-					end
-					spitx_ctrl_running <= 1;
+						2: begin
+							spi_tx_data <= spitx_ctrl_reply;
+							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply);
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
+						end
+						3: begin
+							spi_tx_data <= spitx_ctrl_reply_data[31:24];
+							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply_data[31:24]);
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
+						end
+						4: begin
+							spi_tx_data <= spitx_ctrl_reply_data[23:16];
+							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply_data[23:16]);
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
+						end
+						5: begin
+							spi_tx_data <= spitx_ctrl_reply_data[15:8];
+							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply_data[15:8]);
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
+						end
+						6: begin
+							spi_tx_data <= spitx_ctrl_reply_data[7:0];
+							spitx_crc <= crc8(spitx_crc, spitx_ctrl_reply_data[7:0]);
+							spitx_bytecount <= spitx_bytecount + 1;
+							spitx_ctrl_running <= 1;
+						end
+						7: begin
+							spi_tx_data <= spitx_crc;
+							spitx_bytecount <= 0;
+							spitx_ctrl_running <= 0;
+							spitx_ctrl_pending_ack <= spitx_ctrl_pending;
+						end
+						default: begin
+							spitx_bytecount <= 0;
+							spitx_ctrl_running <= 0;
+							spitx_ctrl_pending_ack <= spitx_ctrl_pending;
+						end
+					endcase
 				end
 			/* Are we currently not transmitting a control frame
 			 * and is a data frame pending? */
