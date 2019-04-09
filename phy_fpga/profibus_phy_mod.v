@@ -200,7 +200,6 @@ module profibus_phy #(
 	/* Host SPI bus interface: */
 	input mosi,							/* SPI bus MOSI signal */
 	output miso,						/* SPI bus MISO signal */
-	output miso_outen,					/* SPI bus MISO output enable */
 	input sck,							/* SPI bus clock signal */
 	input ss,							/* SPI bus slave select signal */
 
@@ -412,7 +411,6 @@ module profibus_phy #(
 		.clk(clk),
 		.mosi(mosi),
 		.miso(miso),
-		.miso_outen(miso_outen),
 		.sck(sck),
 		.ss(ss),
 		.rx_irq(spi_rx_irq),
