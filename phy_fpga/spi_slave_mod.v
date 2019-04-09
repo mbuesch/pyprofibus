@@ -34,7 +34,6 @@ module spi_slave #(
 	input clk,							/* clock */
 	input mosi,							/* SPI bus MOSI signal */
 	output miso,						/* SPI bus MISO signal */
-	output miso_outen,					/* SPI bus MISO output enable */
 	input sck,							/* SPI bus clock signal */
 	input ss,							/* SPI bus slave select signal */
 	output rx_irq,						/* Receive interrupt */
@@ -57,11 +56,9 @@ module spi_slave #(
 	assign sck_setup_edge = (CPOL ^ CPHA) ? sck_rising_s : sck_falling_s;
 
 	/* Output buffers. */
-	reg miso_outen_r;
 	reg miso_r;
 	reg rx_irq_r;
 	reg [WORDSIZE - 1 : 0] rx_data_r;
-	assign miso_outen = miso_outen_r;
 	assign miso = miso_r;
 	assign rx_irq = rx_irq_r;
 	assign rx_data = rx_data_r;
@@ -76,7 +73,6 @@ module spi_slave #(
 		rx_shiftreg <= 0;
 		tx_shiftreg <= 0;
 
-		miso_outen_r <= 0;
 		miso_r <= 0;
 
 		rx_irq_r <= 0;
@@ -90,13 +86,11 @@ module spi_slave #(
 			rx_shiftreg <= 0;
 			tx_shiftreg <= 0;
 
-			miso_outen_r <= 0;
 			miso_r <= 0;
 			rx_irq_r <= 0;
 
 		/* Check if slave select is active */
 		end else begin
-			miso_outen_r <= 1;
 
 			/* Check if we are at the start of a word. */
 			if (bit_count == 0) begin

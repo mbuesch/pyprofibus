@@ -32,7 +32,6 @@ module common_main_module #(
 	/* SPI bus */
 	input spi_mosi,
 	output spi_miso,
-	output spi_miso_outen,
 	input spi_sck,
 	input spi_ss,
 
@@ -51,7 +50,6 @@ module common_main_module #(
 `endif
 );
 	wire miso;
-	wire miso_outen;
 	wire sck;
 	wire ss;
 	wire rx_error;
@@ -72,7 +70,6 @@ module common_main_module #(
 		.rx_irq_level(rx_irq_level),
 		.mosi(spi_mosi),
 		.miso(miso),
-		.miso_outen(miso_outen),
 		.sck(spi_sck),
 		.ss(spi_ss),
 		.rx(pb_rx),
@@ -86,15 +83,14 @@ module common_main_module #(
 `endif
 	);
 
-	bufif1(spi_miso,		miso,			miso_outen);
-	bufif1(spi_miso_outen,	miso_outen,		1);
-	bufif1(pb_rx_error,		rx_error,		1);
-	bufif1(pb_rx_irq_edge,	rx_irq_edge,	1);
-	bufif1(pb_rx_irq_level,	rx_irq_level,	1);
-	bufif1(pb_tx,			tx,				1);
-	bufif1(pb_tx_error,		tx_error,		1);
+	bufif0(spi_miso,		miso,			spi_ss);
+	bufif0(pb_rx_error,		rx_error,		0);
+	bufif0(pb_rx_irq_edge,	rx_irq_edge,	0);
+	bufif0(pb_rx_irq_level,	rx_irq_level,	0);
+	bufif0(pb_tx,			tx,				0);
+	bufif0(pb_tx_error,		tx_error,		0);
 `ifdef DEBUG
-	bufif1(debug,			debug_w,		1);
+	bufif0(debug,			debug_w,		0);
 `endif
 
 	wire led_w;
@@ -110,13 +106,34 @@ module common_main_module #(
 		.enable(led_enable),
 		.led(led_w),
 	);
-	bufif1(led, led_w, 1);
+	bufif0(led, led_w, 0);
 endmodule
 
 
 `ifdef TARGET_TINYFPGA_BX
 
-/* TinyFPGA BX */
+/* TinyFPGA BX:
+ *               +---------------+
+ *               |P|GND     Vin|P|
+ *         debug |O|1       GND|P|
+ *     not reset |I|2      3.3V|P|
+ *               |N|3    T   24|N|
+ *               |N|4    i   23|N|
+ *               |N|5    n   22|N|
+ *               |N|6    y   21|N|
+ *               |N|7    F   20|N|
+ *               |N|8    P   19|O| PB RX IRQ level
+ *               |N|9    G   18|O| PB RX IRQ edge
+ *      SPI MISO |O|10   A   17|O| PB TX error
+ *      SPI MOSI |I|11       16|O| PB RX error
+ *       SPI SCK |I|12   B   15|O| PB UART TX
+ *        SPI SS |I|13   X   14|I| PB UART RX
+ *               +---------------+
+ * P = power
+ * I = input
+ * O = output
+ * N = not connected
+ */
 module top_module(
 	input CLK,
 	input SPI_SS,
@@ -142,20 +159,20 @@ module top_module(
 	input PIN_7,
 	input PIN_8,
 	input PIN_9,
-	input PIN_10,
+	output PIN_10,
 	input PIN_11,
-	output PIN_12,
+	input PIN_12,
 	input PIN_13,
 	input PIN_14,
 	output PIN_15,
 	output PIN_16,
 	output PIN_17,
-	input PIN_18,
-	input PIN_19,
+	output PIN_18,
+	output PIN_19,
 	input PIN_20,
 	input PIN_21,
-	output PIN_22,
-	output PIN_23,
+	input PIN_22,
+	input PIN_23,
 	input PIN_24,
 	input PIN_25,
 	input PIN_26,
@@ -169,16 +186,15 @@ module top_module(
 		.CLK_HZ(16000000),
 	) common (
 		.clk(CLK),
-		.n_reset(PIN_19),
-		.spi_mosi(PIN_13),
-		.spi_miso(PIN_12),
-//TODO	.spi_miso_outen(),
-		.spi_sck(PIN_11),
-		.spi_ss(PIN_10),
+		.n_reset(PIN_2),
+		.spi_mosi(PIN_11),
+		.spi_miso(PIN_10),
+		.spi_sck(PIN_12),
+		.spi_ss(PIN_13),
 		.pb_rx(PIN_14),
 		.pb_rx_error(PIN_16),
-		.pb_rx_irq_edge(PIN_22),
-		.pb_rx_irq_level(PIN_23),
+		.pb_rx_irq_edge(PIN_18),
+		.pb_rx_irq_level(PIN_19),
 		.pb_tx(PIN_15),
 		.pb_tx_error(PIN_17),
 		.led(LED),
