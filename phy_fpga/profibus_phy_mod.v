@@ -229,8 +229,8 @@ module profibus_phy #(
 	/* SPI message FLG bits */
 	localparam SPI_FLG_START	= 0;
 	localparam SPI_FLG_CTRL		= 1;
-	localparam SPI_FLG_TX_OVR	= 2;
-	localparam SPI_FLG_RX_OVR	= 3;
+	localparam SPI_FLG_NEWSTAT	= 2;
+	localparam SPI_FLG_UNUSED3	= 3;
 	localparam SPI_FLG_UNUSED4	= 4;
 	localparam SPI_FLG_UNUSED5	= 5;
 	localparam SPI_FLG_UNUSED6	= 6;
@@ -241,10 +241,23 @@ module profibus_phy #(
 	localparam SPICTRL_PING			= 1;
 	localparam SPICTRL_PONG			= 2;
 	localparam SPICTRL_SOFTRESET	= 3;
-	localparam SPICTRL_GETERRORS	= 4;
-	localparam SPICTRL_ERRORS		= 5;
+	localparam SPICTRL_GETSTATUS	= 4;
+	localparam SPICTRL_STATUS		= 5;
 	localparam SPICTRL_GETBAUD		= 6;
 	localparam SPICTRL_BAUD			= 7;
+
+	/* Status message data bits */
+	localparam SPISTAT_TXOVR		= 0;
+	localparam SPISTAT_RXOVR		= 1;
+
+
+	/***********************************************************/
+	/* General part                                            */
+	/***********************************************************/
+
+	/* SPICTRL_STATUS should be fetched, if 1. */
+	wire new_status_available;
+	assign new_status_available = tx_buf_overflow_get() | rx_buf_overflow_get();
 
 
 	/***********************************************************/
@@ -705,20 +718,22 @@ module profibus_phy #(
 							/* Trigger a soft reset. */
 							spirx_softreset <= 1;
 						end
-						SPICTRL_GETERRORS: begin
+						SPICTRL_GETSTATUS: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
-								spitx_ctrl_reply <= SPICTRL_ERRORS;
-								spitx_ctrl_reply_data <= 0;
+								spitx_ctrl_reply <= SPICTRL_STATUS;
+								spitx_ctrl_reply_data[SPISTAT_TXOVR] <= tx_buf_overflow_get();
+								spitx_ctrl_reply_data[SPISTAT_RXOVR] <= rx_buf_overflow_get();
+								spitx_ctrl_reply_data[31:2] <= 0;
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								/* Reset all error states. */
-								rx_buf_overflow_reset();
 								tx_buf_overflow_reset();
+								rx_buf_overflow_reset();
 
 								spirx_state <= SPIRX_BEGIN;
 							end
 						end
-						SPICTRL_ERRORS: begin
+						SPICTRL_STATUS: begin
 							/* Ignore. */
 							spirx_state <= SPIRX_BEGIN;
 						end
@@ -829,16 +844,16 @@ module profibus_phy #(
 						1: begin
 							spi_tx_data[SPI_FLG_START] <= 0;
 							spi_tx_data[SPI_FLG_CTRL] <= 1;
-							spi_tx_data[SPI_FLG_TX_OVR] <= tx_buf_overflow_get();
-							spi_tx_data[SPI_FLG_RX_OVR] <= rx_buf_overflow_get();
+							spi_tx_data[SPI_FLG_NEWSTAT] <= new_status_available;
+							spi_tx_data[SPI_FLG_UNUSED3] <= 0;
 							spi_tx_data[SPI_FLG_UNUSED4] <= 0;
 							spi_tx_data[SPI_FLG_UNUSED5] <= 0;
 							spi_tx_data[SPI_FLG_UNUSED6] <= 0;
 							spi_tx_data[SPI_FLG_PARITY] <= parity8(ODD, 0,
 											0,
 											1,
-											tx_buf_overflow_get(),
-											rx_buf_overflow_get(),
+											new_status_available,
+											0,
 											0,
 											0,
 											0);
@@ -905,16 +920,16 @@ module profibus_phy #(
 					end else if (spitx_bytecount == 1) begin
 						spi_tx_data[SPI_FLG_START] = rx_buf_rd_data[RXBUF_SOT_BIT];
 						spi_tx_data[SPI_FLG_CTRL] = 0;
-						spi_tx_data[SPI_FLG_TX_OVR] = tx_buf_overflow_get();
-						spi_tx_data[SPI_FLG_RX_OVR] = rx_buf_overflow_get();
+						spi_tx_data[SPI_FLG_NEWSTAT] = new_status_available;
+						spi_tx_data[SPI_FLG_UNUSED3] = 0;
 						spi_tx_data[SPI_FLG_UNUSED4] = 0;
 						spi_tx_data[SPI_FLG_UNUSED5] = 0;
 						spi_tx_data[SPI_FLG_UNUSED6] = 0;
 						spi_tx_data[SPI_FLG_PARITY] = parity8(ODD, 0,
 										rx_buf_rd_data[RXBUF_SOT_BIT],
 										0,
-										tx_buf_overflow_get(),
-										rx_buf_overflow_get(),
+										new_status_available,
+										0,
 										0,
 										0,
 										0);
