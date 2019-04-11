@@ -65,8 +65,8 @@
  * FLG: bit 6: unused (set to 0)
  * FLG: bit 5: unused (set to 0)
  * FLG: bit 4: unused (set to 0)
- * FLG: bit 3: RX buffer overflow
- * FLG: bit 2: TX buffer overflow
+ * FLG: bit 3: A reset occurred. Get STATUS to see details.
+ * FLG: bit 2: New STATUS available
  * FLG: bit 1: Control message
  * FLG: bit 0: Start of telegram
  *
@@ -230,7 +230,7 @@ module profibus_phy #(
 	localparam SPI_FLG_START	= 0;
 	localparam SPI_FLG_CTRL		= 1;
 	localparam SPI_FLG_NEWSTAT	= 2;
-	localparam SPI_FLG_UNUSED3	= 3;
+	localparam SPI_FLG_RESET	= 3;
 	localparam SPI_FLG_UNUSED4	= 4;
 	localparam SPI_FLG_UNUSED5	= 5;
 	localparam SPI_FLG_UNUSED6	= 6;
@@ -247,17 +247,37 @@ module profibus_phy #(
 	localparam SPICTRL_BAUD			= 7;
 
 	/* Status message data bits */
-	localparam SPISTAT_TXOVR		= 0;
-	localparam SPISTAT_RXOVR		= 1;
+	localparam SPISTAT_PONRESET		= 0;
+	localparam SPISTAT_HARDRESET	= 1;
+	localparam SPISTAT_SOFTRESET	= 2;
+	localparam SPISTAT_TXOVR		= 3;
+	localparam SPISTAT_RXOVR		= 4;
 
 
 	/***********************************************************/
 	/* General part                                            */
 	/***********************************************************/
 
+	/* Power-on-reset, hard-reset and soft-reset status. */
+	reg n_poweronreset_status;
+	reg n_hardreset_status;
+	reg softreset_status;
+	/* Soft-reset trigger. */
+	reg softreset;
+
+	wire any_reset_status;
+	assign any_reset_status = ~n_poweronreset_status | ~n_hardreset_status | softreset_status;
+
 	/* SPICTRL_STATUS should be fetched, if 1. */
 	wire new_status_available;
-	assign new_status_available = tx_buf_overflow_get() | rx_buf_overflow_get();
+	assign new_status_available = any_reset_status | tx_buf_overflow_get() | rx_buf_overflow_get();
+
+	initial begin
+		n_poweronreset_status <= 0;
+		n_hardreset_status <= 0;
+		softreset_status <= 0;
+		softreset <= 0;
+	end
 
 
 	/***********************************************************/
@@ -452,7 +472,7 @@ module profibus_phy #(
 	end
 
 	always @(posedge clk) begin
-		if (n_reset & ~spirx_softreset) begin
+		if (n_reset & ~softreset) begin
 			if (uart_rx_irq) begin
 				if (uart_rx_parity_ok & ~uart_rx_frame_error) begin
 					if (rx_buf_wr_addr_next != rx_buf_rd_addr) begin
@@ -486,7 +506,7 @@ module profibus_phy #(
 	/***********************************************************/
 
 	always @(posedge clk) begin
-		if (n_reset & ~spirx_softreset) begin
+		if (n_reset & ~softreset) begin
 			if (uart_tx_trigger) begin
 				uart_tx_trigger <= 0;
 			end else begin
@@ -531,7 +551,6 @@ module profibus_phy #(
 	reg [7:0] spirx_ctrl;
 	reg [31:0] spirx_ctrl_data;
 	reg [7:0] spirx_crc;
-	reg spirx_softreset;
 
 	/* Length calculation of PB frames. */
 	wire spirx_lencalc_n_reset_wire;
@@ -550,7 +569,7 @@ module profibus_phy #(
 		.length(spirx_lencalc_length),
 		.error(spirx_lencalc_error),
 	);
-	assign spirx_lencalc_n_reset_wire = spirx_lencalc_n_reset & ~spirx_softreset & n_reset;
+	assign spirx_lencalc_n_reset_wire = spirx_lencalc_n_reset & ~softreset & n_reset;
 
 	initial begin
 		spirx_state <= SPIRX_BEGIN;
@@ -560,7 +579,6 @@ module profibus_phy #(
 		spirx_ctrl <= 0;
 		spirx_ctrl_data <= 0;
 		spirx_crc <= 0;
-		spirx_softreset <= 0;
 
 		spirx_lencalc_n_reset <= 0;
 		spirx_lencalc_byte <= 0;
@@ -568,7 +586,7 @@ module profibus_phy #(
 	end
 
 	always @(posedge clk) begin
-		if (n_reset & ~spirx_softreset) begin
+		if (n_reset & ~softreset) begin
 			case (spirx_state)
 				SPIRX_BEGIN: begin
 					/* Wait for start of SPI receive. */
@@ -716,19 +734,27 @@ module profibus_phy #(
 						end
 						SPICTRL_SOFTRESET: begin
 							/* Trigger a soft reset. */
-							spirx_softreset <= 1;
+							softreset <= 1;
 						end
 						SPICTRL_GETSTATUS: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
 								spitx_ctrl_reply <= SPICTRL_STATUS;
+								spitx_ctrl_reply_data[SPISTAT_PONRESET] <= ~n_poweronreset_status;
+								spitx_ctrl_reply_data[SPISTAT_HARDRESET] <= ~n_hardreset_status;
+								spitx_ctrl_reply_data[SPISTAT_SOFTRESET] <= softreset_status;
 								spitx_ctrl_reply_data[SPISTAT_TXOVR] <= tx_buf_overflow_get();
 								spitx_ctrl_reply_data[SPISTAT_RXOVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply_data[31:2] <= 0;
+								spitx_ctrl_reply_data[31:5] <= 0;
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								/* Reset all error states. */
 								tx_buf_overflow_reset();
 								rx_buf_overflow_reset();
+
+								/* Reset all reset status bits */
+								n_poweronreset_status <= 1;
+								n_hardreset_status <= 1;
+								softreset_status <= 0;
 
 								spirx_state <= SPIRX_BEGIN;
 							end
@@ -792,9 +818,13 @@ module profibus_phy #(
 			tx_buf_wr <= 0;
 			spirx_state <= SPIRX_BEGIN;
 			spirx_lencalc_n_reset <= 0;
-			spirx_softreset <= 0;
 			rx_buf_overflow_reset();
 			tx_buf_overflow_reset();
+
+			softreset_status <= softreset;
+			n_hardreset_status <= n_reset;
+			n_poweronreset_status <= 1;
+			softreset <= 0;
 		end
 	end
 
@@ -829,7 +859,7 @@ module profibus_phy #(
 	end
 
 	always @(posedge clk) begin
-		if (n_reset & ~spirx_softreset) begin
+		if (n_reset & ~softreset) begin
 			/* Are we currently not transmitting a data frame
 			 * and is a control frame pending? */
 			if (~spitx_data_running &&
@@ -845,7 +875,7 @@ module profibus_phy #(
 							spi_tx_data[SPI_FLG_START] <= 0;
 							spi_tx_data[SPI_FLG_CTRL] <= 1;
 							spi_tx_data[SPI_FLG_NEWSTAT] <= new_status_available;
-							spi_tx_data[SPI_FLG_UNUSED3] <= 0;
+							spi_tx_data[SPI_FLG_RESET] <= any_reset_status;
 							spi_tx_data[SPI_FLG_UNUSED4] <= 0;
 							spi_tx_data[SPI_FLG_UNUSED5] <= 0;
 							spi_tx_data[SPI_FLG_UNUSED6] <= 0;
@@ -853,7 +883,7 @@ module profibus_phy #(
 											0,
 											1,
 											new_status_available,
-											0,
+											any_reset_status,
 											0,
 											0,
 											0);
@@ -921,7 +951,7 @@ module profibus_phy #(
 						spi_tx_data[SPI_FLG_START] = rx_buf_rd_data[RXBUF_SOT_BIT];
 						spi_tx_data[SPI_FLG_CTRL] = 0;
 						spi_tx_data[SPI_FLG_NEWSTAT] = new_status_available;
-						spi_tx_data[SPI_FLG_UNUSED3] = 0;
+						spi_tx_data[SPI_FLG_RESET] = any_reset_status;
 						spi_tx_data[SPI_FLG_UNUSED4] = 0;
 						spi_tx_data[SPI_FLG_UNUSED5] = 0;
 						spi_tx_data[SPI_FLG_UNUSED6] = 0;
@@ -929,7 +959,7 @@ module profibus_phy #(
 										rx_buf_rd_data[RXBUF_SOT_BIT],
 										0,
 										new_status_available,
-										0,
+										any_reset_status,
 										0,
 										0,
 										0);
@@ -994,7 +1024,7 @@ module profibus_phy #(
 	end
 
 	always @(posedge clk) begin
-		if (n_reset & ~spirx_softreset) begin
+		if (n_reset & ~softreset) begin
 			if (uart_tx_active | uart_tx_irq |
 			    uart_rx_active | uart_rx_irq) begin
 				/* A PB transmission is active. Reset idle timer. */
