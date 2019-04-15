@@ -44,7 +44,7 @@ class CpPhyFPGA(CpPhy):
 		if self.__driver is not None:
 			try:
 				self.__driver.shutdown()
-			except ProfiPHYError as e:
+			except FpgaPhyError as e:
 				pass
 			self.__rxDeque.clear()
 			self.__driver = None
@@ -89,9 +89,9 @@ class CpPhyFPGA(CpPhy):
 		super(CpPhyFPGA, self).setConfig(baudrate=baudrate, *args, **kwargs)
 		self.close()
 		try:
-			self.__driver = ProfiPHYDriver(spiDev=self.__spiBus,
-						       spiChipSelect=self.__spiCS,
-						       spiSpeedHz=self.__spiSpeedHz)
+			self.__driver = FpgaPhyDriver(spiDev=self.__spiBus,
+						      spiChipSelect=self.__spiCS,
+						      spiSpeedHz=self.__spiSpeedHz)
 			self.__driver.setBaudRate(baudrate)
-		except ProfiPHYError as e:
+		except FpgaPhyError as e:
 			raise PhyError(self.PFX + ("Failed to setup driver:\n%s" % str(e)))
