@@ -735,6 +735,7 @@ module profibus_phy #(
 						SPICTRL_SOFTRESET: begin
 							/* Trigger a soft reset. */
 							softreset <= 1;
+							spirx_state <= SPIRX_BEGIN;
 						end
 						SPICTRL_GETSTATUS: begin
 							if (spitx_ctrl_pending == spitx_ctrl_pending_ack) begin
