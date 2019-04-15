@@ -146,10 +146,10 @@ module top_module(
 	input USBN,
 	output USBPU,
 	output LED,
-`ifndef DEBUG
-	input PIN_1,
-`else
+`ifdef DEBUG
 	output PIN_1,
+`else
+	input PIN_1,
 `endif
 	input PIN_2,
 	input PIN_3,
