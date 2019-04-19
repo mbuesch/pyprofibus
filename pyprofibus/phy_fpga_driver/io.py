@@ -251,6 +251,9 @@ class FpgaPhyProc(multiprocessing.Process):
 					if (telegramLen == FpgaPhyMsg.LEN_ERROR or
 					    telegramLen == FpgaPhyMsg.LEN_UNKNOWN):
 						# Could not determine telegram length.
+						expectedRxLength = 0
+						collectedRxLength = 0
+						rxDataBuf = bytearray()
 						self.__incShmStatus(self.STATUS_EVENTCOUNT_PBLENERR)
 						continue
 					if telegramLen == FpgaPhyMsg.LEN_NEEDMORE:
