@@ -41,6 +41,7 @@ module common_main_module #(
 	output pb_rx_irq_edge,
 	output pb_rx_irq_level,
 	output pb_tx,
+	output pb_tx_active,
 	output pb_tx_error,
 
 	/* Status and debugging */
@@ -88,6 +89,7 @@ module common_main_module #(
 	bufif0(pb_rx_irq_edge,	rx_irq_edge,	0);
 	bufif0(pb_rx_irq_level,	rx_irq_level,	0);
 	bufif0(pb_tx,			tx,				0);
+	bufif0(pb_tx_active,	tx_active,		0);
 	bufif0(pb_tx_error,		tx_error,		0);
 `ifdef DEBUG
 	bufif0(debug,			debug_w,		0);
@@ -121,11 +123,11 @@ endmodule
  *               |N|4    i   23|N|
  *               |N|5    n   22|N|
  *               |N|6    y   21|N|
- *               |N|7    F   20|N|
- *               |N|8    P   19|O| PB RX IRQ level
- *               |N|9    G   18|O| PB RX IRQ edge
- *      SPI MISO |O|10   A   17|O| PB TX error
- *      SPI MOSI |I|11       16|O| PB RX error
+ *               |N|7    F   20|O| PB RX IRQ level
+ *               |N|8    P   19|O| PB RX IRQ edge
+ *               |N|9    G   18|O| PB TX error
+ *      SPI MISO |O|10   A   17|O| PB RX error
+ *      SPI MOSI |I|11       16|O| PB TX active
  *       SPI SCK |I|12   B   15|O| PB UART TX
  *        SPI SS |I|13   X   14|I| PB UART RX
  *               +---------------+
@@ -169,7 +171,7 @@ module top_module(
 	output PIN_17,
 	output PIN_18,
 	output PIN_19,
-	input PIN_20,
+	output PIN_20,
 	input PIN_21,
 	input PIN_22,
 	input PIN_23,
@@ -192,11 +194,12 @@ module top_module(
 		.spi_sck(PIN_12),
 		.spi_ss(PIN_13),
 		.pb_rx(PIN_14),
-		.pb_rx_error(PIN_16),
-		.pb_rx_irq_edge(PIN_18),
-		.pb_rx_irq_level(PIN_19),
+		.pb_rx_error(PIN_17),
+		.pb_rx_irq_edge(PIN_19),
+		.pb_rx_irq_level(PIN_20),
 		.pb_tx(PIN_15),
-		.pb_tx_error(PIN_17),
+		.pb_tx_active(PIN_16),
+		.pb_tx_error(PIN_18),
 		.led(LED),
 `ifdef DEBUG
 		.debug(PIN_1),
