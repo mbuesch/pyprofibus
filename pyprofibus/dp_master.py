@@ -71,6 +71,9 @@ class DpSlaveState(object):
 		self.pendingReqTimeout = TimeLimit()
 		self.shortAckReceived = False
 
+		# Data_Exchange context
+		self.dxStartTime = 0.0
+
 		# Received telegrams
 		self.rxQueue = []
 
@@ -468,8 +471,11 @@ class DpMaster(object):
 			self.__debugMsg("Initialization finished. "
 				"Running Data_Exchange with slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.dxStartTime = monotonic_time()
 
-		if slave.pendingReqTimeout.exceed():
+		if slave.pendingReq and slave.pendingReqTimeout.exceed():
+			self.__debugMsg("Data_Exchange timeout with slave %d" % (
+					slave.slaveDesc.slaveAddr))
 			slave.faultDeb.fault()
 			slave.pendingReq = None
 
@@ -512,7 +518,7 @@ class DpMaster(object):
 			# communication lost
 			self.__debugMsg("Communication lost in Data_Exchange.")
 			slave.setState(slave.STATE_INIT)
-		elif faultCount >= 3:
+		elif faultCount >= 3 and monotonic_time() >= slave.dxStartTime + 0.2:
 			# Diagnose the slave
 			self.__debugMsg("Many errors in Data_Exchange. "
 				"Requesting diagnostic information...")
