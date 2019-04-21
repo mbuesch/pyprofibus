@@ -263,22 +263,22 @@ class DpMaster(object):
 						       key = lambda x: x[0])
 			 if addr != FdlTelegram.ADDRESS_MCAST ]
 
-	def __send(self, slave, telegram, timeout = 0.1):
+	def __send(self, slave, telegram, timeout):
 		"""Asynchronously send a telegram to a slave.
 		"""
 		slave.pendingReq = telegram
-		slave.pendingReqTimeout.start(timeout)
 		slave.shortAckReceived = False
 		try:
 			if FdlTelegram.checkType(telegram):
 				transceiver = self.fdlTrans
 			else:
 				transceiver = self.dpTrans
-			transceiver.send(fcb = slave.fcb,
-					 telegram = telegram)
+			transceiver.send(fcb=slave.fcb,
+					 telegram=telegram)
 		except ProfibusError as e:
 			slave.pendingReq = None
 			raise e
+		slave.pendingReqTimeout.start(timeout)
 		self.__activeSlave = slave
 
 	def _releaseSlave(self, slave):
@@ -300,10 +300,10 @@ class DpMaster(object):
 
 			try:
 				self.__send(slave,
-					telegram = FdlTelegram_FdlStat_Req(
-						da = slave.slaveDesc.slaveAddr,
-						sa = self.masterAddr),
-					timeout = 0.2)
+					    telegram=FdlTelegram_FdlStat_Req(
+							da=slave.slaveDesc.slaveAddr,
+							sa=self.masterAddr),
+					    timeout=0.2)
 			except ProfibusError as e:
 				self.__debugMsg("FdlStat_Req failed: %s" % str(e))
 				return None
@@ -339,13 +339,13 @@ class DpMaster(object):
 			# Send a SlaveDiag request
 			try:
 				self.__send(slave,
-					telegram = DpTelegram_SlaveDiag_Req(
-						da = slave.slaveDesc.slaveAddr,
-						sa = self.masterAddr))
+					    telegram=DpTelegram_SlaveDiag_Req(
+							da=slave.slaveDesc.slaveAddr,
+							sa=self.masterAddr),
+					    timeout=0.3)
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
-
 
 		for telegram in slave.getRxQueue():
 			if DpTelegram_SlaveDiag_Con.checkType(telegram):
@@ -369,7 +369,8 @@ class DpMaster(object):
 			try:
 				slave.slaveDesc.setPrmTelegram.sa = self.masterAddr
 				self.__send(slave,
-					telegram = slave.slaveDesc.setPrmTelegram)
+					    telegram=slave.slaveDesc.setPrmTelegram,
+					    timeout=0.2)
 			except ProfibusError as e:
 				self.__debugMsg("Set_Prm failed: %s" % str(e))
 				return None
@@ -390,8 +391,8 @@ class DpMaster(object):
 			try:
 				slave.slaveDesc.chkCfgTelegram.sa = self.masterAddr
 				self.__send(slave,
-					telegram = slave.slaveDesc.chkCfgTelegram,
-					timeout = 0.3)
+					    telegram=slave.slaveDesc.chkCfgTelegram,
+					    timeout=0.3)
 			except ProfibusError as e:
 				self.__debugMsg("Chk_Cfg failed: %s" % str(e))
 				return None
@@ -406,14 +407,15 @@ class DpMaster(object):
 
 	def __runSlave_waitDxRdy(self, slave, dataExOutData):
 		if not slave.pendingReq:
-			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
+			self.__debugMsg("Requesting Slave_Diag (WDXRDY) from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
 			try:
 				self.__send(slave,
-					telegram = DpTelegram_SlaveDiag_Req(
-						da = slave.slaveDesc.slaveAddr,
-						sa = self.masterAddr))
+					    telegram=DpTelegram_SlaveDiag_Req(
+							da=slave.slaveDesc.slaveAddr,
+							sa=self.masterAddr),
+					    timeout=0.3)
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
@@ -505,10 +507,11 @@ class DpMaster(object):
 		else:
 			try:
 				self.__send(slave,
-					telegram = DpTelegram_DataExchange_Req(
-						da = slave.slaveDesc.slaveAddr,
-						sa = self.masterAddr,
-						du = dataExOutData))
+					    telegram=DpTelegram_DataExchange_Req(
+							da=slave.slaveDesc.slaveAddr,
+							sa=self.masterAddr,
+							du=dataExOutData),
+					    timeout=0.1)
 			except ProfibusError as e:
 				self.__debugMsg("DataExchange_Req failed: %s" % str(e))
 				return None
