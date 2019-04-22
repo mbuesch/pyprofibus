@@ -99,23 +99,33 @@ class XOR(object):
 	def optimize(self):
 		newItems = []
 		for item in self.__items:
-			if item in newItems:
-				continue
 			if isinstance(item, ConstBit):
 				if item.value == 0:
 					# Constant 0 does not change the XOR result.
 					# Remove it.
-					continue
-			if not isinstance(item, Bit):
-				newItems.append(item)
-				continue
-			if sum(1 if (isinstance(i, Bit) and i == item) else 0
-			       for i in self.__items) % 2:
-				# We have an uneven count of this bit. Keep it once.
-				newItems.append(item)
+					pass
+				else:
+					# Keep it.
+					newItems.append(item)
+			elif isinstance(item, Bit):
+				if item in newItems:
+					# We already have this bit.
+					# Remove it.
+					pass
+				else:
+					if sum(1 if (isinstance(i, Bit) and i == item) else 0
+					       for i in self.__items) % 2:
+						# We have an uneven count of this bit.
+						# Keep it once.
+						newItems.append(item)
+					else:
+						# An even amount cancels out in XOR.
+						# Remove it.
+						pass
 			else:
-				# An even amount cancels out in XOR. Remove it.
-				pass
+				# This is something else.
+				# Keep it.
+				newItems.append(item)
 		self.__items = newItems
 
 	def py(self):
