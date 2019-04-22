@@ -55,13 +55,41 @@ class Bit(object):
 			return "((%s >> %d) & 1)" % (self.name, self.index)
 		return "(%s & 1)" % (self.name)
 
+	c = py
+
 	def verilog(self):
 		return "%s[%d]" % (self.name, self.index)
 
+@dataclass
+class ConstBit(object):
+	value: int
+
+	@property
+	def allBitsRecursive(self):
+		yield self
+
+	def optimize(self):
+		pass
+
+	def __eq__(self, other):
+		return (isinstance(other, ConstBit) and
+			self.value == other.value)
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+
+	def py(self):
+		return "1" if self.value else "0"
+
+	c = py
+
+	def verilog(self):
+		return "1b1" if self.value else "1b0"
+
 class XOR(object):
 	def __init__(self, *items):
-		assert(len(items) >= 2)
 		self.__items = items
+		assert(len(self.__items) >= 2)
 
 	@property
 	def allBitsRecursive(self):
@@ -73,6 +101,11 @@ class XOR(object):
 		for item in self.__items:
 			if item in newItems:
 				continue
+			if isinstance(item, ConstBit):
+				if item.value == 0:
+					# Constant 0 does not change the XOR result.
+					# Remove it.
+					continue
 			if not isinstance(item, Bit):
 				newItems.append(item)
 				continue
@@ -89,15 +122,19 @@ class XOR(object):
 		string = " ^ ".join(item.py() for item in self.__items)
 		return "(%s)" % string
 
+	def c(self):
+		string = " ^ ".join(item.c() for item in self.__items)
+		return "(%s)" % string
+
 	def verilog(self):
 		string = " ^ ".join(item.verilog() for item in self.__items)
 		return "(%s)" % string
 
 class Word(object):
-	def __init__(self, *bits, MSB=True):
+	def __init__(self, *bits, MSBFirst=True):
 		if len(bits) == 1 and isinstance(bits[0], (list, tuple)):
 			bits = bits[0]
-		if MSB:
+		if MSBFirst:
 			bits = reversed(bits)
 		self.__items = list(bits)
 
@@ -110,7 +147,7 @@ class Word(object):
 			if isinstance(item, XOR):
 				newItems.append(XOR(*item.allBitsRecursive))
 			else:
-				newItems.append(bit)
+				newItems.append(item)
 		self.__items = newItems
 
 	def optimize(self):
@@ -118,48 +155,95 @@ class Word(object):
 			item.optimize()
 
 class CrcGen(object):
-	def __init__(self, P=0x07, nrBits=8, shiftRight=False, preFlip=False, postFlip=False):
-		assert(P & 1)
+	OPT_FLATTEN	= 1 << 0
+	OPT_ELIMINATE	= 1 << 1
+	OPT_ALL		= OPT_FLATTEN | OPT_ELIMINATE
+
+	def __init__(self,
+		     P=0x07,
+		     nrBits=8,
+		     shiftRight=False,
+		     preFlip=False,
+		     postFlip=False,
+		     optimize=OPT_ALL):
 		self.__P = P
 		self.__nrBits = nrBits
 		self.__shiftRight = shiftRight
 		self.__preFlip = preFlip
 		self.__postFlip = postFlip
+		self.__optimize = optimize
 
 	def __gen(self, dataVarName, crcVarName):
-		assert(self.__nrBits == 8) #TODO
-		assert(self.__shiftRight == False) #TODO
-		assert(self.__preFlip == False) #TODO
-		assert(self.__postFlip == False) #TODO
+		assert self.__preFlip == False, "Invalid preFlip" #TODO
+		assert self.__postFlip == False, "Invalid postFlip" #TODO
+
+		nrBits = self.__nrBits
+		assert nrBits in (8, 16, 32), "Invalid nrBits"
 
 		inData = Word([ Bit(dataVarName, i) for i in reversed(range(8)) ])
-		inCrc  = Word([ Bit(crcVarName, i) for i in reversed(range(8)) ])
+		inCrc  = Word([ Bit(crcVarName, i) for i in reversed(range(nrBits)) ])
 
-		base = Word([ XOR(inData[i], inCrc[i]) for i in reversed(range(8)) ])
+		if self.__shiftRight:
+			base = Word(
+				*(
+					XOR(inData[i], inCrc[i]) if i <= 7 else ConstBit(0)
+					for i in range(nrBits - 1, -1, -1)
+				)
+			)
+		else:
+			base = Word(
+				*(
+					XOR(inData[i] if i <= 7 else ConstBit(0),
+					    inCrc[i])
+					for i in range(nrBits - 1, -1, -1)
+				)
+			)
 
 		def p(a, b, bitNr):
-			if a is None:
-				return b
 			if (self.__P >> bitNr) & 1:
 				return XOR(a, b)
 			return a
 
 		prevWord = base
 		for i in range(8):
-			word = Word(p(prevWord[6], prevWord[7], 7),
-				    p(prevWord[5], prevWord[7], 6),
-				    p(prevWord[4], prevWord[7], 5),
-				    p(prevWord[3], prevWord[7], 4),
-				    p(prevWord[2], prevWord[7], 3),
-				    p(prevWord[1], prevWord[7], 2),
-				    p(prevWord[0], prevWord[7], 1),
-				    p(None,        prevWord[7], 0))
+			if self.__shiftRight:
+				word = Word(
+					[
+						p(ConstBit(0), prevWord[0], nrBits - 1)
+					] + [
+						p(prevWord[i + 1], prevWord[0], i)
+						for i in range(nrBits - 2, -1, -1)
+					]
+				)
+			else:
+				word = Word(
+					[
+						p(prevWord[i - 1], prevWord[nrBits - 1], i)
+						for i in range(nrBits - 1, 0, -1)
+					] + [
+						p(ConstBit(0), prevWord[nrBits - 1], 0)
+					]
+				)
 			prevWord = word
 
-		word.flatten()
-		word.optimize()
+		if self.__shiftRight:
+			result = Word(
+				*(
+					XOR(inCrc[i + 8] if i < nrBits - 8 else ConstBit(0),
+					    word[i])
+					for i in range(nrBits - 1, -1, -1)
+				)
+			)
+		else:
+			result = word
 
-		return word
+		# Optimize the algorithm. This removes unnecessary operations.
+		if self.__optimize & self.OPT_FLATTEN:
+			result.flatten()
+		if self.__optimize & self.OPT_ELIMINATE:
+			result.optimize()
+
+		return result
 
 	def __header(self):
 		return ("THIS IS GENERATED CODE.\n"
@@ -210,8 +294,8 @@ class CrcGen(object):
 			ret.append("module %s (" % name)
 		ret.append("\tinput [%d:0] %s%s" % (self.__nrBits - 1, inCrcName,
 						    ";" if genFunction else ","))
-		ret.append("\tinput [%d:0] %s%s" % (self.__nrBits - 1, inDataName,
-						    ";" if genFunction else ","))
+		ret.append("\tinput [7:0] %s%s" % (inDataName,
+						   ";" if genFunction else ","))
 		if genFunction:
 			ret.append("begin")
 		else:
@@ -264,7 +348,7 @@ class CrcGen(object):
 			else:
 				operator = "="
 				shift = ""
-			ret.append("\tret %s (%s)%s;" % (operator, bit.py(), shift))
+			ret.append("\tret %s (%s)%s;" % (operator, bit.c(), shift))
 		ret.append("\treturn ret;")
 		ret.append("}")
 		ret.append("")
@@ -345,26 +429,29 @@ if __name__ == "__main__":
 		g.add_argument("-m", "--verilog-module", action="store_true", help="Generate Verilog module")
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
 		p.add_argument("-P", "--polynomial", type=argInt, default=0x07, help="CRC polynomial")
-		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8,], default=8, help="Number of bits")
+		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8, 16, 32], default=8, help="Number of bits")
 		p.add_argument("-R", "--shift-right", action="store_true", help="CRC algorithm shift direction")
 		p.add_argument("-f", "--flip-pre", action="store_true", help="Flip CRC before calculation")
 		p.add_argument("-F", "--flip-post", action="store_true", help="Flip CRC after calculation")
 		p.add_argument("-n", "--name", type=str, default="crc", help="Generated function/module name")
 		p.add_argument("-D", "--data-param", type=str, default="data", help="Generated function/module data parameter name")
 		p.add_argument("-C", "--crc-in-param", type=str, default="crcIn", help="Generated function/module crc input parameter name")
-		p.add_argument("-O", "--crc-out-param", type=str, default="crcOut", help="Generated module crc output parameter name")
+		p.add_argument("-o", "--crc-out-param", type=str, default="crcOut", help="Generated module crc output parameter name")
 		p.add_argument("-S", "--static", action="store_true", help="Generated static C function")
 		p.add_argument("-I", "--inline", action="store_true", help="Generated inline C function")
+		p.add_argument("-O", "--optimize", type=argInt, default=CrcGen.OPT_ALL, help="Enable algorithm optimizer steps")
 		p.add_argument("-T", "--test", action="store_true", help="Run unit tests")
 		args = p.parse_args()
 
-		if not (args.polynomial & 1) or args.polynomial > ((1 << args.nr_bits) - 1):
+		if (not (args.polynomial >> (args.nr_bits - 1 if args.shift_right else 0) & 1) or
+		    args.polynomial > ((1 << args.nr_bits) - 1)):
 			raise Exception("Invalid polynomial.")
 		gen = CrcGen(P=args.polynomial,
 			     nrBits=args.nr_bits,
 			     shiftRight=args.shift_right,
 			     preFlip=args.flip_pre,
-			     postFlip=args.flip_post)
+			     postFlip=args.flip_post,
+			     optimize=args.optimize)
 		if args.test:
 			pyCode = gen.genPython(funcName="crc_func")
 			exec(pyCode)
