@@ -118,13 +118,19 @@ class Word(object):
 			item.optimize()
 
 class CrcGen(object):
-	def __init__(self, P=0x07, nrBits=8):
+	def __init__(self, P=0x07, nrBits=8, shiftRight=False, preFlip=False, postFlip=False):
 		assert(P & 1)
 		self.__P = P
 		self.__nrBits = nrBits
+		self.__shiftRight = shiftRight
+		self.__preFlip = preFlip
+		self.__postFlip = postFlip
 
 	def __gen(self, dataVarName, crcVarName):
 		assert(self.__nrBits == 8) #TODO
+		assert(self.__shiftRight == False) #TODO
+		assert(self.__preFlip == False) #TODO
+		assert(self.__postFlip == False) #TODO
 
 		inData = Word([ Bit(dataVarName, i) for i in reversed(range(8)) ])
 		inCrc  = Word([ Bit(crcVarName, i) for i in reversed(range(8)) ])
@@ -266,6 +272,67 @@ class CrcGen(object):
 		return "\n".join(ret)
 
 if __name__ == "__main__":
+	def crc_reference(crc, data, P, nrBits, shiftRight, preFlip, postFlip):
+		mask = (1 << nrBits) - 1
+		msb = 1 << (nrBits - 1)
+		lsb = 1
+		if preFlip:
+			crc ^= mask
+		for b in data:
+			if shiftRight:
+				tmp = (crc ^ b) & 0xFF
+				for i in range(8):
+					if tmp & lsb:
+						tmp = ((tmp >> 1) ^ P) & mask
+					else:
+						tmp = (tmp >> 1) & mask
+				crc = ((crc >> 8) ^ tmp) & mask
+			else:
+				tmp = (crc ^ (b << (nrBits - 8))) & mask
+				for i in range(8):
+					if tmp & msb:
+						tmp = ((tmp << 1) ^ P) & mask
+					else:
+						tmp = (tmp << 1) & mask
+				crc = tmp
+		if postFlip:
+			crc ^= mask
+		return crc
+
+	def runTests(crc_func, polynomial, nrBits, shiftRight, preFlip, postFlip):
+		import random
+
+		rng = random.Random()
+		rng.seed(424242)
+
+		print("Testing...")
+		mask = (1 << nrBits) - 1
+		for i in range(0x400):
+			if i == 0:
+				crc = 0
+			elif i == 1:
+				crc = mask
+			else:
+				crc = rng.randint(1, mask - 1)
+			for data in range(0xFF + 1):
+				a = crc_reference(crc=crc,
+						  data=(data,),
+						  P=polynomial,
+						  nrBits=nrBits,
+						  shiftRight=shiftRight,
+						  preFlip=preFlip,
+						  postFlip=postFlip)
+				b = crc_func(crc, data)
+				if a != b:
+					raise Exception("Test failed. "
+						"(P=0x%X, nrBits=%d, shiftRight=%d, "
+						"preFlip=%d, postFlip=%d, "
+						"a=0x%X, b=0x%X)" % (
+						polynomial, nrBits, int(shiftRight),
+						int(preFlip), int(postFlip),
+						a, b))
+		print("done.")
+
 	try:
 		def argInt(string):
 			if string.startswith("0x"):
@@ -279,6 +346,9 @@ if __name__ == "__main__":
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
 		p.add_argument("-P", "--polynomial", type=argInt, default=0x07, help="CRC polynomial")
 		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8,], default=8, help="Number of bits")
+		p.add_argument("-R", "--shift-right", action="store_true", help="CRC algorithm shift direction")
+		p.add_argument("-f", "--flip-pre", action="store_true", help="Flip CRC before calculation")
+		p.add_argument("-F", "--flip-post", action="store_true", help="Flip CRC after calculation")
 		p.add_argument("-n", "--name", type=str, default="crc", help="Generated function/module name")
 		p.add_argument("-D", "--data-param", type=str, default="data", help="Generated function/module data parameter name")
 		p.add_argument("-C", "--crc-in-param", type=str, default="crcIn", help="Generated function/module crc input parameter name")
@@ -290,23 +360,20 @@ if __name__ == "__main__":
 
 		if not (args.polynomial & 1) or args.polynomial > ((1 << args.nr_bits) - 1):
 			raise Exception("Invalid polynomial.")
-		gen = CrcGen(P=args.polynomial, nrBits=args.nr_bits)
+		gen = CrcGen(P=args.polynomial,
+			     nrBits=args.nr_bits,
+			     shiftRight=args.shift_right,
+			     preFlip=args.flip_pre,
+			     postFlip=args.flip_post)
 		if args.test:
-			pyCode = gen.genPython()
+			pyCode = gen.genPython(funcName="crc_func")
 			exec(pyCode)
-
-			def crc8_ref(crc, data, P=args.polynomial):
-				data ^= crc
-				for i in range(8):
-					data = ((data << 1) ^ (P if (data & 0x80) else 0)) & 0xFF
-				return data
-
-			print("Testing...")
-			for c in range(256):
-				for d in range(256):
-					if crc8_ref(c, d) != crc(c, d):
-						raise Exception("Test failed.")
-			print("done.")
+			runTests(crc_func=crc_func,
+				 polynomial=args.polynomial,
+				 nrBits=args.nr_bits,
+				 shiftRight=args.shift_right,
+				 preFlip=args.flip_pre,
+				 postFlip=args.flip_post)
 		else:
 			if args.python:
 				print(gen.genPython(funcName=args.name,
