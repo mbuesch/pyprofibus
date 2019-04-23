@@ -41,14 +41,6 @@ class Bit(object):
 	def optimize(self):
 		pass
 
-	def __eq__(self, other):
-		return (isinstance(other, Bit) and
-			self.name == other.name and
-			self.index == other.index)
-
-	def __ne__(self, other):
-		return not self.__eq__(other)
-
 	def gen_python(self):
 		if self.index:
 			return "((%s >> %d) & 1)" % (self.name, self.index)
@@ -68,13 +60,6 @@ class ConstBit(object):
 
 	def optimize(self):
 		pass
-
-	def __eq__(self, other):
-		return (isinstance(other, ConstBit) and
-			self.value == other.value)
-
-	def __ne__(self, other):
-		return not self.__eq__(other)
 
 	def gen_python(self):
 		return "1" if self.value else "0"
