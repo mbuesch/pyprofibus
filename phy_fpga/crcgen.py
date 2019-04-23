@@ -87,7 +87,7 @@ class ConstBit(AbstractBit):
 	gen_c = gen_python
 
 	def gen_verilog(self):
-		return "1b1" if self.value else "1b0"
+		return "1'b1" if self.value else "1'b0"
 
 class XOR(object):
 	def __init__(self, *items):
