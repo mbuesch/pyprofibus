@@ -31,15 +31,17 @@ __all__ = [
 
 
 @dataclass
-class Bit(object):
-	name: str
-	index: int
-
+class AbstractBit(object):
 	def flatten(self):
 		return self
 
 	def optimize(self):
 		pass
+
+@dataclass
+class Bit(AbstractBit):
+	name: str
+	index: int
 
 	def gen_python(self):
 		if self.index:
@@ -52,14 +54,8 @@ class Bit(object):
 		return "%s[%d]" % (self.name, self.index)
 
 @dataclass
-class ConstBit(object):
+class ConstBit(AbstractBit):
 	value: int
-
-	def flatten(self):
-		return self
-
-	def optimize(self):
-		pass
 
 	def gen_python(self):
 		return "1" if self.value else "0"
@@ -150,6 +146,9 @@ class Word(object):
 			item.optimize()
 
 class CrcGen(object):
+	"""Combinatorial CRC algorithm generator.
+	"""
+
 	OPT_FLATTEN	= 1 << 0
 	OPT_ELIMINATE	= 1 << 1
 	OPT_ALL		= OPT_FLATTEN | OPT_ELIMINATE
