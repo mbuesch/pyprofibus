@@ -72,7 +72,10 @@ class Bit(AbstractBit):
 			return "((%s >> %d) & 1)" % (self.name, self.index)
 		return "(%s & 1)" % (self.name)
 
-	gen_c = gen_python
+	def gen_c(self):
+		if self.index:
+			return "((%s >> %du) & 1u)" % (self.name, self.index)
+		return "(%s & 1u)" % (self.name)
 
 	def gen_verilog(self):
 		return "%s[%d]" % (self.name, self.index)
@@ -84,7 +87,8 @@ class ConstBit(AbstractBit):
 	def gen_python(self):
 		return "1" if self.value else "0"
 
-	gen_c = gen_python
+	def gen_c(self):
+		return "1u" if self.value else "0u"
 
 	def gen_verilog(self):
 		return "1'b1" if self.value else "1'b0"
@@ -370,7 +374,7 @@ class CrcGen(object):
 		for i, bit in enumerate(word):
 			if i:
 				operator = "|="
-				shift = " << %d" % i
+				shift = " << %du" % i
 			else:
 				operator = "="
 				shift = ""
