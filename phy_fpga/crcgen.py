@@ -145,6 +145,9 @@ class Word(object):
 		for item in self._items:
 			item.optimize()
 
+class CrcGenError(Exception):
+	pass
+
 class CrcGen(object):
 	"""Combinatorial CRC algorithm generator.
 	"""
@@ -402,7 +405,7 @@ if __name__ == "__main__":
 						  postFlip=postFlip)
 				b = crc_func(crc, data)
 				if a != b:
-					raise Exception("Test failed. "
+					raise CrcGenError("Test failed. "
 						"(P=0x%X, nrBits=%d, shiftRight=%d, "
 						"preFlip=%d, postFlip=%d, "
 						"a=0x%X, b=0x%X)" % (
@@ -439,7 +442,7 @@ if __name__ == "__main__":
 
 		if (not (args.polynomial >> (args.nr_bits - 1 if args.shift_right else 0) & 1) or
 		    args.polynomial > ((1 << args.nr_bits) - 1)):
-			raise Exception("Invalid polynomial.")
+			raise CrcGenError("Invalid polynomial.")
 		gen = CrcGen(P=args.polynomial,
 			     nrBits=args.nr_bits,
 			     shiftRight=args.shift_right,
@@ -479,6 +482,6 @@ if __name__ == "__main__":
 					       static=args.static,
 					       inline=args.inline))
 		sys.exit(0)
-	except Exception as e:
+	except CrcGenError as e:
 		print("ERROR: %s" % str(e), file=sys.stderr)
 		sys.exit(1)
