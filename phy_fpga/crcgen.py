@@ -30,6 +30,30 @@ __all__ = [
 ]
 
 
+CRC_PARAMETERS = {
+	"CRC-32" : {
+		"polynomial"	: 0xEDB88320,
+		"nrBits"	: 32,
+		"shiftRight"	: True,
+	},
+	"CRC-16" : {
+		"polynomial"	: 0xA001,
+		"nrBits"	: 16,
+		"shiftRight"	: True,
+	},
+	"CRC-16-CCITT" : {
+		"polynomial"	: 0x1021,
+		"nrBits"	: 16,
+		"shiftRight"	: False,
+	},
+	"CRC-8-CCITT" : {
+		"polynomial"	: 0x07,
+		"nrBits"	: 8,
+		"shiftRight"	: False,
+	},
+}
+
+
 @dataclass
 class AbstractBit(object):
 	def flatten(self):
@@ -240,6 +264,15 @@ class CrcGen(object):
 			"This code is Public Domain.\n"
 			"It can be used without any restrictions.\n")
 
+	def __algDescription(self):
+		return ("CRC polynomial      = 0x%X (hex)\n"
+			"CRC width           = %d bits\n"
+			"CRC shift direction = %s\n" % (
+			self.__P,
+			self.__nrBits,
+			"right" if self.__shiftRight else "left",
+		))
+
 	def genPython(self,
 		      funcName="crc",
 		      crcVarName="crc",
@@ -249,7 +282,8 @@ class CrcGen(object):
 		ret.append("# vim: ts=8 sw=8 noexpandtab")
 		ret.extend("# " + l for l in self.__header().splitlines())
 		ret.append("")
-		ret.append("# polynomial = 0x%X" % self.__P)
+		ret.extend("# " + l for l in self.__algDescription().splitlines())
+		ret.append("")
 		ret.append("def %s(%s, %s):" % (funcName, crcVarName, dataVarName))
 		for i, bit in enumerate(word):
 			if i:
@@ -277,7 +311,8 @@ class CrcGen(object):
 			ret.append("`ifndef %s_V_" % name.upper())
 			ret.append("`define %s_V_" % name.upper())
 			ret.append("")
-		ret.append("// polynomial = 0x%X" % self.__P)
+		ret.extend("// " + l for l in self.__algDescription().splitlines())
+		ret.append("")
 		if genFunction:
 			ret.append("function automatic [%d:0] %s;" % (self.__nrBits - 1, name))
 		else:
@@ -321,7 +356,8 @@ class CrcGen(object):
 		ret.append("")
 		ret.append("#include <stdint.h>")
 		ret.append("")
-		ret.append("// polynomial = 0x%X" % self.__P)
+		ret.extend("// " + l for l in self.__algDescription().splitlines())
+		ret.append("")
 		ret.append("%s%s%s %s(%s %s, uint8_t %s)" % ("static " if static else "",
 							     "inline " if inline else "",
 							     cType,
@@ -416,9 +452,15 @@ if __name__ == "__main__":
 		g.add_argument("-v", "--verilog-function", action="store_true", help="Generate Verilog function")
 		g.add_argument("-m", "--verilog-module", action="store_true", help="Generate Verilog module")
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
-		p.add_argument("-P", "--polynomial", type=argInt, default=0x07, help="CRC polynomial")
-		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8, 16, 32], default=8, help="Number of bits")
-		p.add_argument("-R", "--shift-right", action="store_true", help="CRC algorithm shift direction")
+		p.add_argument("-a", "--algorithm", type=str,
+			       choices=CRC_PARAMETERS.keys(), default="CRC-8-CCITT",
+			       help="Select the CRC algorithm. "
+				    "Individual algorithm parameters (e.g. polynomial) can be overridden with the options below.")
+		p.add_argument("-P", "--polynomial", type=argInt, help="CRC polynomial")
+		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8, 16, 32], help="Number of bits")
+		g = p.add_mutually_exclusive_group()
+		g.add_argument("-R", "--shift-right", action="store_true", help="CRC algorithm shift direction: right shift")
+		g.add_argument("-L", "--shift-left", action="store_true", help="CRC algorithm shift direction: left shift")
 		p.add_argument("-n", "--name", type=str, default="crc", help="Generated function/module name")
 		p.add_argument("-D", "--data-param", type=str, default="data", help="Generated function/module data parameter name")
 		p.add_argument("-C", "--crc-in-param", type=str, default="crcIn", help="Generated function/module crc input parameter name")
@@ -429,20 +471,35 @@ if __name__ == "__main__":
 		p.add_argument("-T", "--test", action="store_true", help="Run unit tests")
 		args = p.parse_args()
 
-		if (not (args.polynomial >> (args.nr_bits - 1 if args.shift_right else 0) & 1) or
-		    args.polynomial > ((1 << args.nr_bits) - 1)):
-			raise CrcGenError("Invalid polynomial.")
-		gen = CrcGen(P=args.polynomial,
-			     nrBits=args.nr_bits,
-			     shiftRight=args.shift_right,
+		crcParameters = CRC_PARAMETERS[args.algorithm].copy()
+		if args.polynomial is not None:
+			crcParameters["polynomial"] = args.polynomial
+		if args.nr_bits is not None:
+			crcParameters["nrBits"] = args.nr_bits
+		if args.shift_right:
+			crcParameters["shiftRight"] = True
+		if args.shift_left:
+			crcParameters["shiftRight"] = False
+
+		polynomial = crcParameters["polynomial"]
+		nrBits = crcParameters["nrBits"]
+		shiftRight = crcParameters["shiftRight"]
+
+		if polynomial > ((1 << nrBits) - 1):
+			raise CrcGenError("Invalid polynomial. "
+					  "It is bigger than the CRC width of (2**%d)-1." % nrBits)
+
+		gen = CrcGen(P=polynomial,
+			     nrBits=nrBits,
+			     shiftRight=shiftRight,
 			     optimize=args.optimize)
 		if args.test:
 			pyCode = gen.genPython(funcName="crc_func")
 			exec(pyCode)
 			runTests(crc_func=crc_func,
-				 polynomial=args.polynomial,
-				 nrBits=args.nr_bits,
-				 shiftRight=args.shift_right)
+				 polynomial=polynomial,
+				 nrBits=nrBits,
+				 shiftRight=shiftRight)
 		else:
 			if args.python:
 				print(gen.genPython(funcName=args.name,
