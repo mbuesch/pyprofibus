@@ -447,11 +447,12 @@ if __name__ == "__main__":
 				return int(string[2:], 16)
 			return int(string)
 		p = argparse.ArgumentParser()
-		g = p.add_mutually_exclusive_group()
+		g = p.add_mutually_exclusive_group(required=True)
 		g.add_argument("-p", "--python", action="store_true", help="Generate Python code")
 		g.add_argument("-v", "--verilog-function", action="store_true", help="Generate Verilog function")
 		g.add_argument("-m", "--verilog-module", action="store_true", help="Generate Verilog module")
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
+		g.add_argument("-T", "--test", action="store_true", help="Run unit tests")
 		p.add_argument("-a", "--algorithm", type=str,
 			       choices=CRC_PARAMETERS.keys(), default="CRC-8-CCITT",
 			       help="Select the CRC algorithm. "
@@ -468,7 +469,6 @@ if __name__ == "__main__":
 		p.add_argument("-S", "--static", action="store_true", help="Generate static C function")
 		p.add_argument("-I", "--inline", action="store_true", help="Generate inline C function")
 		p.add_argument("-O", "--optimize", type=argInt, default=CrcGen.OPT_ALL, help="Enable algorithm optimizer steps")
-		p.add_argument("-T", "--test", action="store_true", help="Run unit tests")
 		args = p.parse_args()
 
 		crcParameters = CRC_PARAMETERS[args.algorithm].copy()
