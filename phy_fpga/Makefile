@@ -44,7 +44,7 @@ LOG		= >$(1) 2>&1 || ( $(CAT) $(1); $(FALSE) )
 all: $(TARGET_NAME).bin $(TARGET_NAME).rpt
 
 crc8_func.v: crcgen.py
-	$(PYTHON) crcgen.py --nr-bits 8 --polynomial 0x07 --verilog-function --name crc8 > $@
+	$(PYTHON) crcgen.py --algorithm CRC-8-CCITT --verilog-function --name crc8 > $@
 
 %.blif: $(TOP_FILE) $(wildcard *.v) $(GENERATED_V)
 	$(YOSYS) -p 'read_verilog -DTARGET_$(TARGET_UPPER)=1 $(if $(filter-out 0,$(DEBUG)),-DDEBUG=1) $<' \
