@@ -160,20 +160,13 @@ class CrcGen(object):
 		     P=0x07,
 		     nrBits=8,
 		     shiftRight=False,
-		     preFlip=False,
-		     postFlip=False,
 		     optimize=OPT_ALL):
 		self.__P = P
 		self.__nrBits = nrBits
 		self.__shiftRight = shiftRight
-		self.__preFlip = preFlip
-		self.__postFlip = postFlip
 		self.__optimize = optimize
 
 	def __gen(self, dataVarName, crcVarName):
-		assert self.__preFlip == False, "Invalid preFlip" #TODO
-		assert self.__postFlip == False, "Invalid postFlip" #TODO
-
 		nrBits = self.__nrBits
 		assert nrBits in (8, 16, 32), "Invalid nrBits"
 
@@ -376,7 +369,7 @@ if __name__ == "__main__":
 			crc ^= mask
 		return crc
 
-	def runTests(crc_func, polynomial, nrBits, shiftRight, preFlip, postFlip):
+	def runTests(crc_func, polynomial, nrBits, shiftRight):
 		import random
 
 		rng = random.Random()
@@ -397,16 +390,14 @@ if __name__ == "__main__":
 						  P=polynomial,
 						  nrBits=nrBits,
 						  shiftRight=shiftRight,
-						  preFlip=preFlip,
-						  postFlip=postFlip)
+						  preFlip=False,
+						  postFlip=False)
 				b = crc_func(crc, data)
 				if a != b:
 					raise CrcGenError("Test failed. "
 						"(P=0x%X, nrBits=%d, shiftRight=%d, "
-						"preFlip=%d, postFlip=%d, "
 						"a=0x%X, b=0x%X)" % (
 						polynomial, nrBits, int(shiftRight),
-						int(preFlip), int(postFlip),
 						a, b))
 		print("done.")
 
@@ -424,8 +415,6 @@ if __name__ == "__main__":
 		p.add_argument("-P", "--polynomial", type=argInt, default=0x07, help="CRC polynomial")
 		p.add_argument("-B", "--nr-bits", type=argInt, choices=[8, 16, 32], default=8, help="Number of bits")
 		p.add_argument("-R", "--shift-right", action="store_true", help="CRC algorithm shift direction")
-		p.add_argument("-f", "--flip-pre", action="store_true", help="Flip CRC before calculation")
-		p.add_argument("-F", "--flip-post", action="store_true", help="Flip CRC after calculation")
 		p.add_argument("-n", "--name", type=str, default="crc", help="Generated function/module name")
 		p.add_argument("-D", "--data-param", type=str, default="data", help="Generated function/module data parameter name")
 		p.add_argument("-C", "--crc-in-param", type=str, default="crcIn", help="Generated function/module crc input parameter name")
@@ -442,8 +431,6 @@ if __name__ == "__main__":
 		gen = CrcGen(P=args.polynomial,
 			     nrBits=args.nr_bits,
 			     shiftRight=args.shift_right,
-			     preFlip=args.flip_pre,
-			     postFlip=args.flip_post,
 			     optimize=args.optimize)
 		if args.test:
 			pyCode = gen.genPython(funcName="crc_func")
@@ -451,9 +438,7 @@ if __name__ == "__main__":
 			runTests(crc_func=crc_func,
 				 polynomial=args.polynomial,
 				 nrBits=args.nr_bits,
-				 shiftRight=args.shift_right,
-				 preFlip=args.flip_pre,
-				 postFlip=args.flip_post)
+				 shiftRight=args.shift_right)
 		else:
 			if args.python:
 				print(gen.genPython(funcName=args.name,
