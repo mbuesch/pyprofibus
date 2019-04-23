@@ -95,22 +95,21 @@ class ConstBit(AbstractBit):
 
 class XOR(object):
 	def __init__(self, *items):
-		self._items = items
-		assert(len(self._items) >= 2)
+		self.items = items
 
 	def flatten(self):
 		newItems = []
-		for item in self._items:
+		for item in self.items:
 			if isinstance(item, XOR):
-				newItems.extend(item.flatten()._items)
+				newItems.extend(item.flatten().items)
 			else:
 				newItems.append(item)
-		self._items = newItems
+		self.items = newItems
 		return self
 
 	def optimize(self):
 		newItems = []
-		for item in self._items:
+		for item in self.items:
 			if isinstance(item, ConstBit):
 				if item.value == 0:
 					# Constant 0 does not change the XOR result.
@@ -126,7 +125,7 @@ class XOR(object):
 					pass
 				else:
 					if sum(1 if (isinstance(i, Bit) and i == item) else 0
-					       for i in self._items) % 2:
+					       for i in self.items) % 2:
 						# We have an uneven count of this bit.
 						# Keep it once.
 						newItems.append(item)
@@ -142,39 +141,35 @@ class XOR(object):
 			# All items have been optimized out.
 			# This term shall be zero.
 			newItems.append(ConstBit(0))
-		self._items = newItems
+		self.items = newItems
 
 	def gen_python(self):
-		string = " ^ ".join(item.gen_python() for item in self._items)
-		return "(%s)" % string
+		assert(self.items)
+		return "(%s)" % (" ^ ".join(item.gen_python() for item in self.items))
 
 	def gen_c(self):
-		string = " ^ ".join(item.gen_c() for item in self._items)
-		return "(%s)" % string
+		assert(self.items)
+		return "(%s)" % (" ^ ".join(item.gen_c() for item in self.items))
 
 	def gen_verilog(self):
-		string = " ^ ".join(item.gen_verilog() for item in self._items)
-		return "(%s)" % string
+		assert(self.items)
+		return "(%s)" % (" ^ ".join(item.gen_verilog() for item in self.items))
 
 class Word(object):
-	def __init__(self, *bits, MSBFirst=True):
-		if len(bits) == 1 and isinstance(bits[0], (list, tuple)):
-			bits = bits[0]
+	def __init__(self, *items, MSBFirst=True):
 		if MSBFirst:
-			bits = reversed(bits)
-		self._items = list(bits)
+			# Reverse items, so that it's always LSB-first.
+			items = reversed(items)
+		self.items = list(items)
 
 	def __getitem__(self, index):
-		return self._items[index]
+		return self.items[index]
 
 	def flatten(self):
-		newItems = []
-		for item in self._items:
-			newItems.append(item.flatten())
-		self._items = newItems
+		self.items = [ item.flatten() for item in self.items ]
 
 	def optimize(self):
-		for item in self._items:
+		for item in self.items:
 			item.optimize()
 
 class CrcGenError(Exception):
@@ -189,8 +184,8 @@ class CrcGen(object):
 	OPT_ALL		= OPT_FLATTEN | OPT_ELIMINATE
 
 	def __init__(self,
-		     P=0x07,
-		     nrBits=8,
+		     P,
+		     nrBits,
 		     shiftRight=False,
 		     optimize=OPT_ALL):
 		self.__P = P
@@ -202,15 +197,20 @@ class CrcGen(object):
 		nrBits = self.__nrBits
 		assert nrBits in (8, 16, 32), "Invalid nrBits"
 
+		# Construct the function input data word.
 		inData = Word(*(
 			Bit(dataVarName, i)
 			for i in reversed(range(8))
 		))
+
+		# Construct the function input CRC word.
 		inCrc  = Word(*(
 			Bit(crcVarName, i)
 			for i in reversed(range(nrBits))
 		))
 
+		# Construct the base word.
+		# This is the start word for the bit shifting loop below.
 		if self.__shiftRight:
 			base = Word(*(
 				XOR(inData[i], inCrc[i]) if i <= 7 else ConstBit(0)
@@ -223,14 +223,19 @@ class CrcGen(object):
 				for i in reversed(range(nrBits))
 			))
 
-		def xor_P(a, b, bitNr):
+		# Helper function to XOR a polynomial bit with the data bit 'dataBit',
+		# if the decision bit 'queryBit' is set.
+		# This is done reversed, because the polynomial is constant.
+		def xor_P(dataBit, queryBit, bitNr):
 			if (self.__P >> bitNr) & 1:
-				return XOR(a, b)
-			return a
+				return XOR(dataBit, queryBit)
+			return dataBit
 
+		# Run the main shift loop.
 		prevWord = base
 		for _ in range(8):
 			if self.__shiftRight:
+				# Shift to the right: i + 1
 				word = Word(*(
 					xor_P(prevWord[i + 1] if i < nrBits - 1 else ConstBit(0),
 					      prevWord[0],
@@ -238,6 +243,7 @@ class CrcGen(object):
 					for i in reversed(range(nrBits))
 				))
 			else:
+				# Shift to the left: i - 1
 				word = Word(*(
 					xor_P(prevWord[i - 1] if i > 0 else ConstBit(0),
 					      prevWord[nrBits - 1],
@@ -246,27 +252,39 @@ class CrcGen(object):
 				))
 			prevWord = word
 
+		# Construct the function output CRC word.
 		if self.__shiftRight:
-			result = Word(*(
+			outCrc = Word(*(
 				XOR(inCrc[i + 8] if i < nrBits - 8 else ConstBit(0),
 				    word[i])
 				for i in reversed(range(nrBits))
 			))
 		else:
-			result = word
+			outCrc = word
 
 		# Optimize the algorithm. This removes unnecessary operations.
 		if self.__optimize & self.OPT_FLATTEN:
-			result.flatten()
+			outCrc.flatten()
 		if self.__optimize & self.OPT_ELIMINATE:
-			result.optimize()
+			outCrc.optimize()
 
-		return result
+		return outCrc
 
 	def __header(self):
-		return ("THIS IS GENERATED CODE.\n"
-			"This code is Public Domain.\n"
-			"It can be used without any restrictions.\n")
+		return """\
+THIS IS GENERATED CODE.
+
+This code is Public Domain.
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE
+USE OR PERFORMANCE OF THIS SOFTWARE."""
 
 	def __algDescription(self):
 		return ("CRC polynomial      = 0x%X (hex)\n"
@@ -284,6 +302,7 @@ class CrcGen(object):
 		word = self.__gen(dataVarName, crcVarName)
 		ret = []
 		ret.append("# vim: ts=8 sw=8 noexpandtab")
+		ret.append("")
 		ret.extend("# " + l for l in self.__header().splitlines())
 		ret.append("")
 		ret.extend("# " + l for l in self.__algDescription().splitlines())
@@ -309,6 +328,7 @@ class CrcGen(object):
 		word = self.__gen(inDataName, inCrcName)
 		ret = []
 		ret.append("// vim: ts=4 sw=4 noexpandtab")
+		ret.append("")
 		ret.extend("// " + l for l in self.__header().splitlines())
 		ret.append("")
 		if not genFunction:
@@ -353,6 +373,7 @@ class CrcGen(object):
 		cType = "uint%s_t" % self.__nrBits
 		ret = []
 		ret.append("// vim: ts=4 sw=4 noexpandtab")
+		ret.append("")
 		ret.extend("// " + l for l in self.__header().splitlines())
 		ret.append("")
 		ret.append("#ifndef %s_H_" % funcName.upper())
