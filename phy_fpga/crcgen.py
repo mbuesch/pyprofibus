@@ -35,9 +35,8 @@ class Bit(object):
 	name: str
 	index: int
 
-	@property
-	def allBitsRecursive(self):
-		yield self
+	def flatten(self):
+		return self
 
 	def optimize(self):
 		pass
@@ -64,9 +63,8 @@ class Bit(object):
 class ConstBit(object):
 	value: int
 
-	@property
-	def allBitsRecursive(self):
-		yield self
+	def flatten(self):
+		return self
 
 	def optimize(self):
 		pass
@@ -88,17 +86,22 @@ class ConstBit(object):
 
 class XOR(object):
 	def __init__(self, *items):
-		self.__items = items
-		assert(len(self.__items) >= 2)
+		self._items = items
+		assert(len(self._items) >= 2)
 
-	@property
-	def allBitsRecursive(self):
-		for item in self.__items:
-			yield from item.allBitsRecursive
+	def flatten(self):
+		newItems = []
+		for item in self._items:
+			if isinstance(item, XOR):
+				newItems.extend(item.flatten()._items)
+			else:
+				newItems.append(item)
+		self._items = newItems
+		return self
 
 	def optimize(self):
 		newItems = []
-		for item in self.__items:
+		for item in self._items:
 			if isinstance(item, ConstBit):
 				if item.value == 0:
 					# Constant 0 does not change the XOR result.
@@ -114,7 +117,7 @@ class XOR(object):
 					pass
 				else:
 					if sum(1 if (isinstance(i, Bit) and i == item) else 0
-					       for i in self.__items) % 2:
+					       for i in self._items) % 2:
 						# We have an uneven count of this bit.
 						# Keep it once.
 						newItems.append(item)
@@ -126,18 +129,18 @@ class XOR(object):
 				# This is something else.
 				# Keep it.
 				newItems.append(item)
-		self.__items = newItems
+		self._items = newItems
 
 	def gen_python(self):
-		string = " ^ ".join(item.gen_python() for item in self.__items)
+		string = " ^ ".join(item.gen_python() for item in self._items)
 		return "(%s)" % string
 
 	def gen_c(self):
-		string = " ^ ".join(item.gen_c() for item in self.__items)
+		string = " ^ ".join(item.gen_c() for item in self._items)
 		return "(%s)" % string
 
 	def gen_verilog(self):
-		string = " ^ ".join(item.gen_verilog() for item in self.__items)
+		string = " ^ ".join(item.gen_verilog() for item in self._items)
 		return "(%s)" % string
 
 class Word(object):
@@ -146,22 +149,19 @@ class Word(object):
 			bits = bits[0]
 		if MSBFirst:
 			bits = reversed(bits)
-		self.__items = list(bits)
+		self._items = list(bits)
 
 	def __getitem__(self, index):
-		return self.__items[index]
+		return self._items[index]
 
 	def flatten(self):
 		newItems = []
-		for item in self.__items:
-			if isinstance(item, XOR):
-				newItems.append(XOR(*item.allBitsRecursive))
-			else:
-				newItems.append(item)
-		self.__items = newItems
+		for item in self._items:
+			newItems.append(item.flatten())
+		self._items = newItems
 
 	def optimize(self):
-		for item in self.__items:
+		for item in self._items:
 			item.optimize()
 
 class CrcGen(object):
