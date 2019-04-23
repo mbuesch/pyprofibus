@@ -110,6 +110,10 @@ class XOR(object):
 				# This is something else.
 				# Keep it.
 				newItems.append(item)
+		if not newItems:
+			# All items have been optimized out.
+			# This term shall be zero.
+			newItems.append(ConstBit(0))
 		self._items = newItems
 
 	def gen_python(self):
