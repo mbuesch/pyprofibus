@@ -177,60 +177,56 @@ class CrcGen(object):
 		nrBits = self.__nrBits
 		assert nrBits in (8, 16, 32), "Invalid nrBits"
 
-		inData = Word([ Bit(dataVarName, i) for i in reversed(range(8)) ])
-		inCrc  = Word([ Bit(crcVarName, i) for i in reversed(range(nrBits)) ])
+		inData = Word(*(
+			Bit(dataVarName, i)
+			for i in reversed(range(8))
+		))
+		inCrc  = Word(*(
+			Bit(crcVarName, i)
+			for i in reversed(range(nrBits))
+		))
 
 		if self.__shiftRight:
-			base = Word(
-				*(
-					XOR(inData[i], inCrc[i]) if i <= 7 else ConstBit(0)
-					for i in range(nrBits - 1, -1, -1)
-				)
-			)
+			base = Word(*(
+				XOR(inData[i], inCrc[i]) if i <= 7 else ConstBit(0)
+				for i in reversed(range(nrBits))
+			))
 		else:
-			base = Word(
-				*(
-					XOR(inData[i] if i <= 7 else ConstBit(0),
-					    inCrc[i])
-					for i in range(nrBits - 1, -1, -1)
-				)
-			)
+			base = Word(*(
+				XOR(inData[i] if i <= 7 else ConstBit(0),
+				    inCrc[i])
+				for i in reversed(range(nrBits))
+			))
 
-		def p(a, b, bitNr):
+		def xor_P(a, b, bitNr):
 			if (self.__P >> bitNr) & 1:
 				return XOR(a, b)
 			return a
 
 		prevWord = base
-		for i in range(8):
+		for _ in range(8):
 			if self.__shiftRight:
-				word = Word(
-					[
-						p(ConstBit(0), prevWord[0], nrBits - 1)
-					] + [
-						p(prevWord[i + 1], prevWord[0], i)
-						for i in range(nrBits - 2, -1, -1)
-					]
-				)
+				word = Word(*(
+					xor_P(prevWord[i + 1] if i < nrBits - 1 else ConstBit(0),
+					      prevWord[0],
+					      i)
+					for i in reversed(range(nrBits))
+				))
 			else:
-				word = Word(
-					[
-						p(prevWord[i - 1], prevWord[nrBits - 1], i)
-						for i in range(nrBits - 1, 0, -1)
-					] + [
-						p(ConstBit(0), prevWord[nrBits - 1], 0)
-					]
-				)
+				word = Word(*(
+					xor_P(prevWord[i - 1] if i > 0 else ConstBit(0),
+					      prevWord[nrBits - 1],
+					      i)
+					for i in reversed(range(nrBits))
+				))
 			prevWord = word
 
 		if self.__shiftRight:
-			result = Word(
-				*(
-					XOR(inCrc[i + 8] if i < nrBits - 8 else ConstBit(0),
-					    word[i])
-					for i in range(nrBits - 1, -1, -1)
-				)
-			)
+			result = Word(*(
+				XOR(inCrc[i + 8] if i < nrBits - 8 else ConstBit(0),
+				    word[i])
+				for i in reversed(range(nrBits))
+			))
 		else:
 			result = word
 
