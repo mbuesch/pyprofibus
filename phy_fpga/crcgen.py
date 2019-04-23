@@ -68,9 +68,7 @@ class Bit(AbstractBit):
 	index: int
 
 	def gen_python(self):
-		if self.index:
-			return "((%s >> %d) & 1)" % (self.name, self.index)
-		return "(%s & 1)" % (self.name)
+		return "%s[%d]" % (self.name, self.index)
 
 	def gen_c(self):
 		if self.index:
@@ -308,15 +306,22 @@ USE OR PERFORMANCE OF THIS SOFTWARE."""
 		ret.extend("# " + l for l in self.__algDescription().splitlines())
 		ret.append("")
 		ret.append("def %s(%s, %s):" % (funcName, crcVarName, dataVarName))
+		ret.append("\tclass bitwrapper:")
+		ret.append("\t\tdef __init__(self, value):")
+		ret.append("\t\t\tself.value = value")
+		ret.append("\t\tdef __getitem__(self, index):")
+		ret.append("\t\t\treturn ((self.value >> index) & 1)")
+		ret.append("\t\tdef __setitem__(self, index, value):")
+		ret.append("\t\t\tif value:")
+		ret.append("\t\t\t\tself.value |= 1 << index")
+		ret.append("\t\t\telse:")
+		ret.append("\t\t\t\tself.value &= ~(1 << index)")
+		ret.append("\t%s = bitwrapper(%s)" % (crcVarName, crcVarName))
+		ret.append("\t%s = bitwrapper(%s)" % (dataVarName, dataVarName))
+		ret.append("\tret = bitwrapper(0)")
 		for i, bit in enumerate(word):
-			if i:
-				operator = "|="
-				shift = " << %d" % i
-			else:
-				operator = "="
-				shift = ""
-			ret.append("\tret %s (%s)%s" % (operator, bit.gen_python(), shift))
-		ret.append("\treturn ret")
+			ret.append("\tret[%d] = %s" % (i, bit.gen_python()))
+		ret.append("\treturn ret.value")
 		return "\n".join(ret)
 
 	def genVerilog(self,
@@ -442,7 +447,7 @@ if __name__ == "__main__":
 
 		print("Testing...")
 		mask = (1 << nrBits) - 1
-		for i in range(0x400):
+		for i in range(0x100):
 			if i == 0:
 				crc = 0
 			elif i == 1:
