@@ -50,14 +50,14 @@ class Bit(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def py(self):
+	def gen_python(self):
 		if self.index:
 			return "((%s >> %d) & 1)" % (self.name, self.index)
 		return "(%s & 1)" % (self.name)
 
-	c = py
+	gen_c = gen_python
 
-	def verilog(self):
+	def gen_verilog(self):
 		return "%s[%d]" % (self.name, self.index)
 
 @dataclass
@@ -78,12 +78,12 @@ class ConstBit(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def py(self):
+	def gen_python(self):
 		return "1" if self.value else "0"
 
-	c = py
+	gen_c = gen_python
 
-	def verilog(self):
+	def gen_verilog(self):
 		return "1b1" if self.value else "1b0"
 
 class XOR(object):
@@ -128,16 +128,16 @@ class XOR(object):
 				newItems.append(item)
 		self.__items = newItems
 
-	def py(self):
-		string = " ^ ".join(item.py() for item in self.__items)
+	def gen_python(self):
+		string = " ^ ".join(item.gen_python() for item in self.__items)
 		return "(%s)" % string
 
-	def c(self):
-		string = " ^ ".join(item.c() for item in self.__items)
+	def gen_c(self):
+		string = " ^ ".join(item.gen_c() for item in self.__items)
 		return "(%s)" % string
 
-	def verilog(self):
-		string = " ^ ".join(item.verilog() for item in self.__items)
+	def gen_verilog(self):
+		string = " ^ ".join(item.gen_verilog() for item in self.__items)
 		return "(%s)" % string
 
 class Word(object):
@@ -278,7 +278,7 @@ class CrcGen(object):
 			else:
 				operator = "="
 				shift = ""
-			ret.append("\tret %s (%s)%s" % (operator, bit.py(), shift))
+			ret.append("\tret %s (%s)%s" % (operator, bit.gen_python(), shift))
 		ret.append("\treturn ret")
 		return "\n".join(ret)
 
@@ -314,7 +314,7 @@ class CrcGen(object):
 		for i, bit in enumerate(word):
 			ret.append("\t%s%s[%d] = %s;" % ("" if genFunction else "assign ",
 							 name if genFunction else outCrcName,
-							 i, bit.verilog()))
+							 i, bit.gen_verilog()))
 		if genFunction:
 			ret.append("end")
 			ret.append("endfunction")
@@ -358,7 +358,7 @@ class CrcGen(object):
 			else:
 				operator = "="
 				shift = ""
-			ret.append("\tret %s (%s)%s;" % (operator, bit.c(), shift))
+			ret.append("\tret %s (%s)%s;" % (operator, bit.gen_c(), shift))
 		ret.append("\treturn ret;")
 		ret.append("}")
 		ret.append("")
