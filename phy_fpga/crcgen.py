@@ -54,6 +54,44 @@ CRC_PARAMETERS = {
 }
 
 
+class CrcReference(object):
+	"""Generic CRC reference implementation.
+	"""
+
+	@classmethod
+	def crc(cls, crc, data, polynomial, nrBits, shiftRight):
+		mask = (1 << nrBits) - 1
+		msb = 1 << (nrBits - 1)
+		lsb = 1
+		if shiftRight:
+			tmp = (crc ^ data) & 0xFF
+			for i in range(8):
+				if tmp & lsb:
+					tmp = ((tmp >> 1) ^ polynomial) & mask
+				else:
+					tmp = (tmp >> 1) & mask
+			crc = ((crc >> 8) ^ tmp) & mask
+		else:
+			tmp = (crc ^ (data << (nrBits - 8))) & mask
+			for i in range(8):
+				if tmp & msb:
+					tmp = ((tmp << 1) ^ polynomial) & mask
+				else:
+					tmp = (tmp << 1) & mask
+			crc = tmp
+		return crc
+
+	@classmethod
+	def crcBlock(cls, crc, data, polynomial, nrBits, shiftRight, preFlip, postFlip):
+		mask = (1 << nrBits) - 1
+		if preFlip:
+			crc ^= mask
+		for b in data:
+			crc = cls.crc(crc, b, polynomial, nrBits, shiftRight)
+		if postFlip:
+			crc ^= mask
+		return crc
+
 @dataclass
 class AbstractBit(object):
 	def flatten(self):
@@ -179,6 +217,8 @@ class CrcGen(object):
 
 	OPT_FLATTEN	= 1 << 0
 	OPT_ELIMINATE	= 1 << 1
+
+	OPT_NONE	= 0
 	OPT_ALL		= OPT_FLATTEN | OPT_ELIMINATE
 
 	def __init__(self,
@@ -412,40 +452,18 @@ USE OR PERFORMANCE OF THIS SOFTWARE."""
 		return "\n".join(ret)
 
 if __name__ == "__main__":
-	def crc_reference(crc, data, P, nrBits, shiftRight, preFlip, postFlip):
-		mask = (1 << nrBits) - 1
-		msb = 1 << (nrBits - 1)
-		lsb = 1
-		if preFlip:
-			crc ^= mask
-		for b in data:
-			if shiftRight:
-				tmp = (crc ^ b) & 0xFF
-				for i in range(8):
-					if tmp & lsb:
-						tmp = ((tmp >> 1) ^ P) & mask
-					else:
-						tmp = (tmp >> 1) & mask
-				crc = ((crc >> 8) ^ tmp) & mask
-			else:
-				tmp = (crc ^ (b << (nrBits - 8))) & mask
-				for i in range(8):
-					if tmp & msb:
-						tmp = ((tmp << 1) ^ P) & mask
-					else:
-						tmp = (tmp << 1) & mask
-				crc = tmp
-		if postFlip:
-			crc ^= mask
-		return crc
-
-	def runTests(crc_func, polynomial, nrBits, shiftRight):
+	def runTests(crc_func, polynomial, nrBits, shiftRight, name=None, extra=None):
 		import random
 
 		rng = random.Random()
 		rng.seed(424242)
 
-		print("Testing...")
+		print("Testing%s P=0x%X, nrBits=%d, shiftRight=%d %s..." % (
+		      (" " + name) if name else "",
+		      polynomial,
+		      nrBits,
+		      int(bool(shiftRight)),
+		      (extra + " ") if extra else ""))
 		mask = (1 << nrBits) - 1
 		for i in range(0x100):
 			if i == 0:
@@ -455,13 +473,12 @@ if __name__ == "__main__":
 			else:
 				crc = rng.randint(1, mask - 1)
 			for data in range(0xFF + 1):
-				a = crc_reference(crc=crc,
-						  data=(data,),
-						  P=polynomial,
-						  nrBits=nrBits,
-						  shiftRight=shiftRight,
-						  preFlip=False,
-						  postFlip=False)
+				a = CrcReference.crc(
+					crc=crc,
+					data=data,
+					polynomial=polynomial,
+					nrBits=nrBits,
+					shiftRight=shiftRight)
 				b = crc_func(crc, data)
 				if a != b:
 					raise CrcGenError("Test failed. "
@@ -482,7 +499,8 @@ if __name__ == "__main__":
 		g.add_argument("-v", "--verilog-function", action="store_true", help="Generate Verilog function")
 		g.add_argument("-m", "--verilog-module", action="store_true", help="Generate Verilog module")
 		g.add_argument("-c", "--c", action="store_true", help="Generate C code")
-		g.add_argument("-T", "--test", action="store_true", help="Run unit tests")
+		g.add_argument("-t", "--test", action="store_true", help="Run unit tests for the specified algorithm")
+		g.add_argument("-T", "--test-all", action="store_true", help="Run unit tests for all known algorithms")
 		p.add_argument("-a", "--algorithm", type=str,
 			       choices=CRC_PARAMETERS.keys(), default="CRC-8-CCITT",
 			       help="Select the CRC algorithm. "
@@ -501,58 +519,81 @@ if __name__ == "__main__":
 		p.add_argument("-O", "--optimize", type=argInt, default=CrcGen.OPT_ALL, help="Enable algorithm optimizer steps")
 		args = p.parse_args()
 
-		crcParameters = CRC_PARAMETERS[args.algorithm].copy()
-		if args.polynomial is not None:
-			crcParameters["polynomial"] = args.polynomial
-		if args.nr_bits is not None:
-			crcParameters["nrBits"] = args.nr_bits
-		if args.shift_right:
-			crcParameters["shiftRight"] = True
-		if args.shift_left:
-			crcParameters["shiftRight"] = False
-
-		polynomial = crcParameters["polynomial"]
-		nrBits = crcParameters["nrBits"]
-		shiftRight = crcParameters["shiftRight"]
-
-		if polynomial > ((1 << nrBits) - 1):
-			raise CrcGenError("Invalid polynomial. "
-					  "It is bigger than the CRC width of (2**%d)-1." % nrBits)
-
-		gen = CrcGen(P=polynomial,
-			     nrBits=nrBits,
-			     shiftRight=shiftRight,
-			     optimize=args.optimize)
-		if args.test:
-			pyCode = gen.genPython(funcName="crc_func")
-			exec(pyCode)
-			runTests(crc_func=crc_func,
-				 polynomial=polynomial,
-				 nrBits=nrBits,
-				 shiftRight=shiftRight)
+		if args.test_all:
+			for optimize in (CrcGen.OPT_ALL,
+					 CrcGen.OPT_FLATTEN,
+					 CrcGen.OPT_ELIMINATE,
+					 CrcGen.OPT_NONE):
+				for alg, crcParameters in CRC_PARAMETERS.items():
+					polynomial = crcParameters["polynomial"]
+					nrBits = crcParameters["nrBits"]
+					shiftRight = crcParameters["shiftRight"]
+					gen = CrcGen(P=polynomial,
+						     nrBits=nrBits,
+						     shiftRight=shiftRight,
+						     optimize=optimize)
+					pyCode = gen.genPython(funcName="crc_func")
+					exec(pyCode)
+					runTests(crc_func=crc_func,
+						 polynomial=polynomial,
+						 nrBits=nrBits,
+						 shiftRight=shiftRight,
+						 name=alg,
+						 extra=("-O=%d" % optimize))
 		else:
-			if args.python:
-				print(gen.genPython(funcName=args.name,
-						    crcVarName=args.crc_in_param,
-						    dataVarName=args.data_param))
-			elif args.verilog_function:
-				print(gen.genVerilog(genFunction=True,
-						     name=args.name,
-						     inDataName=args.data_param,
-						     inCrcName=args.crc_in_param,
-						     outCrcName=args.crc_out_param))
-			elif args.verilog_module:
-				print(gen.genVerilog(genFunction=False,
-						     name=args.name,
-						     inDataName=args.data_param,
-						     inCrcName=args.crc_in_param,
-						     outCrcName=args.crc_out_param))
-			elif args.c:
-				print(gen.genC(funcName=args.name,
-					       crcVarName=args.crc_in_param,
-					       dataVarName=args.data_param,
-					       static=args.static,
-					       inline=args.inline))
+			crcParameters = CRC_PARAMETERS[args.algorithm].copy()
+			if args.polynomial is not None:
+				crcParameters["polynomial"] = args.polynomial
+			if args.nr_bits is not None:
+				crcParameters["nrBits"] = args.nr_bits
+			if args.shift_right:
+				crcParameters["shiftRight"] = True
+			if args.shift_left:
+				crcParameters["shiftRight"] = False
+
+			polynomial = crcParameters["polynomial"]
+			nrBits = crcParameters["nrBits"]
+			shiftRight = crcParameters["shiftRight"]
+
+			if polynomial > ((1 << nrBits) - 1):
+				raise CrcGenError("Invalid polynomial. "
+						  "It is bigger than the CRC width "
+						  "of (2**%d)-1." % nrBits)
+
+			gen = CrcGen(P=polynomial,
+				     nrBits=nrBits,
+				     shiftRight=shiftRight,
+				     optimize=args.optimize)
+			if args.test:
+				pyCode = gen.genPython(funcName="crc_func")
+				exec(pyCode)
+				runTests(crc_func=crc_func,
+					 polynomial=polynomial,
+					 nrBits=nrBits,
+					 shiftRight=shiftRight)
+			else:
+				if args.python:
+					print(gen.genPython(funcName=args.name,
+							    crcVarName=args.crc_in_param,
+							    dataVarName=args.data_param))
+				elif args.verilog_function:
+					print(gen.genVerilog(genFunction=True,
+							     name=args.name,
+							     inDataName=args.data_param,
+							     inCrcName=args.crc_in_param,
+							     outCrcName=args.crc_out_param))
+				elif args.verilog_module:
+					print(gen.genVerilog(genFunction=False,
+							     name=args.name,
+							     inDataName=args.data_param,
+							     inCrcName=args.crc_in_param,
+							     outCrcName=args.crc_out_param))
+				elif args.c:
+					print(gen.genC(funcName=args.name,
+						       crcVarName=args.crc_in_param,
+						       dataVarName=args.data_param,
+						       static=args.static,
+						       inline=args.inline))
 		sys.exit(0)
 	except CrcGenError as e:
 		print("ERROR: %s" % str(e), file=sys.stderr)
