@@ -216,7 +216,7 @@ class CrcGen(object):
 			))
 		else:
 			base = Word(*(
-				XOR(inData[i] if i <= 7 else ConstBit(0),
+				XOR(inData[i - (nrBits - 8)] if i >= nrBits - 8 else ConstBit(0),
 				    inCrc[i])
 				for i in reversed(range(nrBits))
 			))
