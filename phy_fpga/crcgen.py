@@ -51,6 +51,11 @@ CRC_PARAMETERS = {
 		"nrBits"	: 8,
 		"shiftRight"	: False,
 	},
+	"CRC-8-IBUTTON" : {
+		"polynomial"	: 0x8C,
+		"nrBits"	: 8,
+		"shiftRight"	: True,
+	},
 }
 
 
