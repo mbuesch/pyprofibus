@@ -42,7 +42,7 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-from crcgen import CrcReference, CRC_PARAMETERS
+from crcgen import CrcReference, CrcGen, CRC_PARAMETERS
 import random
 
 
@@ -162,7 +162,7 @@ def bitreverse(value, nrBits):
 		value >>= 1
 	return ret
 
-def compareCRC(name, crcFunc):
+def compareReferenceImpl(name, crcFunc):
 	print("Testing %s..." % name)
 	crcParameters = CRC_PARAMETERS[name]
 	for crc in crcRange(crcParameters["nrBits"]):
@@ -175,7 +175,7 @@ def compareCRC(name, crcFunc):
 			if a != b:
 				raise Exception("%s test FAILED!" % name)
 
-def checkReversed(nrBits, polynomial):
+def checkReferenceReversed(nrBits, polynomial):
 	print("Testing CrcReference reversed (nrBits=%d, P=%X)..." % (
 	      nrBits, polynomial))
 	for shiftRight in (True, False):
@@ -199,22 +199,43 @@ def checkReversed(nrBits, polynomial):
 						"FAILED! (nrBits=%d, P=%X)" % (
 						nrBits, polynomial))
 
+def compareGeneratedImpl():
+	for optimize in (CrcGen.OPT_ALL,
+			 CrcGen.OPT_FLATTEN,
+			 CrcGen.OPT_ELIMINATE,
+			 CrcGen.OPT_NONE):
+		for alg, crcParameters in CRC_PARAMETERS.items():
+			polynomial = crcParameters["polynomial"]
+			nrBits = crcParameters["nrBits"]
+			shiftRight = crcParameters["shiftRight"]
+			gen = CrcGen(P=polynomial,
+				     nrBits=nrBits,
+				     shiftRight=shiftRight,
+				     optimize=optimize)
+			gen.runTests(name=alg,
+				     extra=("-O=%d" % optimize))
+
 if __name__ == "__main__":
 	assert bitreverse(0xE0, 8) == 0x07
 	assert bitreverse(0x8408, 16) == 0x1021
 	assert bitreverse(0xEDB88320, 32) == 0x04C11DB7
 
-	checkReversed(32, 0xEDB88320)
-	checkReversed(16, 0xA001)
-	checkReversed(16, 0x1021)
-	checkReversed(8, 0x07)
-	checkReversed(8, 0x8C)
+	print("*** Comparing reference implementation to itself reversed ***")
+	checkReferenceReversed(32, 0xEDB88320)
+	checkReferenceReversed(16, 0xA001)
+	checkReferenceReversed(16, 0x1021)
+	checkReferenceReversed(8, 0x07)
+	checkReferenceReversed(8, 0x8C)
 
-	compareCRC("CRC-32", crc32)
-	compareCRC("CRC-16", crc16)
-	compareCRC("CRC-16-CCITT",
-		   lambda c, d: bitreverse(crc16_ccitt(bitreverse(c, 16),
-						       bitreverse(d, 8)), 16))
-	compareCRC("CRC-16-CCITT", crc16_xmodem)
-	compareCRC("CRC-8-CCITT", crc8_ccitt)
-	compareCRC("CRC-8-IBUTTON", crc8_ibutton)
+	print("*** Comparing reference implementation to discrete implementations ***")
+	compareReferenceImpl("CRC-32", crc32)
+	compareReferenceImpl("CRC-16", crc16)
+	compareReferenceImpl("CRC-16-CCITT",
+		lambda c, d: bitreverse(crc16_ccitt(bitreverse(c, 16),
+						    bitreverse(d, 8)), 16))
+	compareReferenceImpl("CRC-16-CCITT", crc16_xmodem)
+	compareReferenceImpl("CRC-8-CCITT", crc8_ccitt)
+	compareReferenceImpl("CRC-8-IBUTTON", crc8_ibutton)
+
+	print("*** Comparing generated CRC functions to reference implementation ***")
+	compareGeneratedImpl()
