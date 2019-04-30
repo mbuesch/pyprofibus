@@ -44,6 +44,7 @@
 
 from crcgen import CrcReference, CrcGen, CRC_PARAMETERS
 import random
+import multiprocessing
 
 
 # Derived from CRC-32 version 2.0.0 by Craig Bruce, 2006-04-29. (Public Domain):
@@ -106,6 +107,11 @@ def crc16_ccitt(crc, data):
 	return ((((data << 8) & 0xFFFF) | (crc >> 8)) ^
 		(data >> 4) ^
 		((data << 3) & 0xFFFF))
+
+def crc16_ccitt_reversed(crc, data):
+	return bitreverse(crc16_ccitt(bitreverse(crc, 16),
+				      bitreverse(data, 8)),
+			  16)
 
 # Derived from AVR-libc:
 def crc16_xmodem(crc, data):
@@ -199,21 +205,16 @@ def checkReferenceReversed(nrBits, polynomial):
 						"FAILED! (nrBits=%d, P=%X)" % (
 						nrBits, polynomial))
 
-def compareGeneratedImpl():
-	for optimize in (CrcGen.OPT_ALL,
-			 CrcGen.OPT_FLATTEN,
-			 CrcGen.OPT_ELIMINATE,
-			 CrcGen.OPT_NONE):
-		for alg, crcParameters in CRC_PARAMETERS.items():
-			polynomial = crcParameters["polynomial"]
-			nrBits = crcParameters["nrBits"]
-			shiftRight = crcParameters["shiftRight"]
-			gen = CrcGen(P=polynomial,
-				     nrBits=nrBits,
-				     shiftRight=shiftRight,
-				     optimize=optimize)
-			gen.runTests(name=alg,
-				     extra=("-O=%d" % optimize))
+def compareGeneratedImpl(optimize, alg, crcParameters):
+	polynomial = crcParameters["polynomial"]
+	nrBits = crcParameters["nrBits"]
+	shiftRight = crcParameters["shiftRight"]
+	gen = CrcGen(P=polynomial,
+		     nrBits=nrBits,
+		     shiftRight=shiftRight,
+		     optimize=optimize)
+	gen.runTests(name=alg,
+		     extra=("-O=%d" % optimize))
 
 if __name__ == "__main__":
 	assert bitreverse(0xE0, 8) == 0x07
@@ -221,21 +222,35 @@ if __name__ == "__main__":
 	assert bitreverse(0xEDB88320, 32) == 0x04C11DB7
 
 	print("*** Comparing reference implementation to itself reversed ***")
-	checkReferenceReversed(32, 0xEDB88320)
-	checkReferenceReversed(16, 0xA001)
-	checkReferenceReversed(16, 0x1021)
-	checkReferenceReversed(8, 0x07)
-	checkReferenceReversed(8, 0x8C)
+	params = (
+		(32, 0xEDB88320),
+		(16, 0xA001),
+		(16, 0x1021),
+		(8, 0x07),
+		(8, 0x8C),
+	)
+	with multiprocessing.Pool() as p:
+		p.starmap(checkReferenceReversed, params)
 
 	print("*** Comparing reference implementation to discrete implementations ***")
-	compareReferenceImpl("CRC-32", crc32)
-	compareReferenceImpl("CRC-16", crc16)
-	compareReferenceImpl("CRC-16-CCITT",
-		lambda c, d: bitreverse(crc16_ccitt(bitreverse(c, 16),
-						    bitreverse(d, 8)), 16))
-	compareReferenceImpl("CRC-16-CCITT", crc16_xmodem)
-	compareReferenceImpl("CRC-8-CCITT", crc8_ccitt)
-	compareReferenceImpl("CRC-8-IBUTTON", crc8_ibutton)
+	params = (
+		("CRC-32", crc32),
+		("CRC-16", crc16),
+		("CRC-16-CCITT", crc16_ccitt_reversed),
+		("CRC-16-CCITT", crc16_xmodem),
+		("CRC-8-CCITT", crc8_ccitt),
+		("CRC-8-IBUTTON", crc8_ibutton),
+	)
+	with multiprocessing.Pool() as p:
+		p.starmap(compareReferenceImpl, params)
 
 	print("*** Comparing generated CRC functions to reference implementation ***")
-	compareGeneratedImpl()
+	def makeParams():
+		for optimize in (CrcGen.OPT_ALL,
+				 CrcGen.OPT_FLATTEN,
+				 CrcGen.OPT_ELIMINATE,
+				 CrcGen.OPT_NONE):
+			for alg, crcParameters in CRC_PARAMETERS.items():
+				yield optimize, alg, crcParameters
+	with multiprocessing.Pool() as p:
+		p.starmap(compareGeneratedImpl, tuple(makeParams()))
