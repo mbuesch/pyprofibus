@@ -40,13 +40,14 @@ class DpSlaveState(object):
 		STATE_DX	: "Data_Exchange",
 	}
 
-	defaultTimeLimits = {
+	# State timeouts in seconds
+	stateTimeLimits = {
 		STATE_INIT	: TimeLimit.UNLIMITED,
 		STATE_WDIAG	: 1.0,
 		STATE_WPRM	: 0.5,
 		STATE_WCFG	: 0.5,
 		STATE_WDXRDY	: 1.0,
-		STATE_DX	: 0.3,
+		STATE_DX	: 0.5,
 	}
 
 	def __init__(self, master, slaveDesc):
@@ -88,11 +89,11 @@ class DpSlaveState(object):
 	def getNextState(self):
 		return self.__nextState
 
-	def setState(self, state, stateTimeout = TimeLimit.DEFAULT):
-		if stateTimeout == TimeLimit.DEFAULT:
-			stateTimeout = self.defaultTimeLimits[state]
+	def setState(self, state, stateTimeLimit=None):
+		if stateTimeLimit is None:
+			stateTimeLimit = self.stateTimeLimits[state]
 		self.__nextState = state
-		self.__stateTimeout.start(stateTimeout)
+		self.__stateTimeout.start(stateTimeLimit)
 		self.master._releaseSlave(self)
 
 	def applyState(self):
@@ -100,8 +101,7 @@ class DpSlaveState(object):
 		self.__prevState, self.__state = self.__state, self.__nextState
 
 		# Handle state switch
-		if self.stateJustEntered() or\
-		   not self.pendingReq:
+		if self.stateJustEntered():
 			self.pendingReq = None
 
 	def stateJustEntered(self):
@@ -287,7 +287,7 @@ class DpMaster(object):
 			self.phy.releaseBus()
 
 	def __runSlave_init(self, slave, dataExOutData):
-		if (not slave.pendingReq or\
+		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Trying to initialize slave %d..." % (
 				slave.slaveDesc.slaveAddr))
@@ -329,7 +329,8 @@ class DpMaster(object):
 		return None
 
 	def __runSlave_waitDiag(self, slave, dataExOutData):
-		if not slave.pendingReq:
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -342,7 +343,7 @@ class DpMaster(object):
 					    telegram=DpTelegram_SlaveDiag_Req(
 							da=slave.slaveDesc.slaveAddr,
 							sa=self.masterAddr),
-					    timeout=0.3)
+					    timeout=0.05)
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
@@ -354,14 +355,11 @@ class DpMaster(object):
 			else:
 				self.__debugMsg("Received spurious "
 					"telegram:\n%s" % str(telegram))
-		else:
-			if slave.pendingReqTimeout.exceed():
-				slave.setState(slave.STATE_INIT)
-
 		return None
 
 	def __runSlave_waitPrm(self, slave, dataExOutData):
-		if not slave.pendingReq:
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Sending Set_Prm to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -370,7 +368,7 @@ class DpMaster(object):
 				slave.slaveDesc.setPrmTelegram.sa = self.masterAddr
 				self.__send(slave,
 					    telegram=slave.slaveDesc.setPrmTelegram,
-					    timeout=0.2)
+					    timeout=0.05)
 			except ProfibusError as e:
 				self.__debugMsg("Set_Prm failed: %s" % str(e))
 				return None
@@ -378,13 +376,11 @@ class DpMaster(object):
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WCFG)
-		elif slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-
 		return None
 
 	def __runSlave_waitCfg(self, slave, dataExOutData):
-		if not slave.pendingReq:
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Sending Chk_Cfg to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -392,7 +388,7 @@ class DpMaster(object):
 				slave.slaveDesc.chkCfgTelegram.sa = self.masterAddr
 				self.__send(slave,
 					    telegram=slave.slaveDesc.chkCfgTelegram,
-					    timeout=0.3)
+					    timeout=0.05)
 			except ProfibusError as e:
 				self.__debugMsg("Chk_Cfg failed: %s" % str(e))
 				return None
@@ -400,13 +396,11 @@ class DpMaster(object):
 		if slave.shortAckReceived:
 			slave.fcb.handleReply()
 			slave.setState(slave.STATE_WDXRDY)
-		elif slave.pendingReqTimeout.exceed():
-			slave.setState(slave.STATE_INIT)
-
 		return None
 
 	def __runSlave_waitDxRdy(self, slave, dataExOutData):
-		if not slave.pendingReq:
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Requesting Slave_Diag (WDXRDY) from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 
@@ -415,7 +409,7 @@ class DpMaster(object):
 					    telegram=DpTelegram_SlaveDiag_Req(
 							da=slave.slaveDesc.slaveAddr,
 							sa=self.masterAddr),
-					    timeout=0.3)
+					    timeout=0.05)
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
@@ -459,10 +453,6 @@ class DpMaster(object):
 			else:
 				self.__debugMsg("Received spurious "
 					"telegram:\n%s" % str(telegram))
-		else:
-			if slave.pendingReqTimeout.exceed():
-				slave.setState(slave.STATE_INIT)
-
 		return None
 
 	def __runSlave_dataExchange(self, slave, dataExOutData):
@@ -474,12 +464,6 @@ class DpMaster(object):
 				"Running Data_Exchange with slave %d..." %\
 				slave.slaveDesc.slaveAddr)
 			slave.dxStartTime = monotonic_time()
-
-		if slave.pendingReq and slave.pendingReqTimeout.exceed():
-			self.__debugMsg("Data_Exchange timeout with slave %d" % (
-					slave.slaveDesc.slaveAddr))
-			slave.faultDeb.fault()
-			slave.pendingReq = None
 
 		if slave.pendingReq:
 			for telegram in slave.getRxQueue():
@@ -494,12 +478,20 @@ class DpMaster(object):
 					       FdlTelegram.FC_RDH}:
 					self.__debugMsg("Slave %d requested diagnostics." %\
 						slave.slaveDesc.slaveAddr)
-					slave.setState(slave.STATE_WDXRDY)
+					slave.setState(slave.STATE_WDXRDY, 0.2)
 				elif resFunc == FdlTelegram.FC_RS:
 					raise DpError("Service not active "
 						"on slave %d" % slave.slaveDesc.slaveAddr)
 				dataExInData = telegram.getDU()
-			if dataExInData is not None:
+
+			if dataExInData is None:
+				if slave.pendingReqTimeout.exceed():
+					self.__debugMsg("Data_Exchange timeout with slave %d" % (
+							slave.slaveDesc.slaveAddr))
+					slave.faultDeb.fault()
+					slave.pendingReq = None
+			else:
+				# We received some data.
 				slave.pendingReq = None
 				slave.faultDeb.faultless()
 				slave.restartStateTimeout()
@@ -525,7 +517,7 @@ class DpMaster(object):
 			# Diagnose the slave
 			self.__debugMsg("Many errors in Data_Exchange. "
 				"Requesting diagnostic information...")
-			slave.setState(slave.STATE_WDXRDY)
+			slave.setState(slave.STATE_WDXRDY, 0.2)
 
 		return dataExInData
 

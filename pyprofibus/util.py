@@ -61,7 +61,6 @@ class TimeLimit(object):
 	"""
 
 	UNLIMITED	= -1	# No limit
-	DEFAULT		= -2
 
 	# limit => The time limit, in seconds.
 	#          Negative value = unlimited.
