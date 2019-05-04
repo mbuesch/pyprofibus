@@ -570,14 +570,14 @@ class DpMaster(object):
 			elif telegram.da == FdlTelegram.ADDRESS_MCAST:
 				self.__handleMcastTelegram(telegram)
 			elif telegram.da == self.masterAddr:
-				try:
+				if telegram.sa in self.__slaveStates:
 					slave = self.__slaveStates[telegram.sa]
-				except KeyError:
+					slave.rxQueue.append(telegram)
+					slave.fcb.handleReply()
+				else:
 					self.__debugMsg("Received telegram from "
 						"unknown station %d:\n%s" %(
 						telegram.sa, str(telegram)))
-				slave.rxQueue.append(telegram)
-				slave.fcb.handleReply()
 			else:
 				self.__debugMsg("Received telegram for "
 					"foreign station:\n%s" % str(telegram))
