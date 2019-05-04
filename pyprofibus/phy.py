@@ -13,8 +13,15 @@ from pyprofibus.compat import *
 
 import time
 import sys
+from collections import deque
 
 from pyprofibus.util import *
+
+
+__all__ = [
+	"PhyError",
+	"CpPhy",
+]
 
 
 class PhyError(ProfibusError):
@@ -37,7 +44,7 @@ class CpPhy(object):
 	BAUD_6000000	= 6000000
 	BAUD_12000000	= 12000000
 
-	def __init__(self, debug = False):
+	def __init__(self, debug=False, *args, **kwargs):
 		self.debug = debug
 		self.__close()
 
@@ -48,7 +55,7 @@ class CpPhy(object):
 		self.__close()
 
 	def __close(self):
-		self.__txQueue = []
+		self.__txQueue = deque()
 		self.__allocUntil = monotonic_time()
 		self.__secPerFrame = 0.0
 
@@ -77,9 +84,10 @@ class CpPhy(object):
 		return self.pollData(timeout)
 
 	def __send(self):
-		telegramData, srd, maxReplyLen = self.__txQueue[0]
-		if self.__allocateBus(len(telegramData), maxReplyLen):
-			self.__txQueue.pop(0)
+		now = monotonic_time()
+		if self.__canAllocateBus(now):
+			telegramData, srd, maxReplyLen = self.__txQueue.popleft()
+			self.__allocateBus(now, len(telegramData), maxReplyLen)
 			self.sendData(telegramData, srd)
 
 	def send(self, telegramData, srd, maxReplyLen = -1):
@@ -96,10 +104,10 @@ class CpPhy(object):
 		symLen = 1.0 / baudrate
 		self.__secPerFrame = symLen * float(1 + 8 + 1 + 1)
 
-	def __allocateBus(self, nrSendOctets, nrReplyOctets):
-		now = monotonic_time()
-		if now < self.__allocUntil:
-			return False
+	def __canAllocateBus(self, now):
+		return now >= self.__allocUntil
+
+	def __allocateBus(self, now, nrSendOctets, nrReplyOctets):
 		secPerFrame = self.__secPerFrame
 		seconds = secPerFrame * nrSendOctets
 		if nrReplyOctets:
@@ -107,7 +115,6 @@ class CpPhy(object):
 			seconds += secPerFrame * nrReplyOctets
 		pass#TODO
 		self.__allocUntil = now + seconds
-		return True
 
 	def releaseBus(self):
 		self.__allocUntil = monotonic_time()
