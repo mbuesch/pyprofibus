@@ -213,8 +213,6 @@ class DpMaster(object):
 		self.masterAddr = masterAddr
 		self.debug = debug
 
-		self.__activeSlave = None
-
 		mcastSlaveDesc = DpSlaveDesc(
 			identNumber = 0,
 			slaveAddr = FdlTelegram.ADDRESS_MCAST)
@@ -279,12 +277,9 @@ class DpMaster(object):
 			slave.pendingReq = None
 			raise e
 		slave.pendingReqTimeout.start(timeout)
-		self.__activeSlave = slave
 
 	def _releaseSlave(self, slave):
-		if slave is self.__activeSlave:
-			self.__activeSlave = None
-			self.phy.releaseBus()
+		self.phy.releaseBus()
 
 	def __runSlave_init(self, slave, dataExOutData):
 		if (not slave.pendingReq or
