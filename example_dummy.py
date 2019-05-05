@@ -22,6 +22,8 @@ try:
 				 masterAddr = config.dpMasterAddr,
 				 debug = True)
 
+	outData = {}
+
 	# Create a slave descriptions.
 	for slaveConf in config.slaveConfs:
 		gsd = slaveConf.gsd
@@ -52,18 +54,28 @@ try:
 		# Register the slave at the DPM
 		master.addSlave(slaveDesc)
 
+		# Set initial output data.
+		outData[slaveDesc.slaveAddr] = bytearray((0x42, 0x24))
+
 	# Initialize the DPM
 	master.initialize()
-	slaveDescs = master.getSlaveList()
 
 	# Run the slave state machine.
-	slaveData = [ bytearray((0x42, 0x24,)) ] * len(slaveDescs)
 	while True:
+		# Write the output data.
+		for slaveDesc in master.getSlaveList():
+			slaveDesc.setOutData(outData[slaveDesc.slaveAddr])
+
 		# Run slave state machines.
-		for i, slaveDesc in enumerate(slaveDescs):
-			inData = master.runSlave(slaveDesc, slaveData[i])
+		handledSlaveDesc = master.run()
+
+		# Get the in-data (receive)
+		if handledSlaveDesc:
+			inData = handledSlaveDesc.getInData()
 			if inData is not None:
-				slaveData[i] = bytearray((inData[1], inData[0]))
+				# In our example the output data shall be the inverted input.
+				outData[handledSlaveDesc.slaveAddr][0] = inData[1]
+				outData[handledSlaveDesc.slaveAddr][1] = inData[0]
 
 except pyprofibus.ProfibusError as e:
 	print("Terminating: %s" % str(e))

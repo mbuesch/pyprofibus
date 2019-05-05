@@ -40,6 +40,8 @@ try:
 				 masterAddr = config.dpMasterAddr,
 				 debug = True)
 
+	outData = {}
+
 	# Create a slave descriptions.
 	for slaveConf in config.slaveConfs:
 		gsd = slaveConf.gsd
@@ -71,21 +73,28 @@ try:
 		# Register the ET-200S slave at the DPM
 		master.addSlave(slaveDesc)
 
+		# Set initial output data.
+		outData[slaveDesc.slaveAddr] = bytearray((0x00, 0x00))
+
 	# Initialize the DPM
 	master.initialize()
-	slaveDescs = master.getSlaveList()
 
 	# Cyclically run Data_Exchange.
-	# 4 input bits from the 4-DI module are copied to
-	# the two 2-DO modules.
-	inData = 0
 	while True:
+		# Write the output data.
+		for slaveDesc in master.getSlaveList():
+			slaveDesc.setOutData(outData[slaveDesc.slaveAddr])
+
 		# Run slave state machines.
-		for slaveDesc in slaveDescs:
-			outData = [inData & 3, (inData >> 2) & 3]
-			inDataTmp = master.runSlave(slaveDesc, outData)
-			if inDataTmp is not None:
-				inData = inDataTmp[0]
+		handledSlaveDesc = master.run()
+
+		# Get the in-data (receive)
+		if handledSlaveDesc:
+			inData = handledSlaveDesc.getInData()
+			if inData is not None:
+				# In our example the output data shall be a mirror of the input.
+				outData[handledSlaveDesc.slaveAddr][0] = inData[0] & 3
+				outData[handledSlaveDesc.slaveAddr][1] = (inData[0] >> 2) & 3
 
 except pyprofibus.ProfibusError as e:
 	print("Terminating: %s" % str(e))

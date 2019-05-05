@@ -78,6 +78,10 @@ class DpSlaveState(object):
 		# Received telegrams
 		self.rxQueue = []
 
+		# In/Out user data
+		self.outData = None
+		self.inData = None
+
 	def getRxQueue(self):
 		rxQueue = self.rxQueue
 		self.rxQueue = []
@@ -128,6 +132,7 @@ class DpSlaveDesc(object):
 		     slaveAddr):
 		self.identNumber = identNumber
 		self.slaveAddr = slaveAddr
+		self.dpm = None
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(
@@ -202,6 +207,12 @@ class DpSlaveDesc(object):
 		self.setPrmTelegram.wdFact1 = fact1
 		self.setPrmTelegram.wdFact2 = fact2
 
+	def setOutData(self, outData):
+		self.dpm.setSlaveOutData(self, outData)
+
+	def getInData(self):
+		return self.dpm.getSlaveInData(self)
+
 	def __repr__(self):
 		return "DPSlaveDesc(identNumber=%s, slaveAddr=%d)" %\
 			(intToHex(self.identNumber), self.slaveAddr)
@@ -224,6 +235,8 @@ class DpMaster(object):
 		self.__slaveStates = {
 			FdlTelegram.ADDRESS_MCAST : mcastSlave,
 		}
+		self.__slaveDescsList = []
+		self.__runNextSlaveIndex = 0
 
 		# Create the transceivers
 		self.fdlTrans = FdlTransceiver(self.phy)
@@ -251,15 +264,24 @@ class DpMaster(object):
 		if slaveAddr in self.__slaveDescs or\
 		   slaveAddr in self.__slaveStates:
 			raise DpError("Slave %d is already registered." % slaveAddr)
+		slaveDesc.dpm = self
 		self.__slaveDescs[slaveAddr] = slaveDesc
 		self.__slaveStates[slaveAddr] = DpSlaveState(self, slaveDesc)
 
-	def getSlaveList(self):
-		"""Get a list of registered DpSlaveDescs, sorted by address."""
+		# Rebuild the slave desc list.
+		self.__slaveDescsList = [
+			desc
+			for addr, desc in sorted(self.__slaveDescs.items(),
+						 key=lambda x: x[0])
+			if addr != FdlTelegram.ADDRESS_MCAST
+		]
 
-		return [ desc for addr, desc in sorted(self.__slaveDescs.items(),
-						       key = lambda x: x[0])
-			 if addr != FdlTelegram.ADDRESS_MCAST ]
+		self.__runNextSlaveIndex = 0
+
+	def getSlaveList(self):
+		"""Get a list of registered DpSlaveDescs, sorted by address.
+		"""
+		return self.__slaveDescsList
 
 	def __send(self, slave, telegram, timeout):
 		"""Asynchronously send a telegram to a slave.
@@ -281,7 +303,7 @@ class DpMaster(object):
 	def _releaseSlave(self, slave):
 		self.phy.releaseBus()
 
-	def __runSlave_init(self, slave, dataExOutData):
+	def __runSlave_init(self, slave):
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Trying to initialize slave %d..." % (
@@ -323,7 +345,7 @@ class DpMaster(object):
 					"weird telegram:\n%s" % str(telegram))
 		return None
 
-	def __runSlave_waitDiag(self, slave, dataExOutData):
+	def __runSlave_waitDiag(self, slave):
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
@@ -352,7 +374,7 @@ class DpMaster(object):
 					"telegram:\n%s" % str(telegram))
 		return None
 
-	def __runSlave_waitPrm(self, slave, dataExOutData):
+	def __runSlave_waitPrm(self, slave):
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Sending Set_Prm to slave %d..." %\
@@ -373,7 +395,7 @@ class DpMaster(object):
 			slave.setState(slave.STATE_WCFG)
 		return None
 
-	def __runSlave_waitCfg(self, slave, dataExOutData):
+	def __runSlave_waitCfg(self, slave):
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Sending Chk_Cfg to slave %d..." %\
@@ -393,7 +415,7 @@ class DpMaster(object):
 			slave.setState(slave.STATE_WDXRDY)
 		return None
 
-	def __runSlave_waitDxRdy(self, slave, dataExOutData):
+	def __runSlave_waitDxRdy(self, slave):
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			self.__debugMsg("Requesting Slave_Diag (WDXRDY) from slave %d..." %\
@@ -450,7 +472,7 @@ class DpMaster(object):
 					"telegram:\n%s" % str(telegram))
 		return None
 
-	def __runSlave_dataExchange(self, slave, dataExOutData):
+	def __runSlave_dataExchange(self, slave):
 		#TODO: add support for in/out-only slaves
 		dataExInData = None
 
@@ -492,16 +514,21 @@ class DpMaster(object):
 				slave.restartStateTimeout()
 				self._releaseSlave(slave)
 		else:
-			try:
-				self.__send(slave,
-					    telegram=DpTelegram_DataExchange_Req(
-							da=slave.slaveDesc.slaveAddr,
-							sa=self.masterAddr,
-							du=dataExOutData),
-					    timeout=0.1)
-			except ProfibusError as e:
-				self.__debugMsg("DataExchange_Req failed: %s" % str(e))
-				return None
+			# Send the out data telegram, if any.
+			outData = slave.outData
+			if outData is not None:
+				try:
+					self.__send(slave,
+						    telegram=DpTelegram_DataExchange_Req(
+								da=slave.slaveDesc.slaveAddr,
+								sa=self.masterAddr,
+								du=outData),
+						    timeout=0.1)
+				except ProfibusError as e:
+					self.__debugMsg("DataExchange_Req failed: %s" % str(e))
+					return None
+				# We sent it. Reset the data.
+				slave.outData = None
 
 		faultCount = slave.faultDeb.get()
 		if faultCount >= 5:
@@ -525,12 +552,11 @@ class DpMaster(object):
 		DpSlaveState.STATE_DX		: __runSlave_dataExchange,
 	}
 
-	def runSlave(self, slaveDesc, dataExOutData = None):
+	def __runSlave(self, slave):
 		self.__pollRx()
 		if not self.__haveToken:
 			return None
 
-		slave = self.__slaveStates[slaveDesc.slaveAddr]
 		if slave.stateHasTimeout():
 			self.__debugMsg("State machine timeout! "
 				"Trying to re-initializing slave %d..." %\
@@ -539,7 +565,7 @@ class DpMaster(object):
 			dataExInData = None
 		else:
 			handler = self.__slaveStateHandlers[slave.getState()]
-			dataExInData = handler(self, slave, dataExOutData)
+			dataExInData = handler(self, slave)
 
 			if slave.stateIsChanging():
 				self.__debugMsg("slave[%02X].state --> '%s'" % (
@@ -584,6 +610,39 @@ class DpMaster(object):
 	def __handleMcastTelegram(self, telegram):
 		self.__debugMsg("Received multicast telegram:\n%s" % str(telegram))
 		pass#TODO
+
+	def run(self):
+		"""Run the DP-Master state machine.
+		"""
+		slaveDescsList = self.__slaveDescsList
+		runNextSlaveIndex = self.__runNextSlaveIndex
+
+		if not slaveDescsList:
+			return None
+
+		slaveDesc = slaveDescsList[runNextSlaveIndex]
+		self.__runNextSlaveIndex = (runNextSlaveIndex + 1) % len(slaveDescsList)
+
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+		slave.inData = self.__runSlave(slave)
+
+		return slaveDesc
+
+	def setSlaveOutData(self, slaveDesc, outData):
+		"""Set the out-data that will be sent the
+		next time we are able to send something to that slave.
+		"""
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+		slave.outData = outData
+
+	def getSlaveInData(self, slaveDesc):
+		"""Get the latest received in-data.
+		Returns None, if there was no received data.
+		"""
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+		inData = slave.inData
+		slave.inData = None
+		return inData
 
 	def initialize(self):
 		"""Initialize the DPM."""
