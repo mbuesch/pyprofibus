@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Master
 #
-# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2019 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -86,6 +86,9 @@ class DpSlaveState(object):
 		rxQueue = self.rxQueue
 		self.rxQueue = []
 		return rxQueue
+
+	def flushRxQueue(self):
+		self.rxQueue = []
 
 	def getState(self):
 		return self.__state
@@ -304,11 +307,33 @@ class DpMaster(object):
 		self.phy.releaseBus()
 
 	def __runSlave_init(self, slave):
-		if (not slave.pendingReq or
-		    slave.pendingReqTimeout.exceed()):
+		if slave.stateJustEntered():
 			self.__debugMsg("Trying to initialize slave %d..." % (
 				slave.slaveDesc.slaveAddr))
+			slave.flushRxQueue()
+		else:
+			for telegram in slave.getRxQueue():
+				if telegram.fc is not None:
+					slave.pendingReq = None
+					stype = telegram.fc & FdlTelegram.FC_STYPE_MASK
+					if telegram.fc & FdlTelegram.FC_REQ:
+						self.__debugMsg("Slave %d replied with "
+								"request bit set." %\
+								slave.slaveDesc.slaveAddr)
+					elif stype != FdlTelegram.FC_SLAVE:
+						self.__debugMsg("Device %d is not a slave. "
+								"Detected type: 0x%02X" % (
+								slave.slaveDesc.slaveAddr,
+								stype))
+					else:
+						slave.setState(slave.STATE_WDIAG)
+						return None
+				else:
+					self.__debugMsg("Slave %d replied with a "
+						"weird telegram:\n%s" % str(telegram))
 
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			# Reset fault debounce counter.
 			slave.faultDeb.reset()
 
@@ -320,37 +345,28 @@ class DpMaster(object):
 					    telegram=FdlTelegram_FdlStat_Req(
 							da=slave.slaveDesc.slaveAddr,
 							sa=self.masterAddr),
-					    timeout=0.2)
+					    timeout=0.01)
 			except ProfibusError as e:
 				self.__debugMsg("FdlStat_Req failed: %s" % str(e))
 				return None
-
-		for telegram in slave.getRxQueue():
-			if telegram.fc is not None:
-				slave.pendingReq = None
-				stype = telegram.fc & FdlTelegram.FC_STYPE_MASK
-				if telegram.fc & FdlTelegram.FC_REQ:
-					self.__debugMsg("Slave %d replied with "
-							"request bit set." %\
-							slave.slaveDesc.slaveAddr)
-				elif stype != FdlTelegram.FC_SLAVE:
-					self.__debugMsg("Device %d is not a slave. "
-							"Detected type: 0x%02X" % (
-							slave.slaveDesc.slaveAddr,
-							stype))
-				else:
-					slave.setState(slave.STATE_WDIAG)
-			else:
-				self.__debugMsg("Slave %d replied with a "
-					"weird telegram:\n%s" % str(telegram))
 		return None
 
 	def __runSlave_waitDiag(self, slave):
-		if (not slave.pendingReq or
-		    slave.pendingReqTimeout.exceed()):
+		if slave.stateJustEntered():
 			self.__debugMsg("Requesting Slave_Diag from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.flushRxQueue()
+		else:
+			for telegram in slave.getRxQueue():
+				if DpTelegram_SlaveDiag_Con.checkType(telegram):
+					slave.setState(slave.STATE_WPRM)
+					return None
+				else:
+					self.__debugMsg("Received spurious "
+						"telegram:\n%s" % str(telegram))
 
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			# Enable the FCB bit.
 			slave.fcb.enableFCB(True)
 
@@ -364,22 +380,21 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
-
-		for telegram in slave.getRxQueue():
-			if DpTelegram_SlaveDiag_Con.checkType(telegram):
-				slave.setState(slave.STATE_WPRM)
-				break
-			else:
-				self.__debugMsg("Received spurious "
-					"telegram:\n%s" % str(telegram))
 		return None
 
 	def __runSlave_waitPrm(self, slave):
-		if (not slave.pendingReq or
-		    slave.pendingReqTimeout.exceed()):
+		if slave.stateJustEntered():
 			self.__debugMsg("Sending Set_Prm to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.flushRxQueue()
+		else:
+			if slave.shortAckReceived:
+				slave.fcb.handleReply()
+				slave.setState(slave.STATE_WCFG)
+				return None
 
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			# Send a Set_Prm request
 			try:
 				slave.slaveDesc.setPrmTelegram.sa = self.masterAddr
@@ -389,18 +404,20 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("Set_Prm failed: %s" % str(e))
 				return None
-
-		if slave.shortAckReceived:
-			slave.fcb.handleReply()
-			slave.setState(slave.STATE_WCFG)
 		return None
 
 	def __runSlave_waitCfg(self, slave):
-		if (not slave.pendingReq or
-		    slave.pendingReqTimeout.exceed()):
+		if slave.stateJustEntered():
 			self.__debugMsg("Sending Chk_Cfg to slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.flushRxQueue()
+		else:
+			if slave.shortAckReceived:
+				slave.fcb.handleReply()
+				slave.setState(slave.STATE_WDXRDY)
 
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			try:
 				slave.slaveDesc.chkCfgTelegram.sa = self.masterAddr
 				self.__send(slave,
@@ -409,18 +426,58 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("Chk_Cfg failed: %s" % str(e))
 				return None
-
-		if slave.shortAckReceived:
-			slave.fcb.handleReply()
-			slave.setState(slave.STATE_WDXRDY)
 		return None
 
 	def __runSlave_waitDxRdy(self, slave):
-		if (not slave.pendingReq or
-		    slave.pendingReqTimeout.exceed()):
+		if slave.stateJustEntered():
 			self.__debugMsg("Requesting Slave_Diag (WDXRDY) from slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.flushRxQueue()
+		else:
+			for telegram in slave.getRxQueue():
+				if DpTelegram_SlaveDiag_Con.checkType(telegram):
+					if telegram.notExist():
+						self.__errorMsg("Slave %d is not reachable "
+							"via this line." %\
+							slave.slaveDesc.slaveAddr)
+					if telegram.cfgFault():
+						self.__errorMsg("Slave %d reports a faulty "
+							"configuration (Chk_Cfg)." %\
+							slave.slaveDesc.slaveAddr)
+					if telegram.prmFault():
+						self.__errorMsg("Slave %d reports a faulty "
+							"parameterization (Set_Prm)." %\
+							slave.slaveDesc.slaveAddr)
+					if telegram.isNotSupp():
+						self.__errorMsg("Slave %d replied with "
+							"\"function not supported\". "
+							"The parameters should be checked "
+							"(Set_Prm)." %\
+							slave.slaveDesc.slaveAddr)
+					if telegram.masterLock():
+						self.__errorMsg("Slave %d is already controlled "
+							"(locked to) another DP-master." %\
+							slave.slaveDesc.slaveAddr)
+					if not telegram.hasOnebit():
+						self.__debugMsg("Slave %d diagnostic "
+							"always-one-bit is zero." %\
+							slave.slaveDesc.slaveAddr)
 
+					if telegram.hasExtDiag():
+						pass#TODO turn on red DIAG-LED
+					if telegram.isReadyDataEx():
+						slave.setState(slave.STATE_DX)
+						return None
+					elif telegram.needsNewPrmCfg():
+						slave.setState(slave.STATE_INIT)
+						return None
+					break
+				else:
+					self.__debugMsg("Received spurious "
+						"telegram:\n%s" % str(telegram))
+
+		if (not slave.pendingReq or
+		    slave.pendingReqTimeout.exceed()):
 			try:
 				self.__send(slave,
 					    telegram=DpTelegram_SlaveDiag_Req(
@@ -430,46 +487,6 @@ class DpMaster(object):
 			except ProfibusError as e:
 				self.__debugMsg("SlaveDiag_Req failed: %s" % str(e))
 				return None
-
-		for telegram in slave.getRxQueue():
-			if DpTelegram_SlaveDiag_Con.checkType(telegram):
-				if telegram.notExist():
-					self.__errorMsg("Slave %d is not reachable "
-						"via this line." %\
-						slave.slaveDesc.slaveAddr)
-				if telegram.cfgFault():
-					self.__errorMsg("Slave %d reports a faulty "
-						"configuration (Chk_Cfg)." %\
-						slave.slaveDesc.slaveAddr)
-				if telegram.prmFault():
-					self.__errorMsg("Slave %d reports a faulty "
-						"parameterization (Set_Prm)." %\
-						slave.slaveDesc.slaveAddr)
-				if telegram.isNotSupp():
-					self.__errorMsg("Slave %d replied with "
-						"\"function not supported\". "
-						"The parameters should be checked "
-						"(Set_Prm)." %\
-						slave.slaveDesc.slaveAddr)
-				if telegram.masterLock():
-					self.__errorMsg("Slave %d is already controlled "
-						"(locked to) another DP-master." %\
-						slave.slaveDesc.slaveAddr)
-				if not telegram.hasOnebit():
-					self.__debugMsg("Slave %d diagnostic "
-						"always-one-bit is zero." %\
-						slave.slaveDesc.slaveAddr)
-
-				if telegram.hasExtDiag():
-					pass#TODO turn on red DIAG-LED
-				if telegram.isReadyDataEx():
-					slave.setState(slave.STATE_DX)
-				elif telegram.needsNewPrmCfg():
-					slave.setState(slave.STATE_INIT)
-				break
-			else:
-				self.__debugMsg("Received spurious "
-					"telegram:\n%s" % str(telegram))
 		return None
 
 	def __runSlave_dataExchange(self, slave):
@@ -480,6 +497,7 @@ class DpMaster(object):
 			self.__debugMsg("Initialization finished. "
 				"Running Data_Exchange with slave %d..." %\
 				slave.slaveDesc.slaveAddr)
+			slave.flushRxQueue()
 			slave.dxStartTime = monotonic_time()
 
 		if slave.pendingReq:
