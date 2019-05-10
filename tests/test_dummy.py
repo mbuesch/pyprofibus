@@ -31,7 +31,8 @@ def test_dummy_phy():
 
 	# Run slave initialization state machine.
 	for i in range(25):
-		ret = master.runSlave(slaveDesc, bytearray([1, ]))
+		slaveDesc.setOutData(bytearray([1, ]))
+		master.run()
 	# Check dummy-slave response to Data_Exchange.
 	for i in range(100):
 		print("testing %d" % i)
@@ -39,7 +40,9 @@ def test_dummy_phy():
 		while True:
 			j += 1
 			assert_lt(j, 10)
-			ret = master.runSlave(slaveDesc, bytearray([i, ]))
+			slaveDesc.setOutData(bytearray([i, ]))
+			master.run()
+			ret = slaveDesc.getInData()
 			if j >= 5 and ret is not None:
 				break
 		assert_eq(bytearray(ret), bytearray([i ^ 0xFF, ]))
