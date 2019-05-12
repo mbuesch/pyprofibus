@@ -7,8 +7,6 @@ Build-Depends: dh-python,
                python-setuptools,
                python3-all-dev (>= 3.4.2-2),
                python3-setuptools,
-               pypy,
-               pypy-setuptools,
                debhelper (>= 9)
 Standards-Version: 3.9.6
 X-Python-Version: >= 2.7
@@ -36,23 +34,12 @@ Description: PROFIBUS-DP stack (Python 3)
  pyprofibus is a PROFIBUS-DP stack written in Python.
 
 
-Package: pypy-pyprofibus
-Architecture: any
-Depends: ${misc:Depends},
-         ${pypy:Depends},
-         ${shlibs:Depends}
-Description: PROFIBUS-DP stack (PyPy)
- pyprofibus is a PROFIBUS-DP stack written in Python.
-
-
 Package: profisniff
 Architecture: any
 Depends: python3-pyprofibus,
          ${misc:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
-Suggests: python-pyprofibus,
-          pypy-pyprofibus
 Description: PROFIBUS-DP telegram sniffer (Python 3)
  PROFIBUS-DP telegram sniffer based on pyprofibus.
 
@@ -63,8 +50,6 @@ Depends: python3-pyprofibus,
          ${misc:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
-Suggests: python-pyprofibus,
-          pypy-pyprofibus
 Description: PROFIBUS-DP GSD file parser (Python 3)
  PROFIBUS-DP GSD file parser based on pyprofibus.
 
