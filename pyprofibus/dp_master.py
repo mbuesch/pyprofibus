@@ -101,6 +101,7 @@ class DpSlaveState(object):
 			stateTimeLimit = self.stateTimeLimits[state]
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeLimit)
+		self.master.phy.clearTxQueueAddr(self.slaveDesc.slaveAddr)
 		self.master._releaseSlave(self)
 
 	def applyState(self):
@@ -227,6 +228,10 @@ class DpMaster(object):
 		self.masterAddr = masterAddr
 		self.debug = debug
 
+		# Create the transceivers
+		self.fdlTrans = FdlTransceiver(self.phy)
+		self.dpTrans = DpTransceiver(self.fdlTrans, thisIsMaster=True)
+
 		mcastSlaveDesc = DpSlaveDesc(
 			identNumber = 0,
 			slaveAddr = FdlTelegram.ADDRESS_MCAST)
@@ -240,10 +245,6 @@ class DpMaster(object):
 		}
 		self.__slaveDescsList = []
 		self.__runNextSlaveIndex = 0
-
-		# Create the transceivers
-		self.fdlTrans = FdlTransceiver(self.phy)
-		self.dpTrans = DpTransceiver(self.fdlTrans, thisIsMaster = True)
 
 		# Do we have the token?
 		self.__haveToken = True

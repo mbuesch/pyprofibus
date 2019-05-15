@@ -55,7 +55,8 @@ class CpPhy(object):
 		self.__close()
 
 	def __close(self):
-		self.__txQueue = deque()
+		self.__txQueueDAs = deque()
+		self.__txQueueTelegrams = [None] * (0x7F + 1)
 		self.__allocUntil = monotonic_time()
 		self.__secPerFrame = 0.0
 
@@ -79,22 +80,29 @@ class CpPhy(object):
 			      0 = no timeout, return immediately.
 			      negative = unlimited.
 		"""
-		if self.__txQueue:
+		if self.__txQueueDAs:
 			self.__send()
 		return self.pollData(timeout)
 
 	def __send(self):
 		now = monotonic_time()
 		if self.__canAllocateBus(now):
-			telegramData, srd, maxReplyLen = self.__txQueue.popleft()
+			da = self.__txQueueDAs.popleft()
+			telegram, srd, maxReplyLen = self.__txQueueTelegrams[da]
+			self.__txQueueTelegrams[da] = None
+			telegramData = telegram.getRawData()
 			self.__allocateBus(now, len(telegramData), maxReplyLen)
 			self.sendData(telegramData, srd)
 
-	def send(self, telegramData, srd, maxReplyLen = -1):
+	def send(self, telegram, srd, maxReplyLen=-1):
 		if maxReplyLen < 0 or maxReplyLen > 255:
 			maxReplyLen = 255
 
-		self.__txQueue.append((telegramData, srd, maxReplyLen))
+		da = telegram.da
+		if self.__txQueueTelegrams[da] is None:
+			self.__txQueueDAs.append(da)
+		self.__txQueueTelegrams[da] = (telegram, srd, maxReplyLen)
+
 		self.__send()
 
 	def setConfig(self, baudrate=BAUD_9600, *args, **kwargs):
@@ -118,5 +126,12 @@ class CpPhy(object):
 
 	def releaseBus(self):
 		self.__allocUntil = monotonic_time()
-		if self.__txQueue:
+		if self.__txQueueDAs:
 			self.__send()
+
+	def clearTxQueueAddr(self, da):
+		"""Remove all TX queue entries for the given destination address.
+		"""
+		if da in self.__txQueueDAs:
+			self.__txQueueDAs.remove(da)
+		self.__txQueueTelegrams[da] = None

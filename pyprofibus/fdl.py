@@ -110,7 +110,7 @@ class FdlTransceiver(object):
 					fcb.setWaitingReply()
 				else:
 					fcb.FCBnext()
-		self.phy.send(telegram.getRawData(), srd)
+		self.phy.send(telegram, srd)
 
 class FdlTelegram(object):
 	# Start delimiter
