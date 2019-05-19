@@ -32,6 +32,8 @@ class CpPhy(object):
 	"""PROFIBUS CP PHYsical layer base class.
 	"""
 
+	PFX = "PHY: "
+
 	# Profibus baud-rates
 	BAUD_9600	= 9600
 	BAUD_19200	= 19200
@@ -47,6 +49,10 @@ class CpPhy(object):
 	def __init__(self, debug=False, *args, **kwargs):
 		self.debug = debug
 		self.__close()
+
+	def _debugMsg(self, msg):
+		if self.debug:
+			print(self.PFX + str(msg))
 
 	def close(self):
 		"""Close the PHY device.

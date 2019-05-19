@@ -50,17 +50,30 @@ class CpPhyFPGA(CpPhy):
 			self.__driver = None
 		super(CpPhyFPGA, self).close()
 
+	def __tryRestartDriver(self):
+		try:
+			if self.__driver:
+				self.__driver.restart()
+		except FpgaPhyError as e:
+			self._debugMsg("Error recovery restart failed: %s" % (
+				str(e)))
+
 	def sendData(self, telegramData, srd):
 		"""Send data to the physical line.
 		"""
 		if self.__driver is None:
 			return
-		if self.debug:
-			print(self.PFX + ("TX   %s" % bytesToHex(telegramData)))
-		if not self.__driver.telegramSend(telegramData):
-			raise PhyError(self.PFX + "Failed to transmit telegram.")
 
-	def pollData(self, timeout = 0):
+		if self.debug:
+			self._debugMsg("TX   %s" % bytesToHex(telegramData))
+
+		try:
+			if not self.__driver.telegramSend(telegramData):
+				raise PhyError(self.PFX + "Failed to transmit telegram.")
+		except FpgaPhyError as e:
+			self.__tryRestartDriver()
+
+	def pollData(self, timeout=0.0):
 		"""Poll received data from the physical line.
 		timeout => timeout in seconds.
 			   0 = no timeout, return immediately.
@@ -70,19 +83,23 @@ class CpPhyFPGA(CpPhy):
 			return None
 
 		telegramData = None
-		if self.__rxDeque:
-			telegramData = self.__rxDeque.popleft()
-		else:
-			timeoutStamp = monotonic_time() + timeout
-			telegramDataList = self.__driver.telegramReceive()
-			count = len(telegramDataList)
-			if count >= 1:
-				telegramData = telegramDataList[0]
-				if count >= 2:
-					self.__rxDeque.extend(telegramDataList[1:])
+		try:
+			if self.__rxDeque:
+				telegramData = self.__rxDeque.popleft()
+			else:
+				timeoutStamp = monotonic_time() + timeout
+				telegramDataList = self.__driver.telegramReceive()
+				count = len(telegramDataList)
+				if count >= 1:
+					telegramData = telegramDataList[0]
+					if count >= 2:
+						self.__rxDeque.extend(telegramDataList[1:])
+		except FpgaPhyError as e:
+			self.__tryRestartDriver()
+			telegramData = None
 
 		if self.debug and telegramData:
-			print(self.PFX + ("RX   %s" % bytesToHex(telegramData)))
+			self._debugMsg("RX   %s" % bytesToHex(telegramData))
 		return telegramData
 
 	def setConfig(self, baudrate=CpPhy.BAUD_9600, *args, **kwargs):

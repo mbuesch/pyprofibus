@@ -95,6 +95,7 @@ class FpgaPhyMsg(object):
 		return cls.LEN_UNKNOWN
 
 class FpgaPhyMsgCtrl(FpgaPhyMsg):
+	# SPI control message IDs.
 	SPICTRL_NOP		= 0
 	SPICTRL_PING		= 1
 	SPICTRL_PONG		= 2
@@ -103,6 +104,13 @@ class FpgaPhyMsgCtrl(FpgaPhyMsg):
 	SPICTRL_STATUS		= 5
 	SPICTRL_GETBAUD		= 6
 	SPICTRL_BAUD		= 7
+
+	# Status message data bits.
+	SPISTAT_PONRESET	= 0
+	SPISTAT_HARDRESET	= 1
+	SPISTAT_SOFTRESET	= 2
+	SPISTAT_TXOVR		= 3
+	SPISTAT_RXOVR		= 4
 
 	CTRL_LEN = 8
 
