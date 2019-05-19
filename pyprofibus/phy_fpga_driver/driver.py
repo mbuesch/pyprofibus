@@ -16,7 +16,7 @@ import time
 from pyprofibus.phy_fpga_driver.exceptions import *
 from pyprofibus.phy_fpga_driver.messages import *
 from pyprofibus.phy_fpga_driver.io import *
-from pyprofibus.util import monotonic_time
+from pyprofibus.util import monotonic_time, FaultDebouncer
 
 
 __all__ = [
@@ -30,21 +30,33 @@ class FpgaPhyDriver(object):
 
 	FPGA_CLK_HZ		= 16000000
 	PING_INTERVAL		= 0.1
+	DEB_INTERVAL		= 1.0
 
 	def __init__(self, spiDev=0, spiChipSelect=0, spiSpeedHz=1000000):
+		self.__baudrate = 9600
 		self.__ioProc = None
 		self.__nextPing = monotonic_time()
 		self.__receivedPong = False
-		self.__startup(spiDev, spiChipSelect, spiSpeedHz)
+		self.__spiDev = spiDev
+		self.__spiChipSelect = spiChipSelect
+		self.__spiSpeedHz = spiSpeedHz
+		self.__startup()
 
-	def __startup(self, spiDev, spiChipSelect, spiSpeedHz):
+	def __startup(self):
 		"""Startup the driver.
 		"""
 		self.shutdown()
 
+		self.__faultParity = FaultDebouncer()
+		self.__faultMagic = FaultDebouncer()
+		self.__faultLen = FaultDebouncer()
+		self.__faultPBLen = FaultDebouncer()
+		self.__nextFaultDebounce = monotonic_time() + self.DEB_INTERVAL
+
 		# Start the communication process.
-		self.__ioProc = FpgaPhyProc(spiDev, spiChipSelect, spiSpeedHz)
+		self.__ioProc = FpgaPhyProc(self.__spiDev, self.__spiChipSelect, self.__spiSpeedHz)
 		if not self.__ioProc.start():
+			self.__ioProc = None
 			raise FpgaPhyError("Failed to start I/O process.")
 
 		# Reset the FPGA.
@@ -102,6 +114,12 @@ class FpgaPhyDriver(object):
 		self.__ioProc.shutdownProc()
 		self.__ioProc = None
 
+	def restart(self):
+		"""Restart the driver and the FPGA.
+		"""
+		self.__startup()
+		self.setBaudRate(self.__baudrate)
+
 	def setBaudRate(self, baudrate):
 		"""Configure the PHY baud rate.
 		"""
@@ -120,6 +138,7 @@ class FpgaPhyDriver(object):
 		rxMsg = self.__controlTransferSync(txMsg, FpgaPhyMsgCtrl.SPICTRL_BAUD)
 		if not rxMsg or rxMsg.ctrlData != txMsg.ctrlData:
 			raise FpgaPhyError("Failed to set baud rate.")
+		self.__baudrate = baudrate
 
 	def __controlTransferSync(self, ctrlMsg, rxCtrlMsgId):
 		"""Transfer a control message and wait for a reply.
@@ -161,29 +180,63 @@ class FpgaPhyDriver(object):
 	def __handleEvents(self, events):
 		if events & (1 << FpgaPhyProc.EVENT_RESET):
 			statusBits = self.__fetchStatus()
-			raise FpgaPhyError("Reset detected. "
-					   "Status = 0x%02X." % statusBits)
+			info = []
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_PONRESET):
+				info.append("power-on-reset")
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_HARDRESET):
+				info.append("hard-reset")
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_SOFTRESET):
+				info.append("soft-reset")
+			info.append("0x%02X" % statusBits)
+			raise FpgaPhyError("Reset detected (%s)." % (
+					   " / ".join(info)))
+
 		if events & (1 << FpgaPhyProc.EVENT_NEWSTAT):
 			statusBits = self.__fetchStatus()
-			print("STAT 0x%X" % statusBits)
-			pass#TODO
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_TXOVR):
+				raise FpgaPhyError("FPGA TX buffer overflow.")
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_RXOVR):
+				raise FpgaPhyError("FPGA RX buffer overflow.")
+
 		if events & (1 << FpgaPhyProc.EVENT_PARERR):
-			print("PARITY ERROR")
-			pass#TODO
+			self.__faultParity.fault()
+		else:
+			self.__faultParity.ok()
+
 		if events & (1 << FpgaPhyProc.EVENT_NOMAGIC):
-			print("MAGIC BYTE NOT FOUND")
-			pass#TODO
+			self.__faultMagic.fault()
+		else:
+			self.__faultMagic.ok()
+
 		if events & (1 << FpgaPhyProc.EVENT_INVALLEN):
-			print("INVALID LENGTH FIELD")
-			pass#TODO
+			self.__faultLen.fault()
+		else:
+			self.__faultLen.ok()
+
 		if events & (1 << FpgaPhyProc.EVENT_PBLENERR):
-			print("INVALID PROFIBUS TELEGRAM LENGTH")
+			self.__faultPBLen.fault()
+		else:
+			self.__faultPBLen.ok()
+
+		if self.__faultParity.get() >= 3:
+			pass#TODO
+		if self.__faultMagic.get() >= 3:
+			pass#TODO
+		if self.__faultLen.get() >= 3:
+			pass#TODO
+		if self.__faultPBLen.get() >= 3:
 			pass#TODO
 
 	def telegramSend(self, txTelegramData):
 		"""Send a PROFIBUS telegram.
 		"""
+		ioProc = self.__ioProc
+		if ioProc is None:
+			return False
+
 		now = monotonic_time()
+
+		# Handle keep-alive-ping.
 		if now >= self.__nextPing:
 			if not self.__receivedPong:
 				# We did not receive the PONG to the previous PING.
@@ -193,23 +246,39 @@ class FpgaPhyDriver(object):
 			# Send a PING to the FPGA to check if it is still alive.
 			pingMsg = FpgaPhyMsgCtrl(FpgaPhyMsgCtrl.SPICTRL_PING)
 			self.__controlSend(pingMsg)
-		return self.__ioProc.dataSend(txTelegramData)
+
+		# Send the telegram data.
+		return ioProc.dataSend(txTelegramData)
 
 	def telegramReceive(self):
 		"""Get a list of received PROFIBUS telegrams.
 		Returns a list of bytes.
 		The returned list might be empty.
 		"""
-		rxTelegrams = []
 		ioProc = self.__ioProc
+		if ioProc is None:
+			return []
+
+		rxTelegrams = []
+		now = monotonic_time()
+
+		# Handle I/O process events.
 		events = ioProc.getEventStatus()
 		if events:
-			self.__nextPing = monotonic_time() + self.PING_INTERVAL
+			self.__nextFaultDebounce = now + self.DEB_INTERVAL
 			self.__handleEvents(events)
+		elif now >= self.__nextFaultDebounce:
+			self.__nextFaultDebounce = now + self.DEB_INTERVAL
+			self.__handleEvents(0) # No events
+
+		# Handle received control data.
 		if ioProc.controlAvailable():
-			self.__nextPing = monotonic_time() + self.PING_INTERVAL
+			self.__nextPing = now + self.PING_INTERVAL
 			self.__handleControl()
+
+		# Handle received telegram data.
 		if ioProc.dataAvailable():
-			self.__nextPing = monotonic_time() + self.PING_INTERVAL
+			self.__nextPing = now + self.PING_INTERVAL
 			rxTelegrams = ioProc.dataReceive()
+
 		return rxTelegrams
