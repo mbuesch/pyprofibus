@@ -113,7 +113,7 @@ class FaultDebouncer(object):
 		return (self.__count + 1) // 2
 
 	fault = inc
-	faultless = dec
+	ok = dec
 
 	def get(self):
 		return (self.__count + 1) // 2

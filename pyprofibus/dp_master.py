@@ -541,7 +541,7 @@ class DpMaster(object):
 			else:
 				# We received some data.
 				slave.pendingReq = None
-				slave.faultDeb.faultless()
+				slave.faultDeb.ok()
 				slave.restartStateTimeout()
 				self._releaseSlave(slave)
 		else:
