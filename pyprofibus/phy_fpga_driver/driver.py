@@ -40,7 +40,15 @@ class FpgaPhyDriver(object):
 		self.__spiDev = spiDev
 		self.__spiChipSelect = spiChipSelect
 		self.__spiSpeedHz = spiSpeedHz
-		self.__startup()
+
+		try:
+			self.__startup()
+		except FpgaPhyError as e:
+			try:
+				self.shutdown()
+			except FpgaPhyError:
+				pass
+			raise e
 
 	def __startup(self):
 		"""Startup the driver.
@@ -75,9 +83,9 @@ class FpgaPhyDriver(object):
 		self.__nextPing = monotonic_time() + self.PING_INTERVAL
 		self.__receivedPong = True
 
-	def __ping(self, tries=3, shutdown=True):
+	def __ping(self, tries=3):
 		"""Ping the FPGA and check if a pong can be received.
-		Calls shutdown() and raises a FpgaPhyError on failure.
+		Raises a FpgaPhyError on failure.
 		"""
 		for i in range(tries - 1, -1, -1):
 			try:
@@ -90,11 +98,6 @@ class FpgaPhyDriver(object):
 				break
 			except FpgaPhyError as e:
 				if i <= 0:
-					if shutdown:
-						try:
-							self.shutdown()
-						except FpgaPhyError as e:
-							pass
 					raise e
 
 	def __fetchStatus(self):
@@ -109,10 +112,9 @@ class FpgaPhyDriver(object):
 	def shutdown(self):
 		"""Shutdown the driver.
 		"""
-		if self.__ioProc is None:
-			return
-		self.__ioProc.shutdownProc()
-		self.__ioProc = None
+		if self.__ioProc is not None:
+			self.__ioProc.shutdownProc()
+			self.__ioProc = None
 
 	def restart(self):
 		"""Restart the driver and the FPGA.
@@ -154,7 +156,7 @@ class FpgaPhyDriver(object):
 	def __controlSend(self, ctrlMsg):
 		"""Send a FpgaPhyMsgCtrl() control message.
 		"""
-		return self.__ioProc.controlSend(ctrlMsg)
+		self.__ioProc.controlSend(ctrlMsg)
 
 	def __controlReceive(self):
 		"""Get a list of received control messages.
@@ -232,7 +234,7 @@ class FpgaPhyDriver(object):
 		"""
 		ioProc = self.__ioProc
 		if ioProc is None:
-			return False
+			raise FpgaPhyError("telegramSend: No I/O process")
 
 		now = monotonic_time()
 
@@ -248,7 +250,7 @@ class FpgaPhyDriver(object):
 			self.__controlSend(pingMsg)
 
 		# Send the telegram data.
-		return ioProc.dataSend(txTelegramData)
+		ioProc.dataSend(txTelegramData)
 
 	def telegramReceive(self):
 		"""Get a list of received PROFIBUS telegrams.
@@ -257,7 +259,7 @@ class FpgaPhyDriver(object):
 		"""
 		ioProc = self.__ioProc
 		if ioProc is None:
-			return []
+			raise FpgaPhyError("telegramReceive: No I/O process")
 
 		rxTelegrams = []
 		now = monotonic_time()

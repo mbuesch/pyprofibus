@@ -68,8 +68,7 @@ class CpPhyFPGA(CpPhy):
 			self._debugMsg("TX   %s" % bytesToHex(telegramData))
 
 		try:
-			if not self.__driver.telegramSend(telegramData):
-				raise PhyError(self.PFX + "Failed to transmit telegram.")
+			self.__driver.telegramSend(telegramData)
 		except FpgaPhyError as e:
 			self.__tryRestartDriver()
 
