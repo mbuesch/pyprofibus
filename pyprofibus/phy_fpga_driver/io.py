@@ -337,7 +337,6 @@ class FpgaPhyProc(multiprocessing.Process):
 		self.__shmStatus[self.STATUS_DATA_TXCOUNT] = (txCount + 1) & 0xFF
 
 		self.__txDataWrOffs = (dataWrOffs + txLength) & shmMask
-		return True
 
 	def dataReceive(self):
 		rxTelegrams = []
@@ -374,7 +373,6 @@ class FpgaPhyProc(multiprocessing.Process):
 
 		self.__shmStatus[self.STATUS_CTRL_TXCOUNT] = (txCount + 1) & 0xFF
 		self.__txCtrlWrOffs = (ctrlWrOffs + CTRL_LEN) & shmMask
-		return True
 
 	def controlReceive(self):
 		rxCtrlMsgs = []
