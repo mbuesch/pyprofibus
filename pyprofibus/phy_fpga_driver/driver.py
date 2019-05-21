@@ -221,13 +221,13 @@ class FpgaPhyDriver(object):
 			self.__faultPBLen.ok()
 
 		if self.__faultParity.get() >= 3:
-			pass#TODO
+			raise FpgaPhyError("Detected FPGA message parity errors.")
 		if self.__faultMagic.get() >= 3:
-			pass#TODO
+			raise FpgaPhyError("Detected FPGA message MAGC-field errors.")
 		if self.__faultLen.get() >= 3:
-			pass#TODO
-		if self.__faultPBLen.get() >= 3:
-			pass#TODO
+			raise FpgaPhyError("Detected FPGA message LEN-field errors.")
+		if self.__faultPBLen.get() >= 5:
+			raise FpgaPhyError("Detected Profibus telegram LEN-field errors.")
 
 	def telegramSend(self, txTelegramData):
 		"""Send a PROFIBUS telegram.
@@ -242,7 +242,7 @@ class FpgaPhyDriver(object):
 		if now >= self.__nextPing:
 			if not self.__receivedPong:
 				# We did not receive the PONG to the previous PING.
-				raise FpgaPhyError("PING failed.")
+				raise FpgaPhyError("PING to FPGA failed.")
 			self.__nextPing = now + self.PING_INTERVAL
 			self.__receivedPong = False
 			# Send a PING to the FPGA to check if it is still alive.

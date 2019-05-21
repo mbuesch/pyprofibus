@@ -52,7 +52,7 @@ class CpPhyFPGA(CpPhy):
 
 	def __tryRestartDriver(self):
 		try:
-			if self.__driver:
+			if self.__driver is not None:
 				self.__driver.restart()
 		except FpgaPhyError as e:
 			self._debugMsg("Error recovery restart failed: %s" % (
