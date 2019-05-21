@@ -264,7 +264,10 @@ class FpgaPhyProc(multiprocessing.Process):
 				# If we know the PB telegram length, check if we have enough data.
 				if (expectedRxLength > 0 and
 				    len(rxDataBuf) >= expectedRxLength):
-					#TODO check if received len is more than expected
+
+					if len(rxDataBuf) > expectedRxLength:
+						# We got too much data.
+						self.__incShmStatus(self.STATUS_EVENTCOUNT_INVALLEN)
 
 					# Write the telegram to SHM.
 					for i in range(expectedRxLength):
