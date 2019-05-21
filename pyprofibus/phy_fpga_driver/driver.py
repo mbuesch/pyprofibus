@@ -132,8 +132,20 @@ class FpgaPhyDriver(object):
 			raise FpgaPhyError("Invalid baud rate %d." % baudrate)
 
 		clksPerSym = int(round(self.FPGA_CLK_HZ / baudrate))
-		assert(1 <= clksPerSym <= 0xFFFFFF)
-		#TODO calculate the baud rate error and reject if too big.
+		if not (1 <= clksPerSym <= 0xFFFFFF):
+			raise FpgaPhyError("Invalid baud rate %d. "
+					   "CLK divider out of range." % baudrate)
+
+		realBaudrate = int(round(self.FPGA_CLK_HZ / clksPerSym))
+		baudError = abs(baudrate - realBaudrate) / baudrate
+		maxError = 0.005
+		if baudError > maxError:
+			raise FpgaPhyError("Invalid baud rate %d. "
+					   "CLK divider maximum error threshold (%.1f%%) exceed "
+					   "(actual error = %.1f%%)." % (
+					   baudrate,
+					   maxError * 100.0,
+					   baudError * 100.0))
 
 		txMsg = FpgaPhyMsgCtrl(FpgaPhyMsgCtrl.SPICTRL_BAUD,
 					ctrlData=clksPerSym)
