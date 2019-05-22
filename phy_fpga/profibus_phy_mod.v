@@ -252,6 +252,7 @@ module profibus_phy #(
 	localparam SPISTAT_SOFTRESET	= 2;
 	localparam SPISTAT_TXOVR		= 3;
 	localparam SPISTAT_RXOVR		= 4;
+	localparam SPISTAT_CTRLCRCERR	= 5;
 
 
 	/***********************************************************/
@@ -270,7 +271,8 @@ module profibus_phy #(
 
 	/* SPICTRL_STATUS should be fetched, if 1. */
 	wire new_status_available;
-	assign new_status_available = any_reset_status | tx_buf_overflow_get() | rx_buf_overflow_get();
+	assign new_status_available = any_reset_status | tx_buf_overflow_get() |
+								  rx_buf_overflow_get() | spirx_ctrl_crcerr_get();
 
 	initial begin
 		n_poweronreset_status <= 0;
@@ -551,6 +553,7 @@ module profibus_phy #(
 	reg [7:0] spirx_ctrl;
 	reg [31:0] spirx_ctrl_data;
 	reg [7:0] spirx_crc;
+	reg [1:0] spirx_ctrl_crcerr;
 
 	/* Length calculation of PB frames. */
 	wire spirx_lencalc_n_reset_wire;
@@ -579,11 +582,24 @@ module profibus_phy #(
 		spirx_ctrl <= 0;
 		spirx_ctrl_data <= 0;
 		spirx_crc <= 0;
+		spirx_ctrl_crcerr <= 0;
 
 		spirx_lencalc_n_reset <= 0;
 		spirx_lencalc_byte <= 0;
 		spirx_lencalc_new <= 0;
 	end
+
+	function automatic spirx_ctrl_crcerr_get;
+		begin spirx_ctrl_crcerr_get = spirx_ctrl_crcerr[0] ^ spirx_ctrl_crcerr[1]; end
+	endfunction
+
+	task automatic spirx_ctrl_crcerr_set;
+		begin spirx_ctrl_crcerr[0] = ~spirx_ctrl_crcerr[1]; end
+	endtask
+
+	task automatic spirx_ctrl_crcerr_reset;
+		begin spirx_ctrl_crcerr[1] = spirx_ctrl_crcerr[0]; end
+	endtask
 
 	always @(posedge clk) begin
 		if (n_reset & ~softreset) begin
@@ -745,12 +761,14 @@ module profibus_phy #(
 								spitx_ctrl_reply_data[SPISTAT_SOFTRESET] <= softreset_status;
 								spitx_ctrl_reply_data[SPISTAT_TXOVR] <= tx_buf_overflow_get();
 								spitx_ctrl_reply_data[SPISTAT_RXOVR] <= rx_buf_overflow_get();
-								spitx_ctrl_reply_data[31:5] <= 0;
+								spitx_ctrl_reply_data[SPISTAT_CTRLCRCERR] <= spirx_ctrl_crcerr_get();
+								spitx_ctrl_reply_data[31:6] <= 0;
 								spitx_ctrl_pending <= ~spitx_ctrl_pending_ack;
 
 								/* Reset all error states. */
 								tx_buf_overflow_reset();
 								rx_buf_overflow_reset();
+								spirx_ctrl_crcerr_reset();
 
 								/* Reset all reset status bits */
 								n_poweronreset_status <= 1;
@@ -821,6 +839,7 @@ module profibus_phy #(
 			spirx_lencalc_n_reset <= 0;
 			rx_buf_overflow_reset();
 			tx_buf_overflow_reset();
+			spirx_ctrl_crcerr_reset();
 
 			softreset_status <= softreset;
 			n_hardreset_status <= n_reset;
