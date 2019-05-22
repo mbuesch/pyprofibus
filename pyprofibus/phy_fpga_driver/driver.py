@@ -211,6 +211,8 @@ class FpgaPhyDriver(object):
 				raise FpgaPhyError("FPGA TX buffer overflow.")
 			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_RXOVR):
 				raise FpgaPhyError("FPGA RX buffer overflow.")
+			if statusBits & (1 << FpgaPhyMsgCtrl.SPISTAT_CTRLCRCERR):
+				raise FpgaPhyError("FPGA control message CRC error.")
 
 		if events & (1 << FpgaPhyProc.EVENT_PARERR):
 			self.__faultParity.fault()
