@@ -320,11 +320,11 @@ module profibus_phy #(
 	endfunction
 
 	task automatic tx_buf_overflow_set;
-		begin tx_buf_overflow[0] = ~tx_buf_overflow[1]; end
+		begin tx_buf_overflow[0] <= ~tx_buf_overflow[1]; end
 	endtask
 
 	task automatic tx_buf_overflow_reset;
-		begin tx_buf_overflow[1] = tx_buf_overflow[0]; end
+		begin tx_buf_overflow[1] <= tx_buf_overflow[0]; end
 	endtask
 
 
@@ -368,11 +368,11 @@ module profibus_phy #(
 	endfunction
 
 	task automatic rx_buf_overflow_set;
-		begin rx_buf_overflow[0] = ~rx_buf_overflow[1]; end
+		begin rx_buf_overflow[0] <= ~rx_buf_overflow[1]; end
 	endtask
 
 	task automatic rx_buf_overflow_reset;
-		begin rx_buf_overflow[1] = rx_buf_overflow[0]; end
+		begin rx_buf_overflow[1] <= rx_buf_overflow[0]; end
 	endtask
 
 
@@ -594,11 +594,11 @@ module profibus_phy #(
 	endfunction
 
 	task automatic spirx_ctrl_crcerr_set;
-		begin spirx_ctrl_crcerr[0] = ~spirx_ctrl_crcerr[1]; end
+		begin spirx_ctrl_crcerr[0] <= ~spirx_ctrl_crcerr[1]; end
 	endtask
 
 	task automatic spirx_ctrl_crcerr_reset;
-		begin spirx_ctrl_crcerr[1] = spirx_ctrl_crcerr[0]; end
+		begin spirx_ctrl_crcerr[1] <= spirx_ctrl_crcerr[0]; end
 	endtask
 
 	always @(posedge clk) begin
