@@ -50,8 +50,9 @@ class CpPhyFPGA(CpPhy):
 			self.__driver = None
 		super(CpPhyFPGA, self).close()
 
-	def __tryRestartDriver(self):
+	def __tryRestartDriver(self, exception):
 		try:
+			self._debugMsg("Driver exception: %s" % str(exception))
 			if self.__driver is not None:
 				self.__driver.restart()
 		except FpgaPhyError as e:
@@ -70,7 +71,7 @@ class CpPhyFPGA(CpPhy):
 		try:
 			self.__driver.telegramSend(telegramData)
 		except FpgaPhyError as e:
-			self.__tryRestartDriver()
+			self.__tryRestartDriver(e)
 
 	def pollData(self, timeout=0.0):
 		"""Poll received data from the physical line.
@@ -94,7 +95,7 @@ class CpPhyFPGA(CpPhy):
 					if count >= 2:
 						self.__rxDeque.extend(telegramDataList[1:])
 		except FpgaPhyError as e:
-			self.__tryRestartDriver()
+			self.__tryRestartDriver(e)
 			telegramData = None
 
 		if self.debug and telegramData:

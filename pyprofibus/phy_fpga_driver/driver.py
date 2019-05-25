@@ -107,7 +107,7 @@ class FpgaPhyDriver(object):
 		rxMsg = self.__controlTransferSync(txMsg, FpgaPhyMsgCtrl.SPICTRL_STATUS)
 		if not rxMsg:
 			raise FpgaPhyError("Failed to get status.")
-		return txMsg.ctrlData
+		return rxMsg.ctrlData
 
 	def shutdown(self):
 		"""Shutdown the driver.
