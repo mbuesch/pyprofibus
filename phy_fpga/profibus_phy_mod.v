@@ -722,7 +722,7 @@ module profibus_phy #(
 							spirx_state <= SPIRX_CTRL_EXEC;
 						end else begin
 							/* Incorrect CRC. Do not run the control command. */
-							//TODO set error bit
+							spirx_ctrl_crcerr_set();
 							spirx_state <= SPIRX_BEGIN;
 						end
 					end
