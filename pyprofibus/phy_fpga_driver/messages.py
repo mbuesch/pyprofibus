@@ -136,12 +136,15 @@ class FpgaPhyMsgCtrl(FpgaPhyMsg):
 	@classmethod
 	def fromBytes(cls, data):
 		if data[0] != cls.SPI_SM_MAGIC:
-			return None
+			raise FpgaPhyError("FPGA control message: "
+					   "Invalid MAGC field.")
 		flg = data[1]
 		if cls.parity(flg):
-			return None
+			raise FpgaPhyError("FPGA control message: "
+					   "Invalid parity bit.")
 		if not (flg & (1 << cls.SPI_FLG_CTRL)):
-			return None
+			raise FpgaPhyError("FPGA control message: "
+					   "CTRL bit is not set.")
 		ctrl = data[2]
 		ctrlData = data[3] << 24
 		ctrlData |= data[4] << 16
@@ -150,7 +153,8 @@ class FpgaPhyMsgCtrl(FpgaPhyMsg):
 		crc = data[7]
 		crcExpected = cls.crc8(data[2:7])
 		if crc != crcExpected:
-			return None
+			raise FpgaPhyError("FPGA control message: "
+					   "CRC error.")
 		return cls(ctrl, ctrlData, flg)
 
 	def __str__(self):
