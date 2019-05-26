@@ -38,7 +38,7 @@ module common_main_module #(
 
 	/* SPI bus */
 	input spi_mosi,
-	output spi_miso,
+	inout spi_miso,
 	input spi_sck,
 	input spi_ss,
 
@@ -167,7 +167,7 @@ module top_module(
 	input PIN_7,
 	input PIN_8,
 	input PIN_9,
-	output PIN_10,
+	inout PIN_10,
 	input PIN_11,
 	input PIN_12,
 	input PIN_13,
