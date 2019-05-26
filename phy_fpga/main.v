@@ -23,6 +23,13 @@
 `include "led_blink_mod.v"
 
 
+`ifdef DEBUG
+`define DEBUGOUT output
+`else
+`define DEBUGOUT input
+`endif
+
+
 module common_main_module #(
 	parameter CLK_HZ = 0,
 ) (
@@ -114,11 +121,13 @@ endmodule
 
 `ifdef TARGET_TINYFPGA_BX
 
+`include "pll_mod.v"
+
 /* TinyFPGA BX:
  *               +---------------+
  *               |P|GND     Vin|P|
- *         debug |O|1       GND|P|
- *     not reset |I|2      3.3V|P|
+ *     not reset |O|1       GND|P|
+ *         debug |D|2      3.3V|P|
  *               |N|3    T   24|N|
  *               |N|4    i   23|N|
  *               |N|5    n   22|N|
@@ -134,6 +143,7 @@ endmodule
  * P = power
  * I = input
  * O = output
+ * D = debug output. Only if DEBUG is enabled. Otherwise N.
  * N = not connected
  */
 module top_module(
@@ -148,12 +158,8 @@ module top_module(
 	input USBN,
 	output USBPU,
 	output LED,
-`ifdef DEBUG
-	output PIN_1,
-`else
 	input PIN_1,
-`endif
-	input PIN_2,
+	`DEBUGOUT PIN_2,
 	input PIN_3,
 	input PIN_4,
 	input PIN_5,
@@ -184,11 +190,24 @@ module top_module(
 	input PIN_30,
 	input PIN_31,
 );
+
+	wire pll_clk_out;
+	wire pll_locked;
+
+	pll_module pll(
+		.clock_in(CLK),
+		.clock_out(pll_clk_out),
+		.locked(pll_locked),
+	);
+
+	wire n_reset;
+	assign n_reset = PIN_1 & pll_locked;
+
 	common_main_module #(
-		.CLK_HZ(16000000),
+		.CLK_HZ(`PLL_HZ),
 	) common (
-		.clk(CLK),
-		.n_reset(PIN_2),
+		.clk(pll_clk_out),
+		.n_reset(n_reset),
 		.spi_mosi(PIN_11),
 		.spi_miso(PIN_10),
 		.spi_sck(PIN_12),
@@ -202,7 +221,7 @@ module top_module(
 		.pb_tx_error(PIN_18),
 		.led(LED),
 `ifdef DEBUG
-		.debug(PIN_1),
+		.debug(PIN_2),
 `endif
 	);
 
