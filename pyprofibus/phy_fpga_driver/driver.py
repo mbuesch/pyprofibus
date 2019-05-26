@@ -28,7 +28,7 @@ class FpgaPhyDriver(object):
 	"""Driver for FPGA based PROFIBUS PHY.
 	"""
 
-	FPGA_CLK_HZ		= 16000000
+	FPGA_CLK_HZ		= 24 * 1e6
 	PING_INTERVAL		= 0.1
 	DEB_INTERVAL		= 1.0
 
