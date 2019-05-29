@@ -47,11 +47,14 @@ do_build()
 	local bindir="$builddir/bin/$target"
 
 	make -C "$builddir" TARGET="$target"
+
 	mkdir -p "$bindir"
 	for ftype in .bin .asc .blif .rpt .json _yosys.log _nextpnr.log; do
 		local binfile="${target}_pyprofibusphy${ftype}"
 		cp "$builddir/$binfile" "$bindir/$binfile"
 	done
+	cp "$builddir/${target}_program.sh" "$bindir/${target}_program.sh"
+
 	make -C "$builddir" TARGET="$target" clean
 }
 
