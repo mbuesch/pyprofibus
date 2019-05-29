@@ -22,10 +22,7 @@
 #   ^--------------^----------^----------^----------^----------^
 #
 
-import sys
 import pyprofibus
-from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
-
 
 master = None
 try:
@@ -55,11 +52,11 @@ try:
 		slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
 
 		# Set User_Prm_Data
-		dp1PrmMask = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+		dp1PrmMask = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
 					0x00))
-		dp1PrmSet  = bytearray((DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
-					DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+		dp1PrmSet  = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
 					0x00))
 		slaveDesc.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
 							    dp1PrmSet = dp1PrmSet))

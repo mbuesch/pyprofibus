@@ -6,10 +6,7 @@
 # reads its input data and writes the data back to the module.
 #
 
-import sys
 import pyprofibus
-from pyprofibus import DpTelegram_SetPrm_Req, monotonic_time
-
 
 master = None
 try:
