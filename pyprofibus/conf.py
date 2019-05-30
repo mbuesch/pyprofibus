@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Configuration file parser
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2019 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -44,6 +44,27 @@ class PbConf(object):
 		watchdogMs	= None
 		inputSize	= None
 		outputSize	= None
+
+		def makeDpSlaveDesc(self):
+			"""Create a DpSlaveDesc instance based on the configuration.
+			"""
+			from pyprofibus.dp_master import DpSlaveDesc
+			slaveDesc = DpSlaveDesc(gsd=self.gsd,
+						slaveAddr=self.addr)
+
+			# Create Chk_Cfg telegram
+			slaveDesc.setCfgDataElements(self.gsd.getCfgDataElements())
+
+			# Set User_Prm_Data
+			slaveDesc.setUserPrmData(self.gsd.getUserPrmData())
+
+			# Set various standard parameters
+			slaveDesc.setSyncMode(self.syncMode)
+			slaveDesc.setFreezeMode(self.freezeMode)
+			slaveDesc.setGroupMask(self.groupMask)
+			slaveDesc.setWatchdog(self.watchdogMs)
+
+			return slaveDesc
 
 	# [PROFIBUS] section
 	debug		= None
@@ -204,3 +225,24 @@ class PbConf(object):
 			      rtscts=self.phyRtsCts,
 			      dsrdtr=self.phyDsrDtr)
 		return phy
+
+	def makeDPM(self, dpmClass=1, phy=None):
+		"""Create a DpMaster and a CP-PHY instance based on the configuration.
+		Returns the DpMaster instance.
+		"""
+		if phy is None:
+			# Create a PHY (layer 1) interface object.
+			phy = self.makePhy()
+
+		# Create a DP class 1 or 2 master.
+		from pyprofibus.dp_master import DPM1, DPM2
+		if dpmClass == 1:
+			DpMasterClass = DPM1
+		elif dpmClass == 2:
+			DpMasterClass = DPM2
+		else:
+			return None
+		master = DpMasterClass(phy=phy,
+				       masterAddr=self.dpMasterAddr,
+				       debug=(self.debug >= 1))
+		return master

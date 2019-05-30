@@ -13,35 +13,13 @@ try:
 	# Parse the config file.
 	config = pyprofibus.PbConf.fromFile("example_s7-315-2dp.conf")
 
-	# Create a PHY (layer 1) interface object
-	phy = config.makePhy()
+	# Create a DP class 1 master.
+	master = config.makeDPM(dpmClass=1)
 
-	# Create a DP class 1 master with DP address 1
-	master = pyprofibus.DPM1(phy = phy,
-				 masterAddr = config.dpMasterAddr,
-				 debug = True)
-
+	# Create the slave descriptions.
 	outData = {}
-
-	# Create a slave descriptions.
 	for slaveConf in config.slaveConfs:
-		gsd = slaveConf.gsd
-
-		# Create a slave description for an S7-315-2DP
-		slaveDesc = pyprofibus.DpSlaveDesc(identNumber = gsd.getIdentNumber(),
-						   slaveAddr = slaveConf.addr)
-
-		# Create Chk_Cfg telegram
-		slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
-
-		# Set User_Prm_Data
-		slaveDesc.setUserPrmData(gsd.getUserPrmData())
-
-		# Set various standard parameters
-		slaveDesc.setSyncMode(slaveConf.syncMode)
-		slaveDesc.setFreezeMode(slaveConf.freezeMode)
-		slaveDesc.setGroupMask(slaveConf.groupMask)
-		slaveDesc.setWatchdog(slaveConf.watchdogMs)
+		slaveDesc = slaveConf.makeDpSlaveDesc()
 
 		# Register the S7-315-2DP slave at the DPM
 		master.addSlave(slaveDesc)

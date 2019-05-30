@@ -132,10 +132,11 @@ class DpSlaveDesc(object):
 	"""
 
 	def __init__(self,
-		     identNumber,
+		     gsd,
 		     slaveAddr):
-		self.identNumber = identNumber
+		self.gsd = gsd
 		self.slaveAddr = slaveAddr
+		self.identNumber = gsd.getIdentNumber() if gsd else 0
 		self.dpm = None
 
 		# Prepare a Set_Prm telegram.
@@ -153,15 +154,17 @@ class DpSlaveDesc(object):
 		"""Sets DpCfgDataElement()s from the specified list
 		in the Chk_Cfg telegram.
 		"""
-		self.chkCfgTelegram.clearCfgDataElements()
-		for cfgDataElement in cfgDataElements:
-			self.chkCfgTelegram.addCfgDataElement(cfgDataElement)
+		if cfgDataElements is not None:
+			self.chkCfgTelegram.clearCfgDataElements()
+			for cfgDataElement in cfgDataElements:
+				self.chkCfgTelegram.addCfgDataElement(cfgDataElement)
 
 	def setUserPrmData(self, userPrmData):
 		"""Sets the User_Prm_Data of the Set_Prm telegram.
 		"""
-		self.setPrmTelegram.clearUserPrmData()
-		self.setPrmTelegram.addUserPrmData(userPrmData)
+		if userPrmData is not None:
+			self.setPrmTelegram.clearUserPrmData()
+			self.setPrmTelegram.addUserPrmData(userPrmData)
 
 	def setSyncMode(self, enabled):
 		"""Enable/disable sync-mode.
@@ -232,9 +235,8 @@ class DpMaster(object):
 		self.fdlTrans = FdlTransceiver(self.phy)
 		self.dpTrans = DpTransceiver(self.fdlTrans, thisIsMaster=True)
 
-		mcastSlaveDesc = DpSlaveDesc(
-			identNumber = 0,
-			slaveAddr = FdlTelegram.ADDRESS_MCAST)
+		mcastSlaveDesc = DpSlaveDesc(gsd=None,
+					     slaveAddr=FdlTelegram.ADDRESS_MCAST)
 		mcastSlave = DpSlaveState(self, mcastSlaveDesc)
 
 		self.__slaveDescs = {

@@ -29,27 +29,13 @@ try:
 	# Parse the config file.
 	config = pyprofibus.PbConf.fromFile("example_et200s.conf")
 
-	# Create a PHY (layer 1) interface object
-	phy = config.makePhy()
+	# Create a DP class 1 master.
+	master = config.makeDPM(dpmClass=1)
 
-	# Create a DP class 1 master with DP address 1
-	master = pyprofibus.DPM1(phy = phy,
-				 masterAddr = config.dpMasterAddr,
-				 debug = True)
-
+	# Create the slave descriptions.
 	outData = {}
-
-	# Create a slave descriptions.
 	for slaveConf in config.slaveConfs:
-		gsd = slaveConf.gsd
-
-		# Create a slave description for an ET-200S.
-		# The ET-200S has got the DP address 8 set via DIP-switches.
-		slaveDesc = pyprofibus.DpSlaveDesc(identNumber = gsd.getIdentNumber(),
-						   slaveAddr = slaveConf.addr)
-
-		# Create Chk_Cfg telegram
-		slaveDesc.setCfgDataElements(gsd.getCfgDataElements())
+		slaveDesc = slaveConf.makeDpSlaveDesc()
 
 		# Set User_Prm_Data
 		dp1PrmMask = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
@@ -58,14 +44,8 @@ try:
 		dp1PrmSet  = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
 					pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
 					0x00))
-		slaveDesc.setUserPrmData(gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
-							    dp1PrmSet = dp1PrmSet))
-
-		# Set various standard parameters
-		slaveDesc.setSyncMode(slaveConf.syncMode)
-		slaveDesc.setFreezeMode(slaveConf.freezeMode)
-		slaveDesc.setGroupMask(slaveConf.groupMask)
-		slaveDesc.setWatchdog(slaveConf.watchdogMs)
+		slaveDesc.setUserPrmData(slaveConf.gsd.getUserPrmData(dp1PrmMask=dp1PrmMask,
+								      dp1PrmSet=dp1PrmSet))
 
 		# Register the ET-200S slave at the DPM
 		master.addSlave(slaveDesc)
