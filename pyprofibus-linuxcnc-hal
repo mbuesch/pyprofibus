@@ -3,7 +3,7 @@
 #
 # PROFIBUS DP - LinuxCNC HAL module
 #
-# Copyright 2016 Michael Buesch <m@bues.ch>
+# Copyright 2016-2019 Michael Buesch <m@bues.ch>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,11 +28,9 @@ import time
 import getopt
 import struct
 
-from pyprofibus import DPM1, DPM2, DpSlaveDesc, isPy2Compat
+from pyprofibus import isPy2Compat
 from pyprofibus import ProfibusError, FdlError, DpError
 from pyprofibus.util import fileExists, monotonic_time
-from pyprofibus.phy_serial import CpPhySerial
-from pyprofibus.gsd.interp import GsdInterp
 from pyprofibus.dp import DpTelegram_SetPrm_Req
 from pyprofibus.conf import PbConf, PbConfError
 from pyprofibus.version import *
@@ -494,6 +492,8 @@ def main():
 	try:
 		# Parse the Profibus config file
 		config = PbConf.fromFile(configFile)
+		if opt_loglevel >= 4 and config.debug < 1:
+			config.debug = 1
 
 		# Adjust process priority
 		if opt_nice is not None:
@@ -523,21 +523,9 @@ def main():
 				      outputSize = slaveConf.outputSize)
 
 		# Setup the PROFIBUS stack.
-		phy = config.makePhy()
-		if config.dpMasterClass == 1:
-			DPM = DPM1
-		else:
-			DPM = DPM2
-		master = DPM(phy = phy,
-			     masterAddr = config.dpMasterAddr,
-			     debug = (opt_loglevel >= 4))
+		master = config.makeDPM()
 		for slaveConf in config.slaveConfs:
-			gsd = slaveConf.gsd
-			slave = DpSlaveDesc(
-				identNumber = gsd.getIdentNumber(),
-				slaveAddr = slaveConf.addr)
-			slave.setCfgDataElements(
-				gsd.getCfgDataElements())
+			slaveDesc = slaveConf.makeDpSlaveDesc()
 			dp1PrmMask = bytearray((
 				DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
 				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
@@ -546,15 +534,11 @@ def main():
 				DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
 				DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
 				0x00))
-			slave.setUserPrmData(
-				gsd.getUserPrmData(dp1PrmMask = dp1PrmMask,
-						   dp1PrmSet = dp1PrmSet))
-			slave.setSyncMode(slaveConf.syncMode)
-			slave.setFreezeMode(slaveConf.freezeMode)
-			slave.setGroupMask(slaveConf.groupMask)
-			slave.setWatchdog(slaveConf.watchdogMs)
-			slave._slaveConf = slaveConf
-			master.addSlave(slave)
+			slaveDesc.setUserPrmData(
+				slaveConf.gsd.getUserPrmData(dp1PrmMask=dp1PrmMask,
+							     dp1PrmSet=dp1PrmSet))
+			slaveDesc._slaveConf = slaveConf
+			master.addSlave(slaveDesc)
 
 		printInfo("Running PROFIBUS-DP master...")
 		master.initialize()

@@ -226,7 +226,7 @@ class PbConf(object):
 			      dsrdtr=self.phyDsrDtr)
 		return phy
 
-	def makeDPM(self, dpmClass=1, phy=None):
+	def makeDPM(self, phy=None):
 		"""Create a DpMaster and a CP-PHY instance based on the configuration.
 		Returns the DpMaster instance.
 		"""
@@ -236,12 +236,13 @@ class PbConf(object):
 
 		# Create a DP class 1 or 2 master.
 		from pyprofibus.dp_master import DPM1, DPM2
-		if dpmClass == 1:
+		if self.dpMasterClass == 1:
 			DpMasterClass = DPM1
-		elif dpmClass == 2:
+		elif self.dpMasterClass == 2:
 			DpMasterClass = DPM2
 		else:
-			return None
+			raise PbConfError("Invalid dpMasterClass parameter value: "
+					  "%d" % self.dpMasterClass)
 		master = DpMasterClass(phy=phy,
 				       masterAddr=self.dpMasterAddr,
 				       debug=(self.debug >= 1))

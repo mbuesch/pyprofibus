@@ -13,8 +13,8 @@ try:
 	# Parse the config file.
 	config = pyprofibus.PbConf.fromFile("example_s7-315-2dp.conf")
 
-	# Create a DP class 1 master.
-	master = config.makeDPM(dpmClass=1)
+	# Create a DP master.
+	master = config.makeDPM()
 
 	# Create the slave descriptions.
 	outData = {}
