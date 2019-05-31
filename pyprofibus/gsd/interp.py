@@ -205,6 +205,27 @@ class GsdInterp(GsdParser):
 			self.__interpErr("No Ident_Number in GSD.")
 		return ident
 
+	def getMaxTSDR(self, baudrate):
+		"""Get the max-tSDR.
+		Might return None.
+		"""
+		baud2fieldname = {
+			9600		: "MaxTsdr_9.6",
+			19200		: "MaxTsdr_19.2",
+			45450		: "MaxTsdr_45.45",
+			93750		: "MaxTsdr_93.75",
+			187500		: "MaxTsdr_187.5",
+			500000		: "MaxTsdr_500",
+			1500000		: "MaxTsdr_1.5M",
+			3000000		: "MaxTsdr_3M",
+			6000000		: "MaxTsdr_6M",
+			12000000	: "MaxTsdr_12M",
+		}
+		if baudrate not in baud2fieldname:
+			self.__interpErr("getMaxTSDR: Invalid baud rate.")
+		fieldname = baud2fieldname[baudrate]
+		return self.getField(fieldname, None)
+
 	def __str__(self):
 		text = []
 
