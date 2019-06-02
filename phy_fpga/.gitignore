@@ -5,3 +5,4 @@
 *.rpt
 *.log
 crc8_func.v
+pll_mod.v
