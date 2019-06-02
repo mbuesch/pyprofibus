@@ -33,7 +33,7 @@ gen()
 		die "Failed to generate"
 }
 
-for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name '*.md' -print \)); do
+for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name toolchain-build -prune \) -o \( -name '*.md' -print \)); do
 	gen "$i"
 done
 
