@@ -1,2 +1,4 @@
 #!/bin/sh
-exec tinyprog -p tinyfpga_bx_pyprofibusphy.bin
+set -e
+tinyprog --update-bootloader
+tinyprog --program tinyfpga_bx_pyprofibusphy.bin
