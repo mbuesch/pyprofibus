@@ -66,6 +66,42 @@ hook_pre_archives()
 	do_build tinyfpga_bx "$checkout_dir"
 }
 
+hook_doc_archives()
+{
+	local archive_dir="$1"
+	local checkout_dir="$2"
+
+	local doc_name="$project-doc-$version"
+	local doc_dir="$tmpdir/$doc_name"
+	mkdir "$doc_dir" ||\
+		die "Failed to create directory '$doc_dir'"
+	(
+		cd "$checkout_dir" || die "Failed to cd '$checkout_dir'"
+		rsync --recursive --prune-empty-dirs \
+			--include='/doc/' \
+			--include='/doc/**/' \
+			--include='/doc/**.png' \
+			--include='/doc/**.jpg' \
+			--include='/doc/**.jpeg' \
+			--include='/doc/**.1' \
+			--include='/doc/**.html' \
+			--include='/doc/**.htm' \
+			--include='/doc/**.txt' \
+			--include='/doc/**.ods' \
+			--include='/doc/**/README' \
+			--include='/*.html' \
+			--include='/*.htm' \
+			--include='/*.txt' \
+			--exclude='*' \
+			. "$doc_dir" ||\
+			die "Failed to copy documentation."
+		cd "$tmpdir" || die "Failed to cd '$tmpdir'"
+		tar --owner=root --group=root -c -J -f "$archive_dir"/$doc_name.tar.xz \
+			"$doc_name" ||\
+			die "Failed to create doc archive."
+	) || die
+}
+
 project=pyprofibus
 default_archives=py-sdist-xz
 makerelease "$@"
