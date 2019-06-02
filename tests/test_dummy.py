@@ -4,15 +4,14 @@ from pyprofibus_tstlib import *
 
 def test_dummy_phy():
 	phy = pyprofibus.phy_dummy.CpPhyDummySlave(debug = True)
-	phy.setConfig(baudrate = 19200)
+	phy.setConfig(baudrate=19200)
 
-	master = pyprofibus.DPM1(phy = phy,
-				 masterAddr = 42,
-				 debug = True)
+	master = pyprofibus.DPM1(phy=phy,
+				 masterAddr=42,
+				 debug=True)
 
-	slaveDesc = pyprofibus.DpSlaveDesc(
-			identNumber = 0x6666,
-			slaveAddr = 84)
+	slaveDesc = pyprofibus.DpSlaveDesc(gsd=None,
+					   slaveAddr=84)
 
 	slaveDesc.setCfgDataElements([
 		pyprofibus.DpCfgDataElement(pyprofibus.DpCfgDataElement.ID_TYPE_OUT),
