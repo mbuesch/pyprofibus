@@ -6,6 +6,7 @@ graft phy_fpga
 graft tests
 
 include COPYING
+include README.html
 include README.md
 include dummy.gsd
 include example_*.conf
