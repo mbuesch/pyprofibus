@@ -132,13 +132,13 @@ if [ $BUILD_TINYPROG -ne 0 ]; then
 	cd "$BUILDDIR/TinyFPGA-Bootloader/programmer" || die "Failed to cd to tinyprog."
 	export PREFIX="$INSTALLDIR/tinyprog"
 	rm -rf "$PREFIX" || die "Failed to clean install tinyprog"
-	mkdir -p "$PREFIX/share" || die "Failed to create tinyprog share"
+	mkdir -p "$PREFIX/lib" || die "Failed to create tinyprog lib"
 	mkdir -p "$PREFIX/bin" || die "Failed to create tinyprog bin"
-	cp -r "$BUILDDIR/TinyFPGA-Bootloader/programmer/tinyprog" "$PREFIX/share/" || die "Failed to install tinyprog"
+	cp -r "$BUILDDIR/TinyFPGA-Bootloader/programmer/tinyprog" "$PREFIX/lib/" || die "Failed to install tinyprog"
 	cat > "$PREFIX/bin/tinyprog" <<EOF
 #!/bin/sh
-export PYTHONPATH="$PREFIX/share/"
-exec python3 "$PREFIX/share/tinyprog" "\$@"
+export PYTHONPATH="$PREFIX/lib/:\$PYTHONPATH"
+exec python3 "$PREFIX/lib/tinyprog" "\$@"
 EOF
 	[ -f "$PREFIX/bin/tinyprog" ] || die "Failed to install tinyprog wrapper"
 	chmod 755 "$PREFIX/bin/tinyprog" || die "Failed to chmod tinyprog"
