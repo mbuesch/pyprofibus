@@ -49,6 +49,23 @@ The [nextpnr FPGA place and route tool](https://github.com/YosysHQ/nextpnr) is r
 [GNU make](https://www.gnu.org/software/make/) and various other standard GNU/Linux shell utilities, that are already installed on any Desktop Linux distribution. Building on Windows is not supported.
 
 
+#### Downloading and installing all toolchain tools
+
+The script `build_toolchain.sh` that is included in the pyprofibus archive can be used to download, build and install all FPGA toolchain tools to the $HOME directory.
+
+Just run the script as follows. It will download all required packages, build and install everything to `$HOME/fpga-toolchain` by default.
+
+<pre>
+cd phy_fpga
+./build_toolchain.sh
+</pre>
+
+After successful execution of `build_toolchain.sh` please read the information about $PATH that the script prints to the console. The line printed by the script shall be added to your `$HOME/.bashrc`
+
+No changes to the operating system are necessary.<br />
+Do not run `build_toolchain.sh` as root.<br />
+The toolchain can be uninstalled by simply deleting the directory `$HOME/fpga-toolchain`
+
 ### Building pyprofibus PHY-FPGA
 
 To build the PHY-FPGA sources run the following commands:
