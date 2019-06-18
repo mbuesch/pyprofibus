@@ -7,8 +7,6 @@ export PYBUILD_NAME=pyprofibus
 export PYBUILD_SYSTEM=distutils
 #export PYBUILD_DEBUG=1
 
-export PYBUILD_DESTDIR_python2=debian/destdir-py2-pyprofibus/
-export PYBUILD_DESTDIR_python2-dbg=debian/destdir-py2-pyprofibus-dbg/
 export PYBUILD_DESTDIR_python3=debian/destdir-py3-pyprofibus/
 export PYBUILD_DESTDIR_python3-dbg=debian/destdir-py3-pyprofibus-dbg/
 
@@ -18,7 +16,7 @@ export PYTHONSTARTUP=
 export PYTHONINSPECT=
 
 %:
-	dh $@ --with python2,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
 override_dh_auto_test:
 	true
