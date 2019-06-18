@@ -15,6 +15,9 @@ export PYTHONPATH=
 export PYTHONSTARTUP=
 export PYTHONINSPECT=
 
+export PYPROFIBUS_CYTHON_BUILD=0
+export PYPROFIBUS_CYTHON_PARALLEL=1
+
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
