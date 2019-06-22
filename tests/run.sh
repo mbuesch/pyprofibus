@@ -10,39 +10,27 @@ rootdir="$basedir/.."
 
 die()
 {
-	echo "$*"
+	[ -n "$*" ] && echo "$*" >&2
 	exit 1
 }
 
-# $1=executable_name
-find_executable()
-{
-	local executable_name="$1"
-
-	local executable_path="$(which "$executable_name")"
-	[ -n "$executable_path" ] ||\
-		die "$executable_name executable not found."\
-		    "Please install $executable_name."
-	RET="$executable_path"
-}
-
 # $1=interpreter
-# $2=nose
-# $3=test_dir
-run_nose()
+# $2=test_dir
+run_pyunit()
 {
 	local interpreter="$1"
-	local nose="$2"
-	local test_dir="$3"
+	local test_dir="$2"
 
-	echo
-	echo "==="
-	echo "= Running $interpreter $nose..."
-	echo "==="
-	export PYTHONPATH="$rootdir/tests:$PYTHONPATH"
-	cd "$rootdir" || die "Failed to cd to rootdir."
-	"$interpreter" "$nose" -v --no-byte-compile "$test_dir" ||\
-		die "Test failed"
+	(
+		echo
+		echo "==="
+		echo "= Running $interpreter..."
+		echo "==="
+		export PYTHONPATH="$rootdir/tests:$PYTHONPATH"
+		cd "$rootdir" || die "Failed to cd to rootdir."
+		"$interpreter" -m unittest --failfast --buffer --catch "$test_dir" ||\
+			die "Test failed"
+	) || die
 }
 
 # $1=test_dir
@@ -50,20 +38,23 @@ run_testdir()
 {
 	local test_dir="$1"
 
-	find_executable nosetests
-	local nosetests="$RET"
-	find_executable nosetests3
-	local nosetests3="$RET"
+	unset PYTHONPATH
+	unset PYTHONSTARTUP
+	unset PYTHONY2K
+	unset PYTHONOPTIMIZE
+	unset PYTHONDEBUG
+	export PYTHONDONTWRITEBYTECODE=1
+	unset PYTHONINSPECT
+	unset PYTHONIOENCODING
+	unset PYTHONNOUSERSITE
+	unset PYTHONUNBUFFERED
+	unset PYTHONVERBOSE
+	export PYTHONWARNINGS=once
+	export PYTHONHASHSEED=random
 
-	export PYTHONPATH=
-	run_nose python2 "$nosetests" "$test_dir"
-
-	export PYTHONPATH=
-	run_nose python3 "$nosetests3" "$test_dir"
-
-	local p='import sys; print(":".join(p for p in sys.path if p.startswith("/usr/")))'
-	export PYTHONPATH="$(pypy -c "$p"):$(python2 -c "$p")"
-	run_nose pypy "$nosetests" "$test_dir"
+	run_pyunit python2 "$test_dir"
+	run_pyunit python3 "$test_dir"
+	run_pyunit pypy "$test_dir"
 }
 
 run_tests()
