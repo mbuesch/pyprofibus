@@ -95,6 +95,8 @@ class FdlTransceiver(object):
 		self.phy = phy
 		self.setRXFilter(None)
 
+	#TODO this needs to know about the slaves
+
 	def setRXFilter(self, newFilter):
 		if newFilter is None:
 			newFilter = range(0, FdlTelegram.ADDRESS_MASK + 1)
