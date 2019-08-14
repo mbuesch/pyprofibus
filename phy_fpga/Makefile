@@ -63,7 +63,7 @@ PLL_MOD_V		:=
 endif
 
 crcgen.stamp:
-	$(TEST) -d ./crcgen || $(GIT) submodule update --init
+	$(TEST) -f ./crcgen/crcgen/__main__.py || $(GIT) submodule update --init
 	$(TOUCH) $@
 
 crc8_func.v: crcgen.stamp
