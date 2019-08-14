@@ -25,6 +25,9 @@ hook_get_version()
 
 hook_post_checkout()
 {
+	info "Pulling in git submodules"
+	git submodule update --init
+
 	default_hook_post_checkout "$@"
 
 	rm -r "$1"/maintenance

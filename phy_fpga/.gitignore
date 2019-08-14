@@ -4,5 +4,6 @@
 *.bin
 *.rpt
 *.log
+*.stamp
 crc8_func.v
 pll_mod.v

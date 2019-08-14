@@ -17,6 +17,9 @@ PRINTF		:= printf
 RM		:= rm
 FALSE		:= false
 TR		:= tr
+TEST		:= test
+TOUCH		:= touch
+GIT		:= git
 
 TARGET_LOWER	:= $(shell $(PRINTF) '%s' '$(TARGET)' | $(TR) A-Z a-z)
 TARGET_UPPER	:= $(shell $(PRINTF) '%s' '$(TARGET)' | $(TR) a-z A-Z)
@@ -59,8 +62,12 @@ PLL_HZ		:= 16000000
 PLL_MOD_V		:=
 endif
 
-crc8_func.v: crcgen.py
-	$(PYTHON) crcgen.py --algorithm CRC-8-CCITT --verilog-function --name crc8 > $@
+crcgen.stamp:
+	$(TEST) -d ./crcgen || $(GIT) submodule update --init
+	$(TOUCH) $@
+
+crc8_func.v: crcgen.stamp
+	PYTHONPATH=./crcgen $(PYTHON) ./crcgen/crcgen --algorithm CRC-8-CCITT --verilog-function --name crc8 > $@
 
 %.blif: $(TOP_FILE) $(wildcard *.v) $(GENERATED_V) $(PLL_MOD_V)
 	$(YOSYS) -p 'read_verilog -DTARGET_$(TARGET_UPPER)=1 -DCLK_HZ=$(CLK_HZ) -DPLL_HZ=$(PLL_HZ) $(if $(filter-out 0,$(DEBUG)),-DDEBUG=1) $<' \
@@ -92,7 +99,7 @@ boot:
 	$(TINYPROG) -b
 
 clean:
-	$(RM) -f *.blif *.json *.asc *.bin *.rpt $(YOSYS_LOG) $(NEXTPNR_LOG) $(ICEPACK_LOG) $(ICETIME_LOG) $(GENERATED_V) $(PLL_MOD_V_FILE)
+	$(RM) -f *.blif *.json *.asc *.bin *.rpt crcgen.stamp $(YOSYS_LOG) $(NEXTPNR_LOG) $(ICEPACK_LOG) $(ICETIME_LOG) $(GENERATED_V) $(PLL_MOD_V_FILE)
 
 .PHONY: all install boot clean
 .PRECIOUS: %.json %.blif %.asc

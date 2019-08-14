@@ -1,0 +1,3 @@
+[submodule "phy_fpga/crcgen"]
+	path = phy_fpga/crcgen
+	url = https://git.bues.ch/git/crcgen.git
