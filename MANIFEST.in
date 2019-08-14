@@ -2,6 +2,7 @@ graft debian
 graft doc
 graft linuxcnc-demo-dummyphy
 graft linuxcnc-demo-et200s
+graft misc
 graft phy_fpga
 graft tests
 
