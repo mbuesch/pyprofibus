@@ -16,6 +16,7 @@ from pyprofibus.gsd.parser import GsdError
 from pyprofibus.util import *
 
 import re
+import sys
 from io import StringIO
 
 if isPy2Compat:
@@ -189,8 +190,13 @@ class PbConf(object):
 				mods = [ o for o in p.options(section)
 					 if self.__reMod.match(o) ]
 				mods.sort(key = lambda o: self.__reMod.match(o).group(1))
-				for option in mods:
-					s.gsd.setConfiguredModule(get(section, option))
+				if s.gsd.isModular():
+					for option in mods:
+						s.gsd.setConfiguredModule(get(section, option))
+				elif mods:
+					print("Warning: Some modules are specified in the config file, "
+					      "but the station is 'Compact': Modular_Station=0.",
+					      file=sys.stderr)
 
 				self.slaveConfs.append(s)
 

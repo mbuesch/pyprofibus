@@ -20,10 +20,12 @@ class GsdInterp(GsdParser):
 	"""GSD file/data interpreter.
 	"""
 
-	def __init__(self, text, filename = None, debug = False):
+	def __init__(self, text, filename=None, debug=False):
 		super(GsdInterp, self).__init__(text, filename, debug)
 		self.__configMods = []
-		self.__addPresetModules(onlyFixed = False)
+		self.__addPresetModules(onlyFixed=False)
+		if not self.isModular():
+			self.__addAllModules()
 
 	def __interpErr(self, errorText):
 		raise GsdError("GSD '%s': %s" % (
@@ -81,7 +83,7 @@ class GsdInterp(GsdParser):
 					     name,
 					     lambda module: module.name)
 
-	def __addPresetModules(self, onlyFixed = False):
+	def __addPresetModules(self, onlyFixed=False):
 		if not self.getField("FixPresetModules", False) and\
 		   onlyFixed:
 			return
@@ -89,23 +91,26 @@ class GsdInterp(GsdParser):
 			if mod.getField("Preset", False):
 				self.__configMods.append(mod)
 
+	def __addAllModules(self):
+		"""Configure all available modules as plugged into the device.
+		"""
+		for mod in self.getField("Module", []):
+			if not mod.getField("Preset", False):
+				self.__configMods.append(mod)
+
 	def clearConfiguredModules(self):
 		"""Remove all configured modules.
 		This also removes all preset modules, except for the fixed preset mods.
 		"""
 		self.__configMods = []
-		self.__addPresetModules(onlyFixed = True)
+		self.__addPresetModules(onlyFixed=True)
 
-	def setConfiguredModule(self, moduleName,
-				index = -1, force = False):
+	def setConfiguredModule(self, moduleName, index=-1):
 		"""Set a configured module that is plugged into the device.
 		If index>=0 then set the module at the specified index.
 		If index<0 then append the module.
 		If moduleName is None then the module is removed.
 		"""
-		if not self.isModular() and not force:
-			self.__interpErr("Trying to configure modules, "
-				"but station is non-modular.")
 		if index >= 0 and index < len(self.__configMods) and\
 		   self.getField("FixPresetModules", False) and\
 		   self.__configMods[index].getField("Preset", False):
