@@ -54,7 +54,7 @@ run_testdir()
 
 	run_pyunit python2 "$test_dir"
 	run_pyunit python3 "$test_dir"
-	run_pyunit pypy "$test_dir"
+	run_pyunit pypy3 "$test_dir"
 }
 
 run_tests()
