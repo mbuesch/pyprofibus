@@ -15,3 +15,5 @@ include example_*.py
 
 prune ./build
 prune build
+
+global-exclude *.pyo *.pyc __pycache__ *$py.class
