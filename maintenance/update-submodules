@@ -1,0 +1,17 @@
+#!/bin/sh
+
+basedir="$(dirname "$0")"
+[ "$(echo "$basedir" | cut -c1)" = '/' ] || basedir="$PWD/$basedir"
+
+
+die()
+{
+	echo "$*" >&2
+	exit 1
+}
+
+echo "Updating git submodules..."
+cd "$basedir/.." || die "Failed to cd to basedir"
+git submodule update --init || die "git submodule update failed"
+
+exit 0
