@@ -12,6 +12,6 @@ die()
 
 echo "Updating git submodules..."
 cd "$basedir/.." || die "Failed to cd to basedir"
-git submodule update --init || die "git submodule update failed"
+git submodule update --init --recursive || die "git submodule update failed"
 
 exit 0
