@@ -26,7 +26,7 @@ hook_get_version()
 hook_post_checkout()
 {
 	info "Pulling in git submodules"
-	git submodule update --init
+	git submodule update --init --recursive
 
 	default_hook_post_checkout "$@"
 
