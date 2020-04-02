@@ -52,7 +52,6 @@ run_testdir()
 	export PYTHONWARNINGS=once
 	export PYTHONHASHSEED=random
 
-	run_pyunit python2 "$test_dir"
 	run_pyunit python3 "$test_dir"
 	run_pyunit pypy3 "$test_dir"
 }

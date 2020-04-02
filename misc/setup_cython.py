@@ -1,8 +1,8 @@
 #
 #   Cython patcher
-#   v1.19
+#   v1.21
 #
-#   Copyright (C) 2012-2019 Michael Buesch <m@bues.ch>
+#   Copyright (C) 2012-2020 Michael Buesch <m@bues.ch>
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -31,12 +31,18 @@ import re
 WORKER_MEM_BYTES	= 800 * 1024*1024
 WORKER_CPU_OVERCOMMIT	= 2
 
+setupFileName = "setup.py"
 parallelBuild = False
 profileEnabled = False
 debugEnabled = False
 ext_modules = []
 CythonBuildExtension = None
 
+patchDirName = "cython_patched.%s-%s-%d.%d" % (
+		platform.system().lower(),
+		platform.machine().lower(),
+		sys.version_info[0],
+		sys.version_info[1])
 
 _Cython_Distutils_build_ext = None
 _cythonPossible = None
@@ -71,14 +77,10 @@ def makedirs(path, mode=0o755):
 		raise e
 
 def hashFile(path):
-	if sys.version_info[0] < 3:
-		ExpectedException = IOError
-	else:
-		ExpectedException = FileNotFoundError
 	try:
 		with open(path, "rb") as fd:
 			return hashlib.sha1(fd.read()).hexdigest()
-	except ExpectedException as e:
+	except FileNotFoundError as e:
 		return None
 
 def __fileopIfChanged(fromFile, toFile, fileops):
@@ -161,12 +163,6 @@ def pyCythonPatch(fromFile, toFile):
 			elif "#@cy-win" in stripLine:
 				if _isWindows:
 					line = uncomment(line, "#@cy-win")
-			elif "#@cy2" in stripLine:
-				if sys.version_info[0] < 3:
-					line = uncomment(line, "#@cy2")
-			elif "#@cy3" in stripLine:
-				if sys.version_info[0] >= 3:
-					line = uncomment(line, "#@cy3")
 			elif "#@cy" in stripLine:
 				line = uncomment(line, "#@cy")
 
@@ -223,15 +219,6 @@ def pyCythonPatch(fromFile, toFile):
 			if "#@nocy" in stripLine:
 				line = "#" + line
 
-			# Comment all lines containing #@cyX
-			# for the not matching version.
-			if sys.version_info[0] < 3:
-				if "#@cy3" in stripLine:
-					line = "#" + line
-			else:
-				if "#@cy2" in stripLine:
-					line = "#" + line
-
 			# Comment all lines containing #@cy-posix/win
 			# for the not matching platform.
 			if _isPosix:
@@ -284,15 +271,10 @@ def registerCythonModule(baseDir, sourceModName):
 
 	modDir = os.path.join(baseDir, sourceModName)
 	# Make path to the cython patch-build-dir
-	patchDir = os.path.join(baseDir, "build",
-		"cython_patched.%s-%s-%d.%d" %\
-		(platform.system().lower(),
-		 platform.machine().lower(),
-		 sys.version_info[0], sys.version_info[1]),
-		"%s_cython" % sourceModName
-	)
+	patchDir = os.path.join(baseDir, "build", patchDirName,
+				("%s_cython" % sourceModName))
 
-	if not os.path.exists(os.path.join(baseDir, "setup.py")) or\
+	if not os.path.exists(os.path.join(baseDir, setupFileName)) or\
 	   not os.path.exists(modDir) or\
 	   not os.path.isdir(modDir):
 		raise Exception("Wrong directory. "
@@ -376,7 +358,7 @@ def registerCythonModule(baseDir, sourceModName):
 							# Warn about unused variables?
 							"warn.unused"	: False,
 							# Set language version
-							"language_level" : 2 if sys.version_info[0] < 3 else 3,
+							"language_level" : 3,
 						},
 						define_macros=[
 							("CYTHON_TRACE",	str(int(profileEnabled))),
@@ -390,9 +372,9 @@ def registerCythonModule(baseDir, sourceModName):
 					)
 				)
 
-def registerCythonModules():
-	baseDir = os.curdir # Base directory, where setup.py lives.
-
+def registerCythonModules(baseDir=None):
+	if baseDir is None:
+		baseDir = os.curdir
 	for filename in os.listdir(baseDir):
 		if os.path.isdir(os.path.join(baseDir, filename)) and\
 		   os.path.exists(os.path.join(baseDir, filename, "__init__.py")) and\
@@ -406,6 +388,11 @@ def cythonBuildPossible():
 		return _cythonPossible
 
 	_cythonPossible = False
+
+	if sys.version_info[0] < 3:
+		print("WARNING: Could not build the CYTHON modules: "
+		      "Cython 2 not supported. Please use Cython 3.")
+		return False
 
 	try:
 		import Cython.Compiler.Options
@@ -429,19 +416,6 @@ def cythonBuildPossible():
 
 	_cythonPossible = True
 	return True
-
-if sys.version_info[0] < 3:
-	# Cython2 build libraries need method pickling
-	# for parallel build.
-	def unpickle_method(fname, obj, cls):
-		# Ignore MRO. We don't seem to inherit methods.
-		return cls.__dict__[fname].__get__(obj, cls)
-	def pickle_method(m):
-		return unpickle_method, (m.im_func.__name__,
-					 m.im_self,
-					 m.im_class)
-	import copy_reg, types
-	copy_reg.pickle(types.MethodType, pickle_method, unpickle_method)
 
 def cyBuildWrapper(arg):
 	# This function does the same thing as the for-loop-body
