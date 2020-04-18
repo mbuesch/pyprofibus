@@ -8,7 +8,7 @@ stack written in Python.
 
 What hardware can pyprofibus be run on? Please read the hardware documentation for more information:
 
-[pyprofibus hardware documentation](doc/hardware.html)
+[pyprofibus hardware documentation](doc/hardware.md)
 
 
 ## Examples
