@@ -12,7 +12,7 @@ This is the fastest albeit most expensive alternative to connect pyprofibus to a
 The pyprofibus FPGA is connected via high speed SPI bus to the host computer. It's known to work well with the Raspberry Pi. However it's not strictly limited to that as host computer. The pyprofibus FPGA PHY driver utilizes the Linux SPI subsystem for communication to the FPGA board.
 
 Please see the
-[pyprofibus FPGA PHY documentation](hardware_fpga.html)
+[pyprofibus FPGA PHY documentation](hardware_fpga.md)
 for more information on how to build and run the FPGA PHY.
 
 
