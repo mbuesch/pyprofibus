@@ -51,3 +51,9 @@ try:
 	ConnectionError
 except NameError:
 	ConnectionError = OSError
+
+# IOError dummy
+try:
+	IOError
+except NameError:
+	IOError = OSError
