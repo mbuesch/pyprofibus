@@ -19,6 +19,17 @@ try:
 	for slaveConf in config.slaveConfs:
 		slaveDesc = slaveConf.makeDpSlaveDesc()
 
+		# Set User_Prm_Data
+		dp1PrmMask = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		dp1PrmSet  = bytearray((pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM0_FAILSAFE,
+					pyprofibus.DpTelegram_SetPrm_Req.DPV1PRM1_REDCFG,
+					0x00))
+		slaveDesc.setUserPrmData(slaveConf.gsd.getUserPrmData(dp1PrmMask=dp1PrmMask,
+								      dp1PrmSet=dp1PrmSet))
+
+
 		# Register the slave at the DPM
 		master.addSlave(slaveDesc)
 
