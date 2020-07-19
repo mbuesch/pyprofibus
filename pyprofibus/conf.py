@@ -167,7 +167,8 @@ class PbConf(object):
 				s = self._SlaveConf()
 				s.addr = getint(section, "addr")
 				s.gsd = GsdInterp.fromFile(
-					get(section, "gsd"))
+					get(section, "gsd"),
+					debug=(self.debug > 0))
 				s.syncMode = getboolean(section, "sync_mode",
 							fallback=False)
 				s.freezeMode = getboolean(section, "freeze_mode",
