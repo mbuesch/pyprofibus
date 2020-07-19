@@ -46,6 +46,14 @@ class CpPhy(object):
 	BAUD_6000000	= 6000000
 	BAUD_12000000	= 12000000
 
+	__slots__ = (
+		"debug",
+		"__txQueueDAs",
+		"__txQueueTelegrams",
+		"__allocUntil",
+		"__secPerFrame",
+	)
+
 	def __init__(self, debug=False, *args, **kwargs):
 		self.debug = debug
 		self.__close()

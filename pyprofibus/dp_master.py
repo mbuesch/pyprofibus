@@ -55,6 +55,24 @@ class DpSlaveState(object):
 		STATE_DX	: 0.5,
 	}
 
+	__slots__ = (
+		"__nextState",
+		"__prevState",
+		"__state",
+		"__stateTimeout",
+		"dxStartTime",
+		"faultDeb",
+		"fcb",
+		"inData",
+		"master",
+		"outData",
+		"pendingReq",
+		"pendingReqTimeout",
+		"rxQueue",
+		"shortAckReceived",
+		"slaveDesc",
+	)
+
 	def __init__(self, master, slaveDesc):
 		self.master = master
 		self.slaveDesc = slaveDesc
@@ -135,6 +153,16 @@ class DpSlaveDesc(object):
 	"""Static descriptor data of a DP slave that
 	is managed by a DPM instance.
 	"""
+
+	__slots__ = (
+		"chkCfgTelegram",
+		"dpm",
+		"gsd",
+		"identNumber",
+		"setPrmTelegram",
+		"setPrmTelegram",
+		"slaveAddr",
+	)
 
 	def __init__(self,
 		     gsd,
@@ -230,6 +258,23 @@ class DpSlaveDesc(object):
 			(intToHex(self.identNumber), self.slaveAddr)
 
 class DpMaster(object):
+	__slots__ = (
+		"__haveToken",
+		"__runNextSlaveIndex",
+		"__slaveDescs",
+		"__slaveDescsList",
+		"__slaveStates",
+		"__slowDown",
+		"__slowDownFact",
+		"__slowDownUntil",
+		"debug",
+		"dpTrans",
+		"dpmClass",
+		"fdlTrans",
+		"masterAddr",
+		"phy",
+	)
+
 	def __init__(self, dpmClass, phy, masterAddr, debug=False):
 		self.dpmClass = dpmClass
 		self.phy = phy

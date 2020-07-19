@@ -24,6 +24,10 @@ class CpPhyDummySlave(CpPhy):
 	"""Dummy slave PROFIBUS CP PHYsical layer
 	"""
 
+	__slots__ = (
+		"__pollQueue",
+	)
+
 	def __init__(self, *args, **kwargs):
 		super(CpPhyDummySlave, self).__init__(*args, **kwargs)
 		self.__pollQueue = []

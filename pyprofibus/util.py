@@ -25,7 +25,8 @@ __all__ = [
 ]
 
 class ProfibusError(Exception):
-	pass
+	__slots__ = (
+	)
 
 def bytesToHex(b, sep = " "):
 	return sep.join("%02X" % c for c in bytearray(b))
@@ -73,6 +74,12 @@ class TimeLimit(object):
 
 	UNLIMITED	= -1	# No limit
 
+	__slots__ = (
+		"__limit",
+		"__startTime",
+		"__endTime",
+	)
+
 	# limit => The time limit, in seconds.
 	#          Negative value = unlimited.
 	def __init__(self, limit = 0):
@@ -105,6 +112,11 @@ class TimeLimit(object):
 class FaultDebouncer(object):
 	"""Fault counter/debouncer.
 	"""
+
+	__slots__ = (
+		"__countMax",
+		"__count",
+	)
 
 	def __init__(self, countMax = 0xFFFF):
 		self.__countMax = countMax

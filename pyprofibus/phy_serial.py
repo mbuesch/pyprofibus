@@ -42,6 +42,12 @@ class CpPhySerial(CpPhy):
 	"""pyserial based PROFIBUS CP PHYsical layer
 	"""
 
+	__slots__ = (
+		"__discardTimeout",
+		"__rxBuf",
+		"__serial",
+	)
+
 	def __init__(self, port, useRS485Class=False, *args, **kwargs):
 		"""port => "/dev/ttySx"
 		debug => enable/disable debugging.

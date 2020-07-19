@@ -31,12 +31,19 @@ __all__ = [
 ]
 
 class FdlError(ProfibusError):
-	pass
-
+	__slots__ = (
+	)
 
 class FdlFCB():
 	"""FCB context, per slave.
 	"""
+
+	__slots__ = (
+		"__fcb",
+		"__fcv",
+		"__fcbWaitingReply",
+		"__fcbEnabled",
+	)
 
 	def __init__(self, enable = False):
 		self.resetFCB()
@@ -77,6 +84,11 @@ class FdlFCB():
 			self.__fcv, str(self.__fcbWaitingReply))
 
 class FdlTransceiver(object):
+	__slots__ = (
+		"phy",
+		"__rxFilter",
+	)
+
 	def __init__(self, phy):
 		self.phy = phy
 		self.setRXFilter(None)
@@ -190,6 +202,19 @@ class FdlTelegram(object):
 	FC_MNRDY	= 0x10	# Master, not ready to enter token ring
 	FC_MRDY		= 0x20	# Master, ready to enter token ring
 	FC_MTR		= 0x30	# Master, in token ring
+
+	__slots__ = (
+		"sd",
+		"haveLE",
+		"da",
+		"sa",
+		"fc",
+		"dae",
+		"sae",
+		"du",
+		"haveFCS",
+		"ed",
+	)
 
 	@classmethod
 	def getSizeFromRaw(cls, data):
@@ -380,6 +405,9 @@ class FdlTelegram(object):
 		return isinstance(telegram, cls)
 
 class FdlTelegram_var(FdlTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa, fc, dae, sae, du):
 		FdlTelegram.__init__(self, sd=FdlTelegram.SD2,
 			haveLE=True, da=da, sa=sa, fc=fc,
@@ -389,6 +417,9 @@ class FdlTelegram_var(FdlTelegram):
 			raise FdlError("Invalid data length (> 246)")
 
 class FdlTelegram_stat8(FdlTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa, fc, dae, sae, du):
 		FdlTelegram.__init__(self, sd=FdlTelegram.SD3,
 			da=da, sa=sa, fc=fc,
@@ -398,39 +429,60 @@ class FdlTelegram_stat8(FdlTelegram):
 			raise FdlError("Invalid data length (!= 8)")
 
 class FdlTelegram_stat0(FdlTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa, fc):
 		FdlTelegram.__init__(self, sd=FdlTelegram.SD1,
 			da=da, sa=sa, fc=fc,
 			haveFCS=True, ed=FdlTelegram.ED)
 
 class FdlTelegram_token(FdlTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa):
 		FdlTelegram.__init__(self, sd=FdlTelegram.SD4,
 			da=da, sa=sa)
 
 class FdlTelegram_ack(FdlTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self):
 		FdlTelegram.__init__(self, sd=FdlTelegram.SC)
 
 class FdlTelegram_FdlStat_Req(FdlTelegram_stat0):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa):
 		FdlTelegram_stat0.__init__(self, da=da, sa=sa,
 			fc=FdlTelegram.FC_REQ |\
 			   FdlTelegram.FC_FDL_STAT)
 
 class FdlTelegram_FdlStat_Con(FdlTelegram_stat0):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_OK |
 		        FdlTelegram.FC_SLAVE):
 		FdlTelegram_stat0.__init__(self, da=da, sa=sa, fc=fc)
 
 class FdlTelegram_Ident_Req(FdlTelegram_stat0):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa):
 		FdlTelegram_stat0.__init__(self, da=da, sa=sa,
 			fc=FdlTelegram.FC_REQ |\
 			   FdlTelegram.FC_IDENT)
 
 class FdlTelegram_Lsap_Req(FdlTelegram_stat0):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa):
 		FdlTelegram_stat0.__init__(self, da=da, sa=sa,
 			fc=FdlTelegram.FC_REQ |\

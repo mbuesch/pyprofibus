@@ -31,9 +31,15 @@ __all__ = [
 ]
 
 class DpError(ProfibusError):
-	pass
+	__slots__ = (
+	)
 
 class DpTransceiver(object):
+	__slots__ = (
+		"fdlTrans",
+		"thisIsMaster",
+	)
+
 	def __init__(self, fdlTrans, thisIsMaster):
 		self.fdlTrans = fdlTrans
 		self.thisIsMaster = thisIsMaster
@@ -78,6 +84,14 @@ class DpTelegram(object):
 	DSAP_SLAVE_DIAG		= 60
 	DSAP_SET_PRM		= 61
 	DSAP_CHK_CFG		= 62
+
+	__slots__ = (
+		"da",
+		"sa",
+		"fc",
+		"dsap",
+		"ssap",
+	)
 
 	def __init__(self, da, sa, fc, dsap=None, ssap=None):
 		self.da = da
@@ -185,6 +199,10 @@ class DpTelegram(object):
 		return isinstance(telegram, cls)
 
 class _DataExchange_Common(DpTelegram):
+	__slots__ = (
+		"du",
+	)
+
 	def __init__(self, da, sa, fc, du):
 		DpTelegram.__init__(self,
 			da=da, sa=sa, fc=fc)
@@ -207,6 +225,9 @@ class _DataExchange_Common(DpTelegram):
 		return dp
 
 class DpTelegram_DataExchange_Req(_DataExchange_Common):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
@@ -215,6 +236,9 @@ class DpTelegram_DataExchange_Req(_DataExchange_Common):
 			da=da, sa=sa, fc=fc, du=du)
 
 class DpTelegram_DataExchange_Con(_DataExchange_Common):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_DL,
 		     du=()):
@@ -222,6 +246,9 @@ class DpTelegram_DataExchange_Con(_DataExchange_Common):
 			da=da, sa=sa, fc=fc, du=du)
 
 class DpTelegram_SlaveDiag_Req(DpTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
@@ -262,6 +289,14 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 
 	# Flags byte 2
 	B2_EXTDIAGOVR		= 0x80	# Ext_Diag_Overflow
+
+	__slots__ = (
+		"b0",
+		"b1",
+		"b2",
+		"masterAddr",
+		"identNumber",
+	)
 
 	def __init__(self, da, sa, fc=FdlTelegram.FC_DL,
 		     dsap=DpTelegram.SSAP_MS0,
@@ -389,6 +424,16 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 	DPV1PRM2_R6		= 0x40	# Reserved bit 6
 	DPV1PRM2_REDUN		= 0x80	# Redundancy commands on
 
+	__slots__ = (
+		"stationStatus",
+		"wdFact1",
+		"wdFact2",
+		"minTSDR",
+		"identNumber",
+		"groupIdent",
+		"userPrmData",
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
@@ -478,6 +523,11 @@ class DpCfgDataElement(object):
 	LEN_WORDS		= 0x40	# Word structure
 	LEN_CON_WHOLE		= 0x80	# Consistency over whole length
 
+	__slots__ = (
+		"identifier",
+		"lengthBytes",
+	)
+
 	def __init__(self, identifier=0, lengthBytes=()):
 		self.identifier = identifier
 		self.lengthBytes = lengthBytes
@@ -493,6 +543,10 @@ class DpCfgDataElement(object):
 		return du
 
 class DpTelegram_ChkCfg_Req(DpTelegram):
+	__slots__ = (
+		"cfgData",
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
@@ -552,6 +606,9 @@ class DpTelegram_ChkCfg_Req(DpTelegram):
 		return du
 
 class _Cfg_Common(DpTelegram):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa, fc, dsap, ssap):
 		DpTelegram.__init__(self, da=da, sa=sa, fc=fc,
 				    dsap=dsap, ssap=ssap)
@@ -564,6 +621,9 @@ class _Cfg_Common(DpTelegram):
 			 intToHex(self.dsap), intToHex(self.ssap))
 
 class DpTelegram_GetCfg_Req(_Cfg_Common):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
@@ -577,6 +637,9 @@ class DpTelegram_GetCfg_Req(_Cfg_Common):
 		pass#TODO
 
 class DpTelegram_GetCfg_Con(_Cfg_Common):
+	__slots__ = (
+	)
+
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_DL,
 		     dsap=DpTelegram.SSAP_MS0,
@@ -606,6 +669,11 @@ class DpTelegram_GlobalControl(DpTelegram):
 	GSEL_GROUP6		= 0x20	# Group 6 is addressed
 	GSEL_GROUP7		= 0x40	# Group 7 is addressed
 	GSEL_GROUP8		= 0x80	# Group 8 is addressed
+
+	__slots__ = (
+		"controlCommand",
+		"groupSelect",
+	)
 
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SDN_HI |
