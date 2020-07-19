@@ -4,6 +4,7 @@ graft linuxcnc-demo-dummyphy
 graft linuxcnc-demo-et200s
 graft misc
 graft phy_fpga
+graft stublibs
 graft tests
 
 include COPYING
