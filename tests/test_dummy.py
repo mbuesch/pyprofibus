@@ -3,6 +3,7 @@ from pyprofibus_tstlib import *
 initTest(__file__)
 
 import pyprofibus
+import pyprofibus.dp
 import pyprofibus.phy_dummy
 import pyprofibus.phy_serial
 
@@ -20,8 +21,8 @@ class Test_DummyPhy(TestCase):
 						   slaveAddr=84)
 
 		slaveDesc.setCfgDataElements([
-			pyprofibus.DpCfgDataElement(pyprofibus.DpCfgDataElement.ID_TYPE_OUT),
-			pyprofibus.DpCfgDataElement(pyprofibus.DpCfgDataElement.ID_TYPE_IN),
+			pyprofibus.dp.DpCfgDataElement(pyprofibus.dp.DpCfgDataElement.ID_TYPE_OUT),
+			pyprofibus.dp.DpCfgDataElement(pyprofibus.dp.DpCfgDataElement.ID_TYPE_IN),
 		])
 
 		slaveDesc.setUserPrmData(bytearray([1, 2, 3, 4, ]))
