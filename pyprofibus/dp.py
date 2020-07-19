@@ -14,6 +14,21 @@ from pyprofibus.compat import *
 from pyprofibus.fdl import *
 from pyprofibus.util import *
 
+__all__ = [
+	"DpError",
+	"DpTransceiver",
+	"DpTelegram",
+	"DpTelegram_DataExchange_Req",
+	"DpTelegram_DataExchange_Con",
+	"DpTelegram_SlaveDiag_Req",
+	"DpTelegram_SlaveDiag_Con",
+	"DpTelegram_SetPrm_Req",
+	"DpCfgDataElement",
+	"DpTelegram_ChkCfg_Req",
+	"DpTelegram_GetCfg_Req",
+	"DpTelegram_GetCfg_Con",
+	"DpTelegram_GlobalControl",
+]
 
 class DpError(ProfibusError):
 	pass

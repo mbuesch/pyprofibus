@@ -26,6 +26,10 @@ else:
 	from configparser import ConfigParser as _ConfigParser
 	from configparser import Error as _ConfigParserError
 
+__all__ = [
+	"PbConfError",
+	"PbConf",
+]
 
 class PbConfError(ProfibusError):
 	pass

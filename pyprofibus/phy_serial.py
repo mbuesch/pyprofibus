@@ -34,6 +34,9 @@ try:
 except ImportError:
 	pass
 
+__all__ = [
+	"CpPhySerial",
+]
 
 class CpPhySerial(CpPhy):
 	"""pyserial based PROFIBUS CP PHYsical layer

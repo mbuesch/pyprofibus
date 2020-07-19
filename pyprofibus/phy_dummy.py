@@ -14,7 +14,11 @@ from pyprofibus.compat import *
 from pyprofibus.phy import *
 from pyprofibus.fdl import *
 from pyprofibus.dp import *
+from pyprofibus.util import *
 
+__all__ = [
+	"CpPhyDummySlave",
+]
 
 class CpPhyDummySlave(CpPhy):
 	"""Dummy slave PROFIBUS CP PHYsical layer

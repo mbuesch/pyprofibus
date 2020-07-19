@@ -16,6 +16,9 @@ from pyprofibus.dp import DpCfgDataElement
 
 import difflib
 
+__all__ = [
+	"GsdInterp",
+]
 
 class GsdInterp(GsdParser):
 	"""GSD file/data interpreter.

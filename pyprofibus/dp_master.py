@@ -17,6 +17,11 @@ from pyprofibus.util import *
 
 import math
 
+__all__ = [
+	"DpSlaveDesc",
+	"DPM1",
+	"DPM2",
+]
 
 class DpSlaveState(object):
 	"""Run time state of a DP slave that is managed by a DPM instance.

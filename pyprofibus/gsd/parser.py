@@ -15,6 +15,10 @@ import re
 
 from pyprofibus.util import ProfibusError
 
+__all__ = [
+	"GsdError",
+	"GsdParser",
+]
 
 class GsdError(ProfibusError):
 	pass
