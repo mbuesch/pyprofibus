@@ -31,6 +31,11 @@ class GsdParser(object):
 		"""Raw line.
 		"""
 
+		__slots__ = (
+			"lineNr",
+			"text",
+		)
+
 		def __init__(self, lineNr, text):
 			self.lineNr = lineNr
 			self.text = text
@@ -42,6 +47,10 @@ class GsdParser(object):
 	class _Item(object):
 		"""Abstract item base class.
 		"""
+
+		__slots__ = (
+			"_fields",
+		)
 
 		def __init__(self):
 			self._fields = {}
@@ -55,6 +64,11 @@ class GsdParser(object):
 		"""PrmText section.
 		"""
 
+		__slots__ = (
+			"refNr",
+			"texts",
+		)
+
 		def __init__(self, refNr):
 			GsdParser._Item.__init__(self)
 			self.refNr = refNr
@@ -63,6 +77,11 @@ class GsdParser(object):
 	class _PrmTextValue(_Item):
 		"""PrmText text value.
 		"""
+
+		__slots__ = (
+			"offset",
+			"text",
+		)
 
 		def __init__(self, offset, text):
 			GsdParser._Item.__init__(self)
@@ -73,6 +92,11 @@ class GsdParser(object):
 		"""ExtUserPrmData section.
 		"""
 
+		__slots__ = (
+			"refNr",
+			"name",
+		)
+
 		def __init__(self, refNr, name):
 			GsdParser._Item.__init__(self)
 			self.refNr = refNr
@@ -81,6 +105,11 @@ class GsdParser(object):
 	class _ExtUserPrmDataConst(_Item):
 		"""Ext_User_Prm_Data_Const(x)
 		"""
+
+		__slots__ = (
+			"offset",
+			"dataBytes",
+		)
 
 		def __init__(self, offset, dataBytes):
 			GsdParser._Item.__init__(self)
@@ -91,6 +120,11 @@ class GsdParser(object):
 		"""Ext_User_Prm_Data_Ref(x)
 		"""
 
+		__slots__ = (
+			"offset",
+			"refNr",
+		)
+
 		def __init__(self, offset, refNr):
 			GsdParser._Item.__init__(self)
 			self.offset = offset
@@ -99,6 +133,11 @@ class GsdParser(object):
 	class _Module(_Item):
 		"""Module section.
 		"""
+
+		__slots__ = (
+			"name",
+			"configBytes",
+		)
 
 		def __init__(self, name, configBytes):
 			GsdParser._Item.__init__(self)
