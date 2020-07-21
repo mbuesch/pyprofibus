@@ -13,9 +13,11 @@ class ConfigParser(object):
 	def read_file(self, f, source=None):
 		self.__sections = {}
 		sectionName = ""
-		data = f.read()
-		for line in data.splitlines():
-			line = line.lstrip()
+		while True:
+			line = f.readline()
+			if not line:
+				break
+			line = line.lstrip().rstrip("\r\n")
 			if not line or line.startswith(";"):
 				continue
 			if line.startswith("["):
