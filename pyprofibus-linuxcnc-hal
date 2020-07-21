@@ -28,8 +28,8 @@ import time
 import getopt
 import struct
 
-from pyprofibus import isPy2Compat
 from pyprofibus import ProfibusError, FdlError, DpError
+from pyprofibus.compat import isPy2Compat
 from pyprofibus.util import fileExists, monotonic_time
 from pyprofibus.dp import DpTelegram_SetPrm_Req
 from pyprofibus.conf import PbConf, PbConfError
