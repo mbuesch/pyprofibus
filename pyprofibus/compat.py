@@ -2,7 +2,7 @@
 #
 # Python compatibility
 #
-# Copyright 2012-2016 Michael Buesch <m@bues.ch>
+# Copyright 2012-2020 Michael Buesch <m@bues.ch>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import sys
 __all__ = [
 	"isPy3Compat",
 	"isPy2Compat",
+	"isMicropython",
 	"IOError",
 ]
 
@@ -34,6 +35,9 @@ isPy3Compat = sys.version_info[0] == 3
 
 # isPy2Compat is True, if the interpreter is Python 2 compatible.
 isPy2Compat = sys.version_info[0] == 2
+
+# isMicroPython is True, if the interpreter is Micropython
+isMicropython = hasattr(sys, "implementation") and sys.implementation.name == "micropython"
 
 # IOError dummy
 try:
