@@ -90,18 +90,12 @@ class PbConf(object):
 
 	@classmethod
 	def fromFile(cls, filename):
-		try:
-			with open(filename, "rb") as fd:
-				data = fd.read().decode("UTF-8")
-		except (IOError, UnicodeError) as e:
-			raise PbConfError("Failed to read '%s': %s" %\
-				(filename, str(e)))
-		return cls(data, filename)
+		return cls(open(filename, "r", encoding="UTF-8"), filename)
 
 	__reSlave = re.compile(r'^SLAVE_(\d+)$')
 	__reMod = re.compile(r'^module_(\d+)$')
 
-	def __init__(self, text, filename = None):
+	def __init__(self, fd, filename=None):
 		def get(section, option, fallback = None):
 			if p.has_option(section, option):
 				return p.get(section, option)
@@ -125,11 +119,10 @@ class PbConf(object):
 			return fallback
 		try:
 			p = _ConfigParser()
-			textIO = StringIO(text)
 			if hasattr(p, "read_file"):
-				p.read_file(textIO, filename)
+				p.read_file(fd, filename)
 			else:
-				p.readfp(textIO, filename)
+				p.readfp(fd, filename)
 
 			# [PROFIBUS]
 			self.debug = getint("PROFIBUS", "debug",
@@ -205,6 +198,9 @@ class PbConf(object):
 
 				self.slaveConfs.append(s)
 
+		except (IOError, UnicodeError) as e:
+			raise PbConfError("Failed to read '%s': %s" %\
+				(filename, str(e)))
 		except (_ConfigParserError, ValueError) as e:
 			raise PbConfError("Profibus config file parse "
 				"error:\n%s" % str(e))
