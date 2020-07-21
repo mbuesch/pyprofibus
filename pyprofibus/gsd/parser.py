@@ -11,6 +11,7 @@
 from __future__ import division, absolute_import, print_function, unicode_literals
 from pyprofibus.compat import *
 
+import gc
 import re
 
 from pyprofibus.util import ProfibusError
@@ -145,28 +146,33 @@ class GsdParser(object):
 			self.configBytes = configBytes
 
 	@classmethod
-	def fromFile(cls, filepath, debug = False):
-		try:
-			with open(filepath, "rb") as fd:
-				data = fd.read()
-		except (IOError, UnicodeError) as e:
-			raise GsdError("Failed to read GSD file '%s':\n%s" % (
-				filepath, str(e)))
-		return cls.fromBytes(data, filepath, debug)
+	def fromFile(cls, filepath, debug=False):
+		def readfile():
+			try:
+				with open(filepath, "rb") as fd:
+					while True:
+						line = fd.readline()
+						if not line:
+							break
+						yield line.decode("latin_1").rstrip("\r\n")
+			except (IOError, UnicodeError) as e:
+				raise GsdError("Failed to read GSD file '%s':\n%s" % (
+					filepath, str(e)))
+		return cls(readfile(), filepath, debug)
 
 	@classmethod
-	def fromBytes(cls, data, filename = None, debug = False):
+	def fromBytes(cls, data, filename=None, debug=False):
 		try:
-			text = data.decode("latin_1")
+			lines = data.decode("latin_1").splitlines()
 		except UnicodeError as e:
 			raise GsdError("Failed to parse GSD data: %s" % str(e))
-		return cls(text, filename, debug)
+		return cls(lines, filename, debug)
 
-	def __init__(self, text, filename = None, debug = False):
+	def __init__(self, lines, filename=None, debug=False):
 		self.__debug = debug
 		self.__filename = filename
 		self.__reset()
-		self.__parse(text)
+		self.__parse(lines)
 
 	def getFileName(self):
 		return self.__filename
@@ -177,9 +183,9 @@ class GsdParser(object):
 	def __reset(self):
 		self.__fields = {}
 
-	def __preprocess(self, text):
+	def __preprocess(self, lines):
 		lines = [ self._Line(i + 1, l)
-			  for i, l in enumerate(text.splitlines()) ]
+			  for i, l in enumerate(lines) ]
 
 		# Find the GSD section and discard the rest.
 		newLines, inGsd = [], False
@@ -192,6 +198,7 @@ class GsdParser(object):
 				if line.text == "#Profibus_DP":
 					inGsd = True
 		lines = newLines
+		gc.collect()
 
 		# Remove comments
 		newLines = []
@@ -209,6 +216,7 @@ class GsdParser(object):
 				newLineText.append(c)
 			newLines.append(line)
 		lines = newLines
+		gc.collect()
 
 		# Expand line continuations.
 		newLines, inCont = [], False
@@ -225,6 +233,7 @@ class GsdParser(object):
 					inCont = True
 				newLines.append(line)
 		lines = newLines
+		gc.collect()
 
 		# Strip all lines and remove empty lines.
 		newLines = []
@@ -233,6 +242,7 @@ class GsdParser(object):
 			if line.text:
 				newLines.append(line)
 		lines = newLines
+		gc.collect()
 
 		return lines
 
@@ -512,8 +522,8 @@ class GsdParser(object):
 
 		self.__parseWarn(line, "Ignored unknown line")
 
-	def __parse(self, text):
-		lines = self.__preprocess(text)
+	def __parse(self, lines):
+		lines = self.__preprocess(lines)
 
 		self.__state = self._STATE_GLOBAL
 
