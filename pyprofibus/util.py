@@ -2,11 +2,14 @@
 #
 # Utility helpers
 #
-# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
 #
+
+from __future__ import division, absolute_import, print_function, unicode_literals
+from pyprofibus.compat import *
 
 import os
 import time
@@ -66,7 +69,11 @@ def fileExists(filename):
 	return True
 
 # Monotonic time. Returns a float second count.
-monotonic_time = getattr(time, "monotonic", time.time)
+if isMicropython:
+	def monotonic_time():
+		return time.ticks_ms() / 1e3
+else:
+	monotonic_time = getattr(time, "monotonic", time.time)
 
 class TimeLimit(object):
 	"""Generic timeout helper.
