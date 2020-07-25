@@ -184,7 +184,7 @@ class GsdParser(object):
 		newLines, inCont = [], False
 		for line in lines:
 			if inCont:
-				if line.text.rstrip().endswith("\\"):
+				if line.text.endswith("\\"):
 					line.text = line.text[:-1]
 				else:
 					inCont = False
