@@ -248,7 +248,7 @@ class GsdParser(object):
 	def __parseByteArray(cls, byteText):
 		data = byteText.split(",")
 		data = [ cls.__parseNum(d) for d in data ]
-		return bytearray(data)
+		return bytes(data)
 
 	def __trySimpleNum(self, line, name, hasOffset = False):
 		m = re.match(r'^' + name +\

@@ -174,7 +174,7 @@ class GsdInterp(GsdParser):
 						"truncated by %s" % fieldname)
 					data[:] = data[0:length]
 		# Get the global data.
-		data = self.getField("User_Prm_Data", bytearray())
+		data = bytearray(self.getField("User_Prm_Data", b""))
 		trunc(data, self.getField("User_Prm_Data_Len"),
 		      "User_Prm_Data_Len")
 		for dataConst in self.getField("Ext_User_Prm_Data_Const", []):
@@ -204,7 +204,7 @@ class GsdInterp(GsdParser):
 			self.__interpWarn("DPv1 User_Prm_Data override ignored")
 		trunc(data, self.getField("Max_User_Prm_Data_Len"),
 		      "Max_User_Prm_Data_Len", False)
-		return data
+		return bytes(data)
 
 	def getIdentNumber(self):
 		"""Get the ident number.

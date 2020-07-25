@@ -30,8 +30,6 @@ GSD_STR = (
 )
 
 def gsdrepr(x):
-	if isinstance(x, bytearray):
-		return repr(bytes(x))
 	if isinstance(x, list):
 		return "[%s]" % ", ".join(gsdrepr(a) for a in x)
 	if isinstance(x, tuple):
