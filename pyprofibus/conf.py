@@ -173,7 +173,7 @@ class PbConf(object):
 							get(section, "gsd").replace(".", "_"),
 							debug=(self.debug > 0))
 					except GsdError as e:
-						raise origExc
+						raise GsdError("%s\n%s" % (str(origExc), str(e)))
 				s.syncMode = getboolean(section, "sync_mode",
 							fallback=False)
 				s.freezeMode = getboolean(section, "freeze_mode",
