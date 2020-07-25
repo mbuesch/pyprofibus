@@ -163,9 +163,17 @@ class PbConf(object):
 					continue
 				s = self._SlaveConf()
 				s.addr = getint(section, "addr")
-				s.gsd = GsdInterp.fromFile(
-					get(section, "gsd"),
-					debug=(self.debug > 0))
+				try:
+					s.gsd = GsdInterp.fromFile(
+						get(section, "gsd"),
+						debug=(self.debug > 0))
+				except GsdError as origExc:
+					try:
+						s.gsd = GsdInterp.fromPy(
+							get(section, "gsd").replace(".", "_"),
+							debug=(self.debug > 0))
+					except GsdError as e:
+						raise origExc
 				s.syncMode = getboolean(section, "sync_mode",
 							fallback=False)
 				s.freezeMode = getboolean(section, "freeze_mode",

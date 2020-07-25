@@ -3,7 +3,7 @@
 #
 # PROFIBUS - GSD file parser
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -27,23 +27,40 @@ def usage():
 	print("FILE.GSD is the GSD file to parse.")
 	print("")
 	print("Options:")
-	print(" -d|--debug          Enable parser debugging (default off)")
-	print(" -h|--help           Show this help.")
+	print(" -d|--debug               Enable parser debugging (default off)")
+	print(" -h|--help                Show this help.")
 	print("")
 	print("Actions:")
-	print(" -S|--summary        Print a summary of the GSD file contents.")
-	print("                     (The default, if no action is specified)")
+	print(" -S|--summary             Print a summary of the GSD file contents.")
+	print("                          (The default, if no action is specified)")
+	print(" -D|--dump                Dump the GSD data structure as Python code.")
+	print("")
+	print("Options for --dump:")
+	print(" --dump-strip             Strip leading and trailing whitespace from strings.")
+	print(" --dump-notext            Do not dump PrmText.")
+	print(" --dump-noextuserprmdata  Discard all ExtUserPrmData and ExtUserPrmDataRef.")
+	print(" --dump-module NAME       Only dump this module. (default: Dump all)")
+	print("                          Can be specified more then once to dump multiple modules.")
 
 def main():
 	opt_debug = False
+	opt_dumpStrip = False
+	opt_dumpNoText = False
+	opt_dumpNoExtUserPrmData = False
+	opt_dumpModules = []
 	actions = []
 
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:],
-			"hdS",
+			"hdSD",
 			[ "help",
 			  "debug",
-			  "summary", ])
+			  "summary",
+			  "dump",
+			  "dump-strip",
+			  "dump-notext",
+			  "dump-noextuserprmdata",
+			  "dump-module=", ])
 	except getopt.GetoptError as e:
 		sys.stderr.write(str(e) + "\n")
 		usage()
@@ -55,19 +72,34 @@ def main():
 		if o in ("-d", "--debug"):
 			opt_debug = True
 		if o in ("-S", "--summary"):
-			actions.append("summary")
+			actions.append( ("summary", None) )
+		if o in ("-D", "--dump"):
+			actions.append( ("dump", None) )
+		if o in ("--dump-strip", ):
+			opt_dumpStrip = True
+		if o in ("--dump-notext", ):
+			opt_dumpNoText = True
+		if o in ("--dump-noextuserprmdata", ):
+			opt_dumpNoExtUserPrmData = True
+		if o in ("--dump-module", ):
+			opt_dumpModules.append(v)
 	if len(args) != 1:
 		usage()
 		return 1
 	gsdFile = args[0]
 	if not actions:
-		actions = [ "summary", ]
+		actions = [ ("summary", None), ]
 
 	try:
-		interp = GsdInterp.fromFile(gsdFile, debug = opt_debug)
-		for action in actions:
+		interp = GsdInterp.fromFile(gsdFile, debug=opt_debug)
+		for action, v in actions:
 			if action == "summary":
 				print(str(interp))
+			elif action == "dump":
+				print(interp.dumpPy(stripStr=opt_dumpStrip,
+						    noText=opt_dumpNoText,
+						    noExtUserPrmData=opt_dumpNoExtUserPrmData,
+						    modules=(opt_dumpModules or None)))
 			else:
 				assert(0)
 	except GsdError as e:

@@ -2,7 +2,7 @@
 #
 # PROFIBUS - GSD file parser
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -15,6 +15,7 @@ import gc
 import re
 
 from pyprofibus.util import ProfibusError
+from pyprofibus.gsd.fields import *
 
 __all__ = [
 	"GsdError",
@@ -42,108 +43,8 @@ class GsdParser(object):
 			self.text = text
 
 		def __repr__(self):
-			return "_Line(lineNr = %d, text = '%s')" % (
+			return "_Line(lineNr=%d, text='%s')" % (
 				self.lineNr, self.text)
-
-	class _Item(object):
-		"""Abstract item base class.
-		"""
-
-		__slots__ = (
-			"_fields",
-		)
-
-		def __init__(self):
-			self._fields = {}
-
-		def getField(self, name, default = None):
-			"""Get a field by name.
-			"""
-			return self._fields.get(name, default)
-
-	class _PrmText(_Item):
-		"""PrmText section.
-		"""
-
-		__slots__ = (
-			"refNr",
-			"texts",
-		)
-
-		def __init__(self, refNr):
-			GsdParser._Item.__init__(self)
-			self.refNr = refNr
-			self.texts = []
-
-	class _PrmTextValue(_Item):
-		"""PrmText text value.
-		"""
-
-		__slots__ = (
-			"offset",
-			"text",
-		)
-
-		def __init__(self, offset, text):
-			GsdParser._Item.__init__(self)
-			self.offset = offset
-			self.text = text
-
-	class _ExtUserPrmData(_Item):
-		"""ExtUserPrmData section.
-		"""
-
-		__slots__ = (
-			"refNr",
-			"name",
-		)
-
-		def __init__(self, refNr, name):
-			GsdParser._Item.__init__(self)
-			self.refNr = refNr
-			self.name = name
-
-	class _ExtUserPrmDataConst(_Item):
-		"""Ext_User_Prm_Data_Const(x)
-		"""
-
-		__slots__ = (
-			"offset",
-			"dataBytes",
-		)
-
-		def __init__(self, offset, dataBytes):
-			GsdParser._Item.__init__(self)
-			self.offset = offset
-			self.dataBytes = dataBytes
-
-	class _ExtUserPrmDataRef(_Item):
-		"""Ext_User_Prm_Data_Ref(x)
-		"""
-
-		__slots__ = (
-			"offset",
-			"refNr",
-		)
-
-		def __init__(self, offset, refNr):
-			GsdParser._Item.__init__(self)
-			self.offset = offset
-			self.refNr = refNr
-
-	class _Module(_Item):
-		"""Module section.
-		"""
-
-		__slots__ = (
-			"name",
-			"configBytes",
-		)
-
-		def __init__(self, name, configBytes):
-			GsdParser._Item.__init__(self)
-			self.name = name
-			self.configBytes = configBytes
 
 	@classmethod
 	def fromFile(cls, filepath, debug=False):
@@ -168,11 +69,72 @@ class GsdParser(object):
 			raise GsdError("Failed to parse GSD data: %s" % str(e))
 		return cls(lines, filename, debug)
 
+	@classmethod
+	def fromPy(cls, moduleName, debug=False):
+		try:
+			mod = __import__(moduleName)
+		except Exception as e:
+			raise GsdError("Failed to import GSD Python dump: %s" % str(e))
+		return cls(mod.fields, moduleName, debug)
+
 	def __init__(self, lines, filename=None, debug=False):
 		self.__debug = debug
 		self.__filename = filename
 		self.__reset()
 		self.__parse(lines)
+
+	def dumpPy(self,
+		   stripStr=False,
+		   noText=False,
+		   noExtUserPrmData=False,
+		   modules=None):
+		"""Dump the GSD as Python code.
+		stripStr: Strip leading and trailing whitespace from strings.
+		noText: Discard all PrmText.
+		noExtUserPrmData: Discard all ExtUserPrmData and ExtUserPrmDataRef.
+		modules: List of modules to include. If None: include all.
+		"""
+		if modules:
+			modules = [ Module.sanitizeName(m) for m in modules ]
+		import copy
+		def empty(x):
+			return not (x is None or
+				    (isinstance(x, (dict, list, tuple)) and not x))
+		def dup(x):
+			if isinstance(x, (tuple, list)):
+				return [ dup(a) for a in x if empty(dup(a)) ]
+			if isinstance(x, dict):
+				return { a : dup(b) for a, b in x.items() if empty(dup(b)) }
+			if isinstance(x, str) and stripStr:
+				return x.strip()
+			if isinstance(x, PrmText) and noText:
+				return None
+			if isinstance(x, ExtUserPrmData):
+				if noExtUserPrmData:
+					return None
+				y = copy.copy(x)
+				y.name = ""
+				return y
+			if isinstance(x, ExtUserPrmDataRef) and noExtUserPrmData:
+				return None
+			if isinstance(x, Module):
+				if (modules is not None and
+				    Module.sanitizeName(x.name) not in modules):
+					return None
+				y = copy.copy(x)
+				y.name = Module.sanitizeName(y.name)
+				return y
+			return copy.copy(x)
+		fields = dup(self.__fields)
+		return "from pyprofibus.gsd.fields import "\
+		       "GSD_STR, "\
+		       "PrmText, "\
+		       "PrmTextValue, "\
+		       "ExtUserPrmData, "\
+		       "ExtUserPrmDataConst, "\
+		       "ExtUserPrmDataRef, "\
+		       "Module; "\
+		       "fields = " + gsdrepr(fields)
 
 	def getFileName(self):
 		return self.__filename
@@ -323,6 +285,13 @@ class GsdParser(object):
 		if m:
 			if hasOffset:
 				offset = m.group(1)
+				try:
+					if offset.strip().startswith("0x"):
+						offset = int(offset, 16)
+					else:
+						offset = int(offset, 10)
+				except ValueError as e:
+					self.__parseErr(line, "%s invalid" % name)
 				value = m.group(2)
 			else:
 				value = m.group(1)
@@ -404,7 +373,7 @@ class GsdParser(object):
 		value = self.__trySimpleNum(line, "PrmText")
 		if value is not None:
 			self.__fields.setdefault("PrmText", []).append(
-				self._PrmText(value))
+				PrmText(value))
 			self.__state = self._STATE_PRMTEXT
 			return
 		value = self.__tryStrNoQuotes(line, "Slave_Family")
@@ -421,7 +390,7 @@ class GsdParser(object):
 				refNr = self.__parseNum(m.group(1))
 				name = m.group(2)
 				self.__fields.setdefault("ExtUserPrmData", []).append(
-					self._ExtUserPrmData(refNr, name))
+					ExtUserPrmData(refNr, name))
 				self.__state = self._STATE_EXTUSERPRMDATA
 			except ValueError as e:
 				self.__parseErr(line, "ExtUserPrmData invalid")
@@ -430,13 +399,13 @@ class GsdParser(object):
 						    hasOffset = True)
 		if value is not None:
 			self.__fields.setdefault("Ext_User_Prm_Data_Const", []).append(
-				self._ExtUserPrmDataConst(offset, value))
+				ExtUserPrmDataConst(offset, value))
 			return
 		offset, value = self.__trySimpleNum(line, "Ext_User_Prm_Data_Ref",
 						    hasOffset = True)
 		if value is not None:
 			self.__fields.setdefault("Ext_User_Prm_Data_Ref", []).append(
-				self._ExtUserPrmDataRef(offset, value))
+				ExtUserPrmDataRef(offset, value))
 			return
 		m = self._reModule.match(line.text)
 		if m:
@@ -445,7 +414,7 @@ class GsdParser(object):
 				config = m.group(2)
 				configBytes = self.__parseByteArray(config)
 				self.__fields.setdefault("Module", []).append(
-					self._Module(name, configBytes))
+					Module(name, configBytes))
 				self.__state = self._STATE_MODULE
 			except ValueError as e:
 				self.__parseErr(line, "Module invalid")
@@ -464,7 +433,7 @@ class GsdParser(object):
 		offset, value = self.__trySimpleStr(line, "Text",
 						    hasOffset = True)
 		if value is not None:
-			prmText.texts.append(self._PrmTextValue(offset, value))
+			prmText.texts.append(PrmTextValue(offset, value))
 			return
 
 		self.__parseWarn(line, "Ignored unknown line")
@@ -480,7 +449,7 @@ class GsdParser(object):
 		for name in ("Prm_Text_Ref", ):
 			value = self.__trySimpleNum(line, name)
 			if value is not None:
-				extUserPrmData._fields[name] = value
+				extUserPrmData.fields[name] = value
 				return
 
 		self.__parseWarn(line, "Ignored unknown line")
@@ -496,33 +465,37 @@ class GsdParser(object):
 		for name in ("Ext_Module_Prm_Data_Len", ):
 			value = self.__trySimpleNum(line, name)
 			if value is not None:
-				module._fields[name] = value
+				module.fields[name] = value
 				return
 
 		# Parse simple booleans.
 		for name in ("Preset", ):
 			value = self.__trySimpleBool(line, name)
 			if value is not None:
-				module._fields[name] = value
+				module.fields[name] = value
 				return
 
 		# Parse specials
 		offset, value = self.__tryByteArray(line, "Ext_User_Prm_Data_Const",
 						    hasOffset = True)
 		if value is not None:
-			module._fields.setdefault("Ext_User_Prm_Data_Const", []).append(
-				self._ExtUserPrmDataConst(offset, value))
+			module.fields.setdefault("Ext_User_Prm_Data_Const", []).append(
+				ExtUserPrmDataConst(offset, value))
 			return
 		offset, value = self.__trySimpleNum(line, "Ext_User_Prm_Data_Ref",
 						    hasOffset = True)
 		if value is not None:
-			module._fields.setdefault("Ext_User_Prm_Data_Ref", []).append(
-				self._ExtUserPrmDataRef(offset, value))
+			module.fields.setdefault("Ext_User_Prm_Data_Ref", []).append(
+				ExtUserPrmDataRef(offset, value))
 			return
 
 		self.__parseWarn(line, "Ignored unknown line")
 
 	def __parse(self, lines):
+		if isinstance(lines, dict):
+			self.__fields = lines
+			return
+
 		lines = self.__preprocess(lines)
 
 		self.__state = self._STATE_GLOBAL
