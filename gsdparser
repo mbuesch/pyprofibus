@@ -27,7 +27,8 @@ def usage():
 	print("FILE.GSD is the GSD file to parse.")
 	print("")
 	print("Options:")
-	print(" -d|--debug               Enable parser debugging (default off)")
+	print(" -o|--output FILE         Write output to FILE instead of stdout.")
+	print(" -d|--debug               Enable parser debugging (default off).")
 	print(" -h|--help                Show this help.")
 	print("")
 	print("Actions:")
@@ -42,7 +43,12 @@ def usage():
 	print(" --dump-module NAME       Only dump this module. (default: Dump all)")
 	print("                          Can be specified more then once to dump multiple modules.")
 
+def out(fd, text):
+	fd.write(text)
+	fd.flush()
+
 def main():
+	opt_output = None
 	opt_debug = False
 	opt_dumpStrip = False
 	opt_dumpNoText = False
@@ -52,8 +58,9 @@ def main():
 
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:],
-			"hdSD",
+			"ho:dSD",
 			[ "help",
+			  "output=",
 			  "debug",
 			  "summary",
 			  "dump",
@@ -69,6 +76,8 @@ def main():
 		if o in ("-h", "--help"):
 			usage()
 			return 0
+		if o in ("-o", "--output"):
+			opt_output = v
 		if o in ("-d", "--debug"):
 			opt_debug = True
 		if o in ("-S", "--summary"):
@@ -91,15 +100,25 @@ def main():
 		actions = [ ("summary", None), ]
 
 	try:
+		if opt_output is None:
+			outFd = sys.stdout
+		else:
+			outFd = open(opt_output, "w", encoding="UTF-8")
+	except OSError as e:
+		sys.stderr.write("ERROR: %s\n" % str(e))
+		return 1
+	try:
+
 		interp = GsdInterp.fromFile(gsdFile, debug=opt_debug)
 		for action, v in actions:
 			if action == "summary":
-				print(str(interp))
+				out(outFd, str(interp))
 			elif action == "dump":
-				print(interp.dumpPy(stripStr=opt_dumpStrip,
-						    noText=opt_dumpNoText,
-						    noExtUserPrmData=opt_dumpNoExtUserPrmData,
-						    modules=(opt_dumpModules or None)))
+				py = interp.dumpPy(stripStr=opt_dumpStrip,
+						   noText=opt_dumpNoText,
+						   noExtUserPrmData=opt_dumpNoExtUserPrmData,
+						   modules=(opt_dumpModules or None))
+				out(outFd, py)
 			else:
 				assert(0)
 	except GsdError as e:
@@ -108,6 +127,10 @@ def main():
 	except Exception as e:
 		sys.stderr.write("Exception: %s\n" % str(e))
 		return 1
+	finally:
+		if opt_output is not None:
+			outFd.flush()
+			outFd.close()
 	return 0
 
 if __name__ == "__main__":
