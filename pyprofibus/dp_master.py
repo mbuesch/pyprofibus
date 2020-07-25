@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Master
 #
-# Copyright (c) 2013-2019 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -15,6 +15,7 @@ from pyprofibus.fdl import *
 from pyprofibus.dp import *
 from pyprofibus.util import *
 
+import gc
 import math
 
 __all__ = [
@@ -739,6 +740,8 @@ class DpMaster(object):
 		# Initialize the RX filter
 		self.fdlTrans.setRXFilter([self.masterAddr,
 					   FdlTelegram.ADDRESS_MCAST])
+		# Free memory
+		gc.collect()
 
 	def __syncFreezeHelper(self, groupMask, controlCommand):
 		slave = self.__slaveStates[FdlTelegram.ADDRESS_MCAST]
