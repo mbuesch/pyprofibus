@@ -12,7 +12,7 @@ def main():
 	master = None
 	try:
 		# Parse the config file.
-		config = pyprofibus.PbConf.fromFile("example_s7-315-2dp.conf")
+		config = pyprofibus.PbConf.fromFile("example_s7_315_2dp.conf")
 
 		# Create a DP master.
 		master = config.makeDPM()
