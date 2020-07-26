@@ -253,7 +253,7 @@ class GsdInterp(GsdParser):
 		if order:
 			text.append("Order number:      %s\n" % order)
 
-		for module in self.getField("Module"):
+		for module in self.getField("Module", []):
 			if module.getField("Preset"):
 				continue
 			text.append("Available module:  \"%s\"\n" % module.name)
