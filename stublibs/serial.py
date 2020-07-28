@@ -35,11 +35,12 @@ class Serial(object):
 			except ValueError:
 				raise SerialException("Invalid port: %s" % self.port)
 			try:
-				self.__lowlevel = self.__machine.UART(port, self.baudrate)
-				self.__lowlevel.init(self.baudrate,
-						     self.bytesize,
-						     0 if self.parity == PARITY_EVEN else 1,
-						     self.stopbits)
+				self.__lowlevel = self.__machine.UART(
+					port,
+					self.baudrate,
+					self.bytesize,
+					0 if self.parity == PARITY_EVEN else 1,
+					self.stopbits)
 				print("Opened machine.UART(%d)" % port)
 			except Exception as e:
 				raise SerialException("Failed to open port '%s':\n%s" % (
