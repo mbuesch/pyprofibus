@@ -1,0 +1,65 @@
+pyprofibus Micropython support
+==============================
+
+This directory contains scripts and support files for pyprofibus on `Micropython <https://micropython.org/>`_.
+
+
+Installing pyprofibus on a Micropython device
+=============================================
+
+Run the install.sh script to build and install pyprofibus to a Micropython device via USB-UART.
+
+Run `install.sh -h` for more help.
+
+`install.sh` prepares and cross-compiles all pyprofibus files for the target platform to optimize resource usage.
+
+
+Prerequisites
+=============
+
+The following tools have to be available on your Linux compatible system to build pyprofibus for Micropython:
+
+* `mpy-cross`: `Micropython cross compiler <https://github.com/micropython/micropython>`_.
+* `pyboard.py`: Device flashing script `from Micropython distribution <https://github.com/micropython/micropython/blob/master/tools/pyboard.py>`_.
+* `make`: `GNU make <https://www.gnu.org/software/make/>`_.
+
+These tools must be available in your PATH.
+
+
+Resource usage
+==============
+
+pyprofibus requires a fair amount of memory to run.
+
+Currently about 110 kBytes of memory available to the Micropython Garbage Collector are required to run pyprofibus. The more memory is available, the better. Remember that your application code also has to run in addition to pyprofibus.
+
+You can check the memory available to the GC with the following commands:
+
+.. code:: python
+
+	import micropython
+	micropython.mem_info()
+
+
+Supported devices
+=================
+
+pyprofibus has been tested on:
+
+* ESP32 WROOM32
+
+pyprofibus probably runs on other devices, too. The major limiting factor is the memory available to pyprofibus.
+
+
+main.py
+=======
+
+Please see the file `main.py` and edit it to your needs.
+
+It is the main file that will be executed after boot. It should start your application and pyprofibus.
+
+
+boot.py
+=======
+
+The script `boot.py` sets up a basic environment after Micropython boot. You probably don't need to edit the default `boot.py` script shipped with pyprofibus.
