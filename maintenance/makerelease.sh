@@ -18,8 +18,8 @@ done
 hook_get_version()
 {
 	local file="$1/pyprofibus/version.py"
-	local maj="$(cat "$file" | grep -e VERSION_MAJOR | head -n1 | awk '{print $3;}')"
-	local min="$(cat "$file" | grep -e VERSION_MINOR | head -n1 | awk '{print $3;}')"
+	local maj="$(cat "$file" | grep -e 'VERSION_MAJOR\s*=' | head -n1 | awk '{print $3;}')"
+	local min="$(cat "$file" | grep -e 'VERSION_MINOR\s*=' | head -n1 | awk '{print $3;}')"
 	version="$maj.$min"
 }
 
