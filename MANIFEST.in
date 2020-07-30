@@ -2,6 +2,7 @@ graft debian
 graft doc
 graft linuxcnc-demo-dummyphy
 graft linuxcnc-demo-et200s
+graft micropython
 graft misc
 graft phy_fpga
 graft stublibs
@@ -9,7 +10,7 @@ graft tests
 
 include COPYING
 include README.html
-include README.md
+include README.rst
 include example_*.conf
 include example_*.py
 
