@@ -18,22 +18,18 @@ die()
 
 gen()
 {
-	local md="$1"
-	local docname="$(basename "$md" .md)"
-	local dir="$(dirname "$md")"
+	local rst="$1"
+	local docname="$(basename "$rst" .rst)"
+	local dir="$(dirname "$rst")"
 	local html="$dir/$docname.html"
 
-	echo "Generating $(realpath --relative-to="$srcdir" "$html") from $(realpath --relative-to="$srcdir" "$md") ..."
+	echo "Generating $(realpath --relative-to="$srcdir" "$html") from $(realpath --relative-to="$srcdir" "$rst") ..."
 
-	echo "<!DOCTYPE html><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"></head><body>" > "$html" ||\
-		die "Failed to generate"
-	markdown "$md" >> "$html" ||\
-		die "Failed to generate"
-	echo "</body></html>" >> "$html" ||\
+	python3 -m readme_renderer -o "$html" "$rst" ||\
 		die "Failed to generate"
 }
 
-for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name toolchain-build -prune \) -o \( -name '*.md' -print \)); do
+for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name toolchain-build -prune \) -o \( -name crcgen -prune \) -o \( -name '*.rst' -print \)); do
 	gen "$i"
 done
 

@@ -8,4 +8,4 @@ __pycache__/
 .*.swp
 .~*
 
-/*.html
+*.html
