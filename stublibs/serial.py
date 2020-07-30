@@ -1,4 +1,5 @@
 from pyprofibus.compat import *
+import time
 
 PARITY_EVEN	= "E"
 PARITY_ODD	= "O"
@@ -80,4 +81,17 @@ class Serial(object):
 			except Exception as e:
 				raise SerialException("Read(%d bytes) failed: %s" % (
 					size, str(e)))
+		raise NotImplementedError
+
+	def flushInput(self):
+		if self.__isMicropython:
+			while self.__lowlevel.any():
+				self.__lowlevel.read()
+			return
+		raise NotImplementedError
+
+	def flushOutput(self):
+		if self.__isMicropython:
+			time.sleep(0.01)
+			return
 		raise NotImplementedError
