@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Install pyprofibus on a Micropython board.
+# Build pyprofibus and install on a Micropython board.
 #
 
 basedir="$(dirname "$0")"
@@ -57,6 +57,7 @@ build()
 		echo "--- $target ---"
 		make -j "$(getconf _NPROCESSORS_ONLN)" -f "$rootdir/micropython/Makefile" \
 			SRCDIR="$(rootpath -m "$rootdir")" \
+			BUILDDIR="$builddir" \
 			MARCH="$march" \
 			GSDPARSER_OPTS="$gsdparser_opts" \
 			PYS="$pys" \
@@ -93,6 +94,7 @@ transfer_to_device()
 }
 
 builddir="$rootdir/build/micropython"
+buildonly=0
 dev="/dev/ttyUSB0"
 march="xtensa"
 pyboard="pyboard.py"
@@ -106,16 +108,32 @@ while [ $# -ge 1 ]; do
 	-h|--help)
 		echo "install.sh [OPTIONS] [TARGET-UART-DEVICE]"
 		echo
+		echo "Build pyprofibus and install on a Micropython board."
+		echo
 		echo "TARGET-UART-DEVICE:"
 		echo " Target serial device. Default: /dev/ttyUSB0"
 		echo
 		echo "Options:"
 		echo " -c|--clean          Clean before build."
-		echo " -a|--march ARCH     Target architecture for cross compile. Default: xtensa"
-		echo " -m|--module NAME    Include GSD module."
-		echo " -p|--pyboard PATH   Path to pyboard executable. Default: pyboard.py"
+		echo " -b|--build-only     Build only. Do not install."
+		echo " -B|--build-dir DIR  Set the build directory."
+		echo "                     Default: build/micropython"
+		echo " -a|--march ARCH     Target architecture for cross compile."
+		echo "                     Default: xtensa"
+		echo " -m|--module NAME    Include GSD module NAME."
+		echo "                     Can be specified multiple times for multiple modules."
+		echo "                     Enter your 'module_X' names from your configuration here."
+		echo " -p|--pyboard PATH   Path to pyboard executable."
+		echo "                     Default: pyboard.py"
 		echo " -h|--help           Show this help."
 		exit 0
+		;;
+	-b|--build-only)
+		buildonly=1
+		;;
+	-B|--build-dir)
+		shift
+		builddir="$1"
 		;;
 	-a|--march)
 		shift
@@ -147,4 +165,5 @@ if [ $# -ge 1 ]; then
 fi
 
 build
-transfer_to_device
+[ $buildonly -eq 0 ] && transfer_to_device
+exit 0

@@ -13,6 +13,20 @@ Run `install.sh -h` for more help.
 
 `install.sh` prepares and cross-compiles all pyprofibus files for the target platform to optimize resource usage.
 
+Example
+-------
+
+Your device is an ESP32 (xtensa) connected to the computer as /dev/ttyUSB0.
+Two GSD modules are configured in your pyprofibus .conf file. For example:
+
+* 6ES7 138-4CA01-0AA0 PM-E DC24V
+* 6ES7 132-4BB30-0AA0  2DO DC24V
+
+The corresponding command to build and install pyprofibus is:
+
+.. code:: sh
+
+	./micropython/install.sh --march xtensa --module "6ES7 138-4CA01-0AA0 PM-E DC24V" --module "6ES7 132-4BB30-0AA0  2DO DC24V" /dev/ttyUSB0
 
 Prerequisites
 =============
