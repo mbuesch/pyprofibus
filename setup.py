@@ -63,7 +63,7 @@ ext_modules = setup_cython.ext_modules
 
 warnings.filterwarnings("ignore", r".*'long_description_content_type'.*")
 
-with open(os.path.join(basedir, "README.md"), "rb") as fd:
+with open(os.path.join(basedir, "README.rst"), "rb") as fd:
 	readmeText = fd.read().decode("UTF-8")
 
 setup(	name		= "pyprofibus",
@@ -109,5 +109,5 @@ setup(	name		= "pyprofibus",
 		"Topic :: System :: Networking",
 	],
 	long_description=readmeText,
-	long_description_content_type="text/markdown",
+	long_description_content_type="text/x-rst",
 )
