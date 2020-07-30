@@ -29,10 +29,10 @@ class Serial(object):
 	def open(self):
 		if self.__isMicropython:
 			port = self.port
-			for sub in ("/dev/ttyS", "/dev/ttyUSB", "/dev/ttyACM", "COM", ):
+			for sub in ("/dev/ttyS", "/dev/ttyUSB", "/dev/ttyACM", "COM", "UART", ):
 				port = port.replace(sub, "")
 			try:
-				port = int(port)
+				port = int(port.strip())
 			except ValueError:
 				raise SerialException("Invalid port: %s" % self.port)
 			try:
