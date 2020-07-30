@@ -55,7 +55,7 @@ build()
 	local targets="$targets all"
 	for target in $targets; do
 		echo "--- $target ---"
-		make -j4 -f "$rootdir/micropython/Makefile" \
+		make -j "$(getconf _NPROCESSORS_ONLN)" -f "$rootdir/micropython/Makefile" \
 			SRCDIR="$(rootpath -m "$rootdir")" \
 			MARCH="$march" \
 			GSDPARSER_OPTS="$gsdparser_opts" \
