@@ -83,17 +83,19 @@ hook_doc_archives()
 		rsync --recursive --prune-empty-dirs \
 			--include='/doc/' \
 			--include='/doc/**/' \
+			--include='/doc/**.pdf' \
 			--include='/doc/**.png' \
 			--include='/doc/**.jpg' \
 			--include='/doc/**.jpeg' \
 			--include='/doc/**.1' \
 			--include='/doc/**.html' \
-			--include='/doc/**.htm' \
 			--include='/doc/**.txt' \
 			--include='/doc/**.ods' \
 			--include='/doc/**/README' \
+			--include='/micropython/' \
+			--include='/micropython/**/' \
+			--include='/micropython/**.html' \
 			--include='/*.html' \
-			--include='/*.htm' \
 			--include='/*.txt' \
 			--exclude='*' \
 			. "$doc_dir" ||\
