@@ -33,11 +33,14 @@ Prerequisites
 
 The following tools have to be available on your Linux compatible system to build pyprofibus for Micropython:
 
+* The latest version of Micropython has to be installed on your device. See `these instructions <https://micropython.org/download/esp32/>`_ for installing Micropython on an ESP32 device.
 * `mpy-cross`: `Micropython cross compiler <https://github.com/micropython/micropython>`_.
-* `pyboard.py`: Device flashing script `from Micropython distribution <https://github.com/micropython/micropython/blob/master/tools/pyboard.py>`_.
+* `pyboard.py`: Device flashing script `from Micropython distribution <https://github.com/micropython/micropython/blob/master/tools/pyboard.py>`_ to copy pyprofibus to the device.
 * `make`: `GNU make <https://www.gnu.org/software/make/>`_.
 
 These tools must be available in your PATH.
+
+You may pass the parameters `--pyboard` and/or `--mpycross` to `install.sh` to specify the path to your tool installation location.
 
 
 Resource usage
@@ -45,7 +48,7 @@ Resource usage
 
 pyprofibus requires a fair amount of memory to run.
 
-Currently about 110 kBytes of memory available to the Micropython Garbage Collector are required to run pyprofibus. The more memory is available, the better. Remember that your application code also has to run in addition to pyprofibus.
+Currently about 100 kBytes of memory available to the Micropython Garbage Collector are required to run pyprofibus. The more memory is available, the better. Remember that your application code also has to run in addition to pyprofibus.
 
 You can check the memory available to the GC with the following commands:
 

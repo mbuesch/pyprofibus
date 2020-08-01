@@ -9,7 +9,7 @@ However some hardware is superior to other. See the documentation below for the 
 pyprofibus on Linux with /dev/ttyS0 or /dev/ttyAMA0 serial port
 ===============================================================
 
-Using the Linux serial port is a supported albeit slow alternative to connect pyprofibus to a Profibus network. It only supports low baud rates of up to about 19200 baud. However that depends on the actual hardware. On certain embedded boards with flexible serial hardware, high baudrates such as 1.5 MBaud may also be possible.
+Using the Linux serial port is a supported way to connect pyprofibus to a Profibus network. On some boards it may only supports low baud rates of up to about 19200 baud. However that depends on the actual serial transceiver hardware. On certain embedded boards with flexible serial hardware, high baudrates such as 1.5 MBaud may also be possible.
 
 To run pyprofibus on serial port configure pyprofibus as follows:
 
@@ -46,7 +46,7 @@ To run pyprofibus on Micropython serial port (UART 2) configure pyprofibus as fo
 pyprofibus on Linux with FPGA PHY
 =================================
 
-This is one of the fastest albeit most expensive alternative to connect pyprofibus to a Profibus network. Currently baud rates of up to 1.5 MBaud are supported.
+This is one of the fastest albeit most expensive alternative to connect pyprofibus to a Profibus network. Currently baud rates of up to 1.5 MBaud are supported. There is room for improvement towards higher baud rates.
 
 The pyprofibus FPGA is connected via high speed SPI bus to the host computer. It's known to work well with the Raspberry Pi. However it's not strictly limited to that as host computer. The pyprofibus FPGA PHY driver utilizes the Linux SPI subsystem for communication to the FPGA board.
 
@@ -62,6 +62,8 @@ To run pyprofibus on FPGA PHY configure pyprofibus as follows:
 	spiCS=0
 	spiSpeedHz=2500000
 	baud=1500000
+
+The FPGA PHY is currently not supported on Micropython.
 
 
 pyprofibus on MS Windows
