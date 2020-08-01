@@ -29,7 +29,7 @@ gen()
 		die "Failed to generate"
 }
 
-for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name toolchain-build -prune \) -o \( -name crcgen -prune \) -o \( -name '*.rst' -print \)); do
+for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name release-archives -prune \) -o \( -name build -prune \) -o \( -name toolchain-build -prune \) -o \( -name crcgen -prune \) -o \( -name '*.rst' -print \)); do
 	gen "$i"
 done
 
