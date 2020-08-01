@@ -260,6 +260,8 @@ class DpSlaveDesc(object):
 
 class DpMaster(object):
 	__slots__ = (
+		"__runTimer",
+		"__runCount",
 		"__haveToken",
 		"__runNextSlaveIndex",
 		"__slaveDescs",
@@ -281,6 +283,9 @@ class DpMaster(object):
 		self.phy = phy
 		self.masterAddr = masterAddr
 		self.debug = debug
+
+		self.__runTimer = monotonic_time()
+		self.__runCount = 0
 
 		# Create the transceivers
 		self.fdlTrans = FdlTransceiver(self.phy)
@@ -697,6 +702,17 @@ class DpMaster(object):
 	def run(self):
 		"""Run the DP-Master state machine.
 		"""
+		if self.debug:
+			self.__runCount += 1
+			now = monotonic_time()
+			if now >= self.__runTimer + 10.0:
+				cps = self.__runCount / (now - self.__runTimer)
+				self.__debugMsg("State machine calls: "
+						"%.1f /s = %.3f s/call" % (
+						cps, 1.0 / cps))
+				self.__runTimer = now
+				self.__runCount = 0
+
 		if self.__slowDown:
 			# Master slowdown is active.
 			# Do not run state machine until the end of the slowdown.
