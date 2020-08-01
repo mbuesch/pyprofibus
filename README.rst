@@ -29,7 +29,7 @@ pyprofibus comes with a couple of examples that can teach you how to use pyprofi
 	* example_dummy.py
 	* example_dummy.conf
 
-* Example that runs pyprofibus as master connected to an ET&nbsp;200S as slave.
+* Example that runs pyprofibus as master connected to an ET200S as slave.
 	* example_et200s.py
 	* example_et200s.conf
 
