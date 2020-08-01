@@ -176,7 +176,7 @@ class CpPhySerial(CpPhy):
 
 	def setConfig(self, baudrate=CpPhy.BAUD_9600, rtscts=False, dsrdtr=False, *args, **kwargs):
 		wellSuppBaud = (9600, 19200)
-		if baudrate not in wellSuppBaud:
+		if baudrate not in wellSuppBaud and not isMicropython:
 			# The hw/driver might silently ignore the baudrate
 			# and use the already set value from __init__().
 			print("PHY-serial: Warning: The configured baud rate %d baud "
