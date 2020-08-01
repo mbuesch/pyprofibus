@@ -22,10 +22,7 @@ class Serial(object):
 		self.xonxoff = False
 		self.rtscts = False
 		self.dsrdtr = False
-		if self.__isMicropython:
-			import machine
-			self.__machine = machine
-			self.__lowlevel = None
+		self.__lowlevel = None
 
 	def open(self):
 		if self.__isMicropython:
@@ -37,12 +34,13 @@ class Serial(object):
 			except ValueError:
 				raise SerialException("Invalid port: %s" % self.port)
 			try:
-				self.__lowlevel = self.__machine.UART(
+				import machine
+				self.__lowlevel = machine.UART(
 					self.__portNum,
 					self.baudrate,
 					self.bytesize,
 					0 if self.parity == PARITY_EVEN else 1,
-					self.stopbits)
+					1 if self.stopbits == STOPBITS_ONE else 2)
 				print("Opened machine.UART(%d)" % self.__portNum)
 			except Exception as e:
 				raise SerialException("UART%d: Failed to open:\n%s" % (
@@ -55,8 +53,8 @@ class Serial(object):
 			try:
 				if self.__lowlevel is not None:
 					self.__lowlevel.deinit()
+					self.__lowlevel = None
 					print("Closed machine.UART(%d)" % self.__portNum)
-				self.__lowlevel = None
 			except Exception as e:
 				raise SerialException("UART%d: Failed to close:\n%s" % (
 					self.__portNum, str(e)))
