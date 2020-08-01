@@ -58,6 +58,7 @@ build()
 		make -j "$(getconf _NPROCESSORS_ONLN)" -f "$rootdir/micropython/Makefile" \
 			SRCDIR="$(rootpath -m "$rootdir")" \
 			BUILDDIR="$builddir" \
+			MPYCROSS="$mpycross" \
 			MARCH="$march" \
 			GSDPARSER_OPTS="$gsdparser_opts" \
 			PYS="$pys" \
@@ -98,6 +99,7 @@ buildonly=0
 dev="/dev/ttyUSB0"
 march="xtensa"
 pyboard="pyboard.py"
+mpycross="mpy-cross"
 modules=
 clean=
 
@@ -123,6 +125,8 @@ while [ $# -ge 1 ]; do
 		echo " -m|--module NAME    Include GSD module NAME."
 		echo "                     Can be specified multiple times for multiple modules."
 		echo "                     Enter your 'module_X' names from your configuration here."
+		echo " -M|--mpycross PATH  Path to mpy-cross executable."
+		echo "                     Default: mpy-cross"
 		echo " -p|--pyboard PATH   Path to pyboard executable."
 		echo "                     Default: pyboard.py"
 		echo " -h|--help           Show this help."
@@ -142,6 +146,10 @@ while [ $# -ge 1 ]; do
 	-p|--pyboard)
 		shift
 		pyboard="$1"
+		;;
+	-M|--mpycross)
+		shift
+		mpycross="$1"
 		;;
 	-m|--module)
 		shift
