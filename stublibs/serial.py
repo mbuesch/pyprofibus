@@ -13,6 +13,7 @@ class Serial(object):
 	def __init__(self):
 		self.__isMicropython = isMicropython
 		self.port = "/dev/ttyS0"
+		self.__portNum = None
 		self.baudrate = 9600
 		self.bytesize = 8
 		self.parity = PARITY_EVEN
@@ -32,20 +33,20 @@ class Serial(object):
 			for sub in ("/dev/ttyS", "/dev/ttyUSB", "/dev/ttyACM", "COM", "UART", ):
 				port = port.replace(sub, "")
 			try:
-				port = int(port.strip())
+				self.__portNum = int(port.strip())
 			except ValueError:
 				raise SerialException("Invalid port: %s" % self.port)
 			try:
 				self.__lowlevel = self.__machine.UART(
-					port,
+					self.__portNum,
 					self.baudrate,
 					self.bytesize,
 					0 if self.parity == PARITY_EVEN else 1,
 					self.stopbits)
-				print("Opened machine.UART(%d)" % port)
+				print("Opened machine.UART(%d)" % self.__portNum)
 			except Exception as e:
-				raise SerialException("Failed to open port '%s':\n%s" % (
-					self.port, str(e)))
+				raise SerialException("UART%d: Failed to open:\n%s" % (
+					self.__portNum, str(e)))
 			return
 		raise NotImplementedError
 
@@ -54,10 +55,11 @@ class Serial(object):
 			try:
 				if self.__lowlevel is not None:
 					self.__lowlevel.deinit()
+					print("Closed machine.UART(%d)" % self.__portNum)
 				self.__lowlevel = None
 			except Exception as e:
-				raise SerialException("Failed to close port '%s':\n%s" % (
-					self.port, str(e)))
+				raise SerialException("UART%d: Failed to close:\n%s" % (
+					self.__portNum, str(e)))
 			return
 		raise NotImplementedError
 
@@ -66,8 +68,8 @@ class Serial(object):
 			try:
 				self.__lowlevel.write(data)
 			except Exception as e:
-				raise SerialException("Write(%d bytes) failed: %s" % (
-					len(data), str(e)))
+				raise SerialException("UART%d write(%d bytes) failed: %s" % (
+					self.__portNum, len(data), str(e)))
 			return
 		raise NotImplementedError
 
@@ -79,8 +81,8 @@ class Serial(object):
 					return b""
 				return data
 			except Exception as e:
-				raise SerialException("Read(%d bytes) failed: %s" % (
-					size, str(e)))
+				raise SerialException("UART%d read(%d bytes) failed: %s" % (
+					self.__portNum, size, str(e)))
 		raise NotImplementedError
 
 	def flushInput(self):
