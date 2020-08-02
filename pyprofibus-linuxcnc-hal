@@ -256,7 +256,9 @@ class Worker(object):
 			return
 
 		for slave in self.slaves:
-			slaveConf = slave._slaveConf
+			slaveConf = slave.slaveConf
+			if slaveConf is None:
+				continue
 
 			activePbInputs = self.__buildTable(
 				slave.slaveAddr, "input", slaveConf.inputSize)
@@ -283,9 +285,10 @@ class Worker(object):
 			time.sleep(0.1)
 		while watchdog():
 			for slave in self.slaves:
-				slaveConf = slave._slaveConf
-				outputSize, inputSize = \
-					slaveConf.outputSize, slaveConf.inputSize
+				slaveConf = slave.slaveConf
+				if slaveConf is None:
+					continue
+				outputSize, inputSize = slaveConf.outputSize, slaveConf.inputSize
 
 				txData = bytearray((0,) * outputSize)
 				for sig in slave._activePbOutputs:
@@ -517,10 +520,10 @@ def main():
 
 		# Create the HAL pins.
 		for slaveConf in config.slaveConfs:
-			createHalPins(hal = hal,
-				      slaveAddr = slaveConf.addr,
-				      inputSize = slaveConf.inputSize,
-				      outputSize = slaveConf.outputSize)
+			createHalPins(hal=hal,
+				      slaveAddr=slaveConf.addr,
+				      inputSize=slaveConf.inputSize,
+				      outputSize=slaveConf.outputSize)
 
 		# Setup the PROFIBUS stack.
 		master = config.makeDPM()
@@ -537,7 +540,6 @@ def main():
 			slaveDesc.setUserPrmData(
 				slaveConf.gsd.getUserPrmData(dp1PrmMask=dp1PrmMask,
 							     dp1PrmSet=dp1PrmSet))
-			slaveDesc._slaveConf = slaveConf
 			master.addSlave(slaveDesc)
 
 		printInfo("Running PROFIBUS-DP master...")

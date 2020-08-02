@@ -165,13 +165,16 @@ class DpSlaveDesc(object):
 		"setPrmTelegram",
 		"setPrmTelegram",
 		"slaveAddr",
+		"slaveConf",
 	)
 
 	def __init__(self,
 		     gsd,
-		     slaveAddr):
+		     slaveAddr,
+		     slaveConf=None):
 		self.gsd = gsd
 		self.slaveAddr = slaveAddr
+		self.slaveConf = slaveConf
 		self.identNumber = gsd.getIdentNumber() if gsd else 0
 		self.dpm = None
 		self.name = None
@@ -259,7 +262,7 @@ class DpSlaveDesc(object):
 		return self.dpm.getSlaveInData(self)
 
 	def __repr__(self):
-		return "DPSlaveDesc(identNumber=%s, slaveAddr=%d)" %\
+		return "DpSlaveDesc(identNumber=%s, slaveAddr=%d)" %\
 			(intToHex(self.identNumber), self.slaveAddr)
 
 class DpMaster(object):

@@ -57,7 +57,8 @@ class PbConf(object):
 			"""
 			from pyprofibus.dp_master import DpSlaveDesc
 			slaveDesc = DpSlaveDesc(gsd=self.gsd,
-						slaveAddr=self.addr)
+						slaveAddr=self.addr,
+						slaveConf=self)
 			slaveDesc.index = self.index
 			slaveDesc.name = self.name
 
