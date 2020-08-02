@@ -95,7 +95,10 @@ class PbConf(object):
 
 	@classmethod
 	def fromFile(cls, filename):
-		return cls(open(filename, "r", encoding="UTF-8"), filename)
+		if isPy2Compat:
+			return cls(open(filename, "r"), filename)
+		else:
+			return cls(open(filename, "r", encoding="UTF-8"), filename)
 
 	__reSlave = re.compile(r'^SLAVE_(\d+)$')
 	__reMod = re.compile(r'^module_(\d+)$')
