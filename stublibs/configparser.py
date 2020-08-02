@@ -12,7 +12,7 @@ class ConfigParser(object):
 
 	def read_file(self, f, source=None):
 		self.__sections = {}
-		sectionName = ""
+		section = None
 		while True:
 			line = f.readline()
 			if not line:
@@ -20,19 +20,25 @@ class ConfigParser(object):
 			line = line.lstrip().rstrip("\r\n")
 			if not line or line.startswith(";"):
 				continue
-			if line.startswith("["):
-				sectionName = line.strip().replace("[", "").replace("]", "")
-				self.__sections[sectionName] = self.Section(sectionName)
+			sline = line.strip()
+			if sline.startswith("[") and sline.endswith("]"):
+				sectionName = sline[1:-1]
+				if sectionName in self.__sections:
+					raise Error("Multiple definitions of section '%s'" % sectionName)
+				section = self.__sections[sectionName] = self.Section(sectionName)
 				continue
-			if not sectionName:
-				raise Error("Option is not in section.")
+			if section is None:
+				raise Error("Option '%s' is not in a section." % line)
 			idx = line.find("=")
 			if idx > 0:
 				optionName = line[:idx]
 				optionValue = line[idx+1:]
-				self.__sections[sectionName].options[optionName] = optionValue
+				if optionName in section.options:
+					raise Error("Multiple definitions of option '%s/%s'" % (
+						section.name, optionName))
+				section.options[optionName] = optionValue
 				continue
-			raise Error("Could not parse line.")
+			raise Error("Could not parse line: %s" % line)
 
 	def has_option(self, section, option):
 		try:
@@ -45,7 +51,7 @@ class ConfigParser(object):
 		try:
 			return self.__sections[section].options[option]
 		except KeyError as e:
-			raise Error("Option not found.")
+			raise Error("Option '%s/%s' not found." % (section, option))
 
 	def getboolean(self, section, option):
 		try:
@@ -56,13 +62,13 @@ class ConfigParser(object):
 				return False
 			return bool(int(v))
 		except ValueError as e:
-			raise Error("Invalid boolean option.")
+			raise Error("Invalid boolean option '%s/%s'." % (section, option))
 
 	def getint(self, section, option):
 		try:
 			return int(self.get(section, option))
 		except ValueError as e:
-			raise Error("Invalid int option.")
+			raise Error("Invalid int option '%s/%s'." % (section, option))
 
 	def sections(self):
 		return list(self.__sections.keys())
@@ -71,4 +77,4 @@ class ConfigParser(object):
 		try:
 			return list(self.__sections[section].options)
 		except KeyError as e:
-			raise Error("Section not found.")
+			raise Error("Section '%s' not found." % section)
