@@ -166,6 +166,7 @@ class DpSlaveDesc(object):
 		"setPrmTelegram",
 		"slaveAddr",
 		"slaveConf",
+		"userData",
 	)
 
 	def __init__(self,
@@ -179,6 +180,7 @@ class DpSlaveDesc(object):
 		self.dpm = None
 		self.name = None
 		self.index = None
+		self.userData = {} # For use by application code.
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(

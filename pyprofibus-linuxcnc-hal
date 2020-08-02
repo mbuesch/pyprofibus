@@ -266,8 +266,8 @@ class Worker(object):
 			activePbOutputs = self.__buildTable(
 				slave.slaveAddr, "output", slaveConf.outputSize)
 
-			slave._activePbInputs = activePbInputs
-			slave._activePbOutputs = activePbOutputs
+			slave.userData["activePbInputs"] = activePbInputs
+			slave.userData["activePbOutputs"] = activePbOutputs
 
 			printInfo("Active DP slave (addr=%d) pins:" % slave.slaveAddr)
 			for sig in activePbInputs:
@@ -291,7 +291,7 @@ class Worker(object):
 				outputSize, inputSize = slaveConf.outputSize, slaveConf.inputSize
 
 				txData = bytearray((0,) * outputSize)
-				for sig in slave._activePbOutputs:
+				for sig in slave.userData["activePbOutputs"]:
 					sig.fromHal(txData)
 				rxData = master.runSlave(slave, txData)
 				if rxData is not None:
@@ -299,7 +299,7 @@ class Worker(object):
 						rxData = rxData[0 : inputSize]
 					if len(rxData) < inputSize:
 						rxData += b'\0' * (inputSize - len(rxData))
-					for sig in slave._activePbInputs:
+					for sig in slave.userData["activePbInputs"]:
 						sig.toHal(rxData)
 
 class LinuxCNC_NotRunning(Exception):
