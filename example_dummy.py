@@ -35,7 +35,7 @@ def main():
 			master.addSlave(slaveDesc)
 
 			# Set initial output data.
-			outData[slaveDesc.slaveAddr] = bytearray((0x42, 0x24))
+			outData[slaveDesc.name] = bytearray((0x42, 0x24))
 
 		# Initialize the DPM
 		master.initialize()
@@ -44,7 +44,7 @@ def main():
 		while True:
 			# Write the output data.
 			for slaveDesc in master.getSlaveList():
-				slaveDesc.setOutData(outData[slaveDesc.slaveAddr])
+				slaveDesc.setOutData(outData[slaveDesc.name])
 
 			# Run slave state machines.
 			handledSlaveDesc = master.run()
@@ -54,8 +54,8 @@ def main():
 				inData = handledSlaveDesc.getInData()
 				if inData is not None:
 					# In our example the output data shall be the inverted input.
-					outData[handledSlaveDesc.slaveAddr][0] = inData[1]
-					outData[handledSlaveDesc.slaveAddr][1] = inData[0]
+					outData[handledSlaveDesc.name][0] = inData[1]
+					outData[handledSlaveDesc.name][1] = inData[0]
 
 	except pyprofibus.ProfibusError as e:
 		print("Terminating: %s" % str(e))

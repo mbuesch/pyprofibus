@@ -156,6 +156,8 @@ class DpSlaveDesc(object):
 	"""
 
 	__slots__ = (
+		"index",
+		"name",
 		"chkCfgTelegram",
 		"dpm",
 		"gsd",
@@ -172,6 +174,8 @@ class DpSlaveDesc(object):
 		self.slaveAddr = slaveAddr
 		self.identNumber = gsd.getIdentNumber() if gsd else 0
 		self.dpm = None
+		self.name = None
+		self.index = None
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(

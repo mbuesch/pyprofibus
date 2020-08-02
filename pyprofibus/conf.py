@@ -41,6 +41,8 @@ class PbConf(object):
 	class _SlaveConf(object):
 		"""Slave configuration.
 		"""
+		index		= None
+		name		= None
 		addr		= None
 		gsd		= None
 		syncMode	= None
@@ -56,6 +58,8 @@ class PbConf(object):
 			from pyprofibus.dp_master import DpSlaveDesc
 			slaveDesc = DpSlaveDesc(gsd=self.gsd,
 						slaveAddr=self.addr)
+			slaveDesc.index = self.index
+			slaveDesc.name = self.name
 
 			# Create Chk_Cfg telegram
 			slaveDesc.setCfgDataElements(self.gsd.getCfgDataElements())
@@ -161,7 +165,10 @@ class PbConf(object):
 				m = self.__reSlave.match(section)
 				if not m:
 					continue
+				index = int(m.group(1))
 				s = self._SlaveConf()
+				s.index = index
+				s.name = get(section, "name", section)
 				s.addr = getint(section, "addr")
 				try:
 					s.gsd = GsdInterp.fromFile(
