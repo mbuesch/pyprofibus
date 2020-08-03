@@ -87,7 +87,7 @@ class CpPhyFPGA(CpPhy):
 			if self.__rxDeque:
 				telegramData = self.__rxDeque.popleft()
 			else:
-				timeoutStamp = monotonic_time() + timeout
+				timeoutStamp = monotonic_time() + timeout#TODO
 				telegramDataList = self.__driver.telegramReceive()
 				count = len(telegramDataList)
 				if count >= 1:

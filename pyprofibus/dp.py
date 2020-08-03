@@ -44,7 +44,7 @@ class DpTransceiver(object):
 		self.fdlTrans = fdlTrans
 		self.thisIsMaster = thisIsMaster
 
-	def poll(self, timeout = 0):
+	def poll(self, timeout=0.0):
 		retTelegram = None
 		ok, fdlTelegram = self.fdlTrans.poll(timeout)
 		if ok and fdlTelegram:

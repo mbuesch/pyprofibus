@@ -50,10 +50,10 @@ class CpPhyDummySlave(CpPhy):
 					       bytesToHex(telegramData)))
 		self.__mockSend(telegramData, srd = srd)
 
-	def pollData(self, timeout = 0):
+	def pollData(self, timeout=0.0):
 		"""Poll received data from the physical line.
 		timeout => timeout in seconds.
-			   0 = no timeout, return immediately.
+			   0.0 = no timeout, return immediately.
 			   negative = unlimited.
 		"""
 		try:

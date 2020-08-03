@@ -107,7 +107,7 @@ class FdlTransceiver(object):
 		# Accept the packet, if it's in the RX filter.
 		return (telegram.da & FdlTelegram.ADDRESS_MASK) in self.__rxFilter
 
-	def poll(self, timeout=0):
+	def poll(self, timeout=0.0):
 		ok, telegram = False, None
 		reply = self.phy.poll(timeout)
 		if reply is not None:
@@ -205,6 +205,14 @@ class FdlTelegram(object):
 	FC_MRDY		= 0x20	# Master, ready to enter token ring
 	FC_MTR		= 0x30	# Master, in token ring
 
+	# Delimiter to size converstion table.
+	delim2size = {
+		SD1	: 6,
+		SD3	: 14,
+		SD4	: 3,
+		SC	: 1,
+	}
+
 	__slots__ = (
 		"sd",
 		"haveLE",
@@ -220,27 +228,22 @@ class FdlTelegram(object):
 
 	@classmethod
 	def getSizeFromRaw(cls, data):
-		try:
-			sd = data[0]
-			try:
-				return {
-					cls.SD1	: 6,
-					cls.SD3	: 14,
-					cls.SD4	: 3,
-					cls.SC	: 1,
-				}[sd]
-			except KeyError:
-				pass
-			if sd == cls.SD2:
-				le = data[1]
-				if data[2] != le:
-					raise FdlError("Repeated length field mismatch")
-				if le < 3 or le > 249:
-					raise FdlError("Invalid LE field")
-				return le + 6
-			raise FdlError("Unknown start delimiter: %02X" % sd)
-		except IndexError:
-			raise FdlError("Invalid FDL packet format")
+		dataLen = len(data)
+		if dataLen < 1:
+			return None # Telegram too short.
+		sd = data[0]
+		if sd in cls.delim2size:
+			return cls.delim2size[sd]
+		if sd == cls.SD2:
+			if dataLen < 3:
+				return None # Telegram too short.
+			le = data[1]
+			if data[2] != le:
+				return None # Repeated length field mismatch.
+			if le < 3 or le > 249:
+				return None # Invalid length field.
+			return le + 6
+		return None # Unknown start delimiter.
 
 	def __init__(self, sd, haveLE=False, da=None, sa=None,
 		     fc=None, dae=b"", sae=b"", du=None,

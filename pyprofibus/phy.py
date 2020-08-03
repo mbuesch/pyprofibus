@@ -83,15 +83,15 @@ class CpPhy(object):
 	def pollData(self, timeout):
 		"""Poll received data from the physical line.
 		timeout => timeout in seconds.
-			   0 = no timeout, return immediately.
+			   0.0 = no timeout, return immediately.
 			   negative = unlimited.
 		Reimplement this method in the PHY driver.
 		"""
 		raise NotImplementedError
 
-	def poll(self, timeout = 0):
+	def poll(self, timeout=0.0):
 		"""timeout => timeout in seconds.
-			      0 = no timeout, return immediately.
+			      0.0 = no timeout, return immediately.
 			      negative = unlimited.
 		"""
 		if self.__txQueueDAs:

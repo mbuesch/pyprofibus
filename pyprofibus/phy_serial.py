@@ -107,49 +107,52 @@ class CpPhySerial(CpPhy):
 		self.__discardTimeout = monotonic_time() + 0.01
 
 	# Poll for received packet.
-	# timeout => In seconds. 0 = none, Negative = unlimited.
-	def pollData(self, timeout = 0):
-		timeoutStamp = monotonic_time() + timeout
-		ret, rxBuf, s, size = None, self.__rxBuf, self.__serial, -1
+	# timeout => In seconds. 0.0 = none, Negative = unlimited.
+	def pollData(self, timeout=0.0):
+		if timeout > 0.0:
+			timeoutStamp = monotonic_time() + timeout
+		ret = None
+		rxBuf = self.__rxBuf
+		ser = self.__serial
+		size = -1
 		getSize = FdlTelegram.getSizeFromRaw
 
 		if self.__discardTimeout is not None:
 			while self.__discardTimeout is not None:
 				self.__discard()
-				if timeout >= 0 and\
-				   monotonic_time() >= timeoutStamp:
+				if (timeout == 0.0 or
+				    (timeout > 0.0 and monotonic_time() >= timeoutStamp)):
 					return None
 
 		try:
+			rxBufLen = len(rxBuf)
 			while True:
-				if len(rxBuf) < 1:
-					rxBuf += s.read(1)
-				elif len(rxBuf) < 3:
-					try:
-						size = getSize(rxBuf)
-						readLen = size
-					except ProfibusError:
-						readLen = 3
-					rxBuf += s.read(readLen - len(rxBuf))
-				elif len(rxBuf) >= 3:
-					try:
-						size = getSize(rxBuf)
-					except ProfibusError:
+				if rxBufLen < 1:
+					rxBuf.extend(ser.read(1))
+				elif rxBufLen < 3:
+					size = getSize(rxBuf)
+					readLen = 3 if size is None else size
+					rxBuf.extend(ser.read(readLen - rxBufLen))
+				elif rxBufLen >= 3:
+					size = getSize(rxBuf)
+					if size is None:
 						rxBuf = bytearray()
 						self.__startDiscard()
 						raise PhyError("PHY-serial: "
-							"Failed to get received "
-							"telegram size:\n"
+							"Failed to get received telegram size: "
 							"Invalid telegram format.")
-					if len(rxBuf) < size:
-						rxBuf += s.read(size - len(rxBuf))
+					if rxBufLen < size:
+						rxBuf.extend(ser.read(size - rxBufLen))
 
-				if len(rxBuf) == size:
-					ret, rxBuf = rxBuf, bytearray()
+				rxBufLen = len(rxBuf)
+				if rxBufLen == size:
+					ret = rxBuf
+					rxBuf = bytearray()
+					rxBufLen = 0
 					break
 
-				if timeout >= 0 and\
-				   monotonic_time() >= timeoutStamp:
+				if (timeout == 0.0 or
+				    (timeout > 0.0 and monotonic_time() >= timeoutStamp)):
 					break
 		except serial.SerialException as e:
 			rxBuf = bytearray()
@@ -166,7 +169,6 @@ class CpPhySerial(CpPhy):
 		if self.__discardTimeout is not None:
 			return
 		try:
-			telegramData = bytearray(telegramData)
 			if self.debug:
 				print("PHY-serial: TX   %s" % bytesToHex(telegramData))
 			self.__serial.write(telegramData)

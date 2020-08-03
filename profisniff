@@ -3,7 +3,7 @@
 #
 # PROFIBUS - Telegram sniffer
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -12,6 +12,7 @@
 
 from pyprofibus.phy_serial import *
 from pyprofibus.fdl import *
+from pyprofibus import *
 
 import sys
 import getopt
@@ -55,7 +56,7 @@ def main():
 	try:
 		while True:
 			try:
-				ok, telegram = xceiv.poll(-1)
+				ok, telegram = xceiv.poll(-1.0)
 				if not ok or not telegram:
 					continue
 				print(telegram)
