@@ -230,20 +230,20 @@ class FdlTelegram(object):
 	def getSizeFromRaw(cls, data):
 		dataLen = len(data)
 		if dataLen < 1:
-			return None # Telegram too short.
+			return -1 # Telegram too short.
 		sd = data[0]
 		if sd in cls.delim2size:
 			return cls.delim2size[sd]
 		if sd == cls.SD2:
 			if dataLen < 3:
-				return None # Telegram too short.
+				return -1 # Telegram too short.
 			le = data[1]
 			if data[2] != le:
-				return None # Repeated length field mismatch.
+				return -1 # Repeated length field mismatch.
 			if le < 3 or le > 249:
-				return None # Invalid length field.
+				return -1 # Invalid length field.
 			return le + 6
-		return None # Unknown start delimiter.
+		return -1 # Unknown start delimiter.
 
 	def __init__(self, sd, haveLE=False, da=None, sa=None,
 		     fc=None, dae=b"", sae=b"", du=None,

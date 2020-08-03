@@ -130,17 +130,20 @@ class CpPhySerial(CpPhy):
 				if rxBufLen < 1:
 					rxBuf.extend(ser.read(1))
 				elif rxBufLen < 3:
-					size = getSize(rxBuf)
-					readLen = 3 if size is None else size
-					rxBuf.extend(ser.read(readLen - rxBufLen))
+					if size < 0:
+						size = getSize(rxBuf)
+					readLen = (size if size > 0 else 3) - rxBufLen
+					if readLen > 0:
+						rxBuf.extend(ser.read(readLen))
 				elif rxBufLen >= 3:
-					size = getSize(rxBuf)
-					if size is None:
-						rxBuf = bytearray()
-						self.__startDiscard()
-						raise PhyError("PHY-serial: "
-							"Failed to get received telegram size: "
-							"Invalid telegram format.")
+					if size < 0:
+						size = getSize(rxBuf)
+						if size < 0:
+							rxBuf = bytearray()
+							self.__startDiscard()
+							raise PhyError("PHY-serial: "
+								"Failed to get received telegram size: "
+								"Invalid telegram format.")
 					if rxBufLen < size:
 						rxBuf.extend(ser.read(size - rxBufLen))
 
