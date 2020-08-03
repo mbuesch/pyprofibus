@@ -30,10 +30,12 @@ class ProfibusError(Exception):
 	__slots__ = (
 	)
 
-def bytesToHex(b, sep = " "):
+def bytesToHex(b, sep=" "):
 	if b is None:
 		return "None"
 	assert isinstance(b, (bytes, bytearray))
+	if not b:
+		return "Empty"
 	return sep.join("%02X" % c for c in bytearray(b))
 
 def intToHex(val):
