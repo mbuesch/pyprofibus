@@ -117,12 +117,10 @@ class CpPhySerial(CpPhy):
 		size = -1
 		getSize = FdlTelegram.getSizeFromRaw
 
-		if self.__discardTimeout is not None:
-			while self.__discardTimeout is not None:
-				self.__discard()
-				if (timeout == 0.0 or
-				    (timeout > 0.0 and monotonic_time() >= timeoutStamp)):
-					return None
+		while self.__discardTimeout is not None:
+			self.__discard()
+			if timeout > 0.0 and monotonic_time() >= timeoutStamp:
+				return None
 
 		try:
 			rxBufLen = len(rxBuf)
