@@ -589,8 +589,8 @@ class DpMaster(object):
 					slave.faultDeb.fault()
 					continue
 				resFunc = telegram.fc & FdlTelegram.FC_RESFUNC_MASK
-				if resFunc in {FdlTelegram.FC_DH,
-					       FdlTelegram.FC_RDH}:
+				if resFunc in (FdlTelegram.FC_DH,
+					       FdlTelegram.FC_RDH,):
 					self.__debugMsg("Slave %d requested diagnostics." %\
 						slave.slaveDesc.slaveAddr)
 					slave.setState(slave.STATE_WDXRDY, 0.2)

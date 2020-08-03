@@ -48,13 +48,13 @@ class DpTransceiver(object):
 		retTelegram = None
 		ok, fdlTelegram = self.fdlTrans.poll(timeout)
 		if ok and fdlTelegram:
-			if fdlTelegram.sd in {FdlTelegram.SD1,
+			if fdlTelegram.sd in (FdlTelegram.SD1,
 					      FdlTelegram.SD2,
-					      FdlTelegram.SD3}:
+					      FdlTelegram.SD3,):
 				retTelegram = DpTelegram.fromFdlTelegram(
 						fdlTelegram, self.thisIsMaster)
-			elif fdlTelegram.sd in {FdlTelegram.SC,
-						FdlTelegram.SD4}:
+			elif fdlTelegram.sd in (FdlTelegram.SC,
+						FdlTelegram.SD4,):
 				retTelegram = fdlTelegram
 			else:
 				ok = False
