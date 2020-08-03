@@ -2,7 +2,7 @@
 #
 # PROFIBUS - Layer 2 - Fieldbus Data Link (FDL)
 #
-# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -79,9 +79,11 @@ class FdlFCB():
 			self.FCBnext()
 
 	def __repr__(self):
-		return "FdlFCB(en=%s, fcb=%d, fcv=%d, wait=%s)" % (
-			str(self.__fcbEnabled), self.__fcb,
-			self.__fcv, str(self.__fcbWaitingReply))
+		return ("FdlFCB(en=%s, fcb=%d, fcv=%d, wait=%s)" % (
+			str(self.__fcbEnabled),
+			self.__fcb,
+			self.__fcv,
+			str(self.__fcbWaitingReply)))
 
 class FdlTransceiver(object):
 	__slots__ = (
@@ -241,7 +243,7 @@ class FdlTelegram(object):
 			raise FdlError("Invalid FDL packet format")
 
 	def __init__(self, sd, haveLE=False, da=None, sa=None,
-		     fc=None, dae=(), sae=(), du=None,
+		     fc=None, dae=b"", sae=b"", du=None,
 		     haveFCS=False, ed=None):
 		self.sd = sd
 		self.haveLE = haveLE
@@ -268,15 +270,18 @@ class FdlTelegram(object):
 				}[val]
 			except KeyError:
 				return intToHex(val)
-		return "FdlTelegram(sd=%s, haveLE=%s, da=%s, sa=%s, " \
-			"fc=%s, dae=%s, sae=%s, du=%s, haveFCS=%s, ed=%s)" %\
-			(sdVal(self.sd), boolToStr(self.haveLE),
-			 intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intListToHex(self.dae),
-			 intListToHex(self.sae),
-			 intListToHex(self.du),
-			 boolToStr(self.haveFCS), intToHex(self.ed))
+		return ("FdlTelegram(sd=%s, haveLE=%s, da=%s, sa=%s, "
+			"fc=%s, dae=%s, sae=%s, du=%s, haveFCS=%s, ed=%s)" % (
+			sdVal(self.sd),
+			boolToStr(self.haveLE),
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			bytesToHex(self.dae),
+			bytesToHex(self.sae),
+			bytesToHex(self.du),
+			boolToStr(self.haveFCS),
+			intToHex(self.ed)))
 
 	# Get real length of DU field
 	def getRealDuLen(self):
@@ -287,10 +292,12 @@ class FdlTelegram(object):
 		return sum(data) & 0xFF
 
 	def getRawData(self):
-		data = []
+		data = bytearray()
 		if self.haveLE:
 			le = 3 + self.getRealDuLen()
-			data.extend([self.sd, le, le])
+			data.append(self.sd)
+			data.append(le)
+			data.append(le)
 		data.append(self.sd)
 		if self.da is not None:
 			data.append((self.da | FdlTelegram.ADDRESS_EXT) if self.dae
@@ -300,9 +307,12 @@ class FdlTelegram(object):
 				    else self.sa)
 		if self.fc is not None:
 			data.append(self.fc)
+		assert isinstance(self.dae, (bytes, bytearray))
 		data.extend(self.dae)
+		assert isinstance(self.sae, (bytes, bytearray))
 		data.extend(self.sae)
 		if self.du is not None:
+			assert isinstance(self.du, (bytes, bytearray))
 			data.extend(self.du)
 		if self.haveFCS:
 			if self.haveLE:
@@ -317,7 +327,7 @@ class FdlTelegram(object):
 	# Extract address extension bytes from DU
 	@staticmethod
 	def __duExtractAe(du):
-		ae = []
+		ae = bytearray()
 		while 1:
 			if not du:
 				raise FdlError("Address extension error: Data too short")
@@ -359,7 +369,7 @@ class FdlTelegram(object):
 				du = data[7:7+(le-3)]
 				if len(du) != le - 3:
 					raise FdlError("FDL packet shorter than FE")
-				da, sa, dae, sae = data[4], data[5], [], []
+				da, sa, dae, sae = data[4], data[5], b"", b""
 				if da & FdlTelegram.ADDRESS_EXT:
 					du, dae = FdlTelegram.__duExtractAe(du)
 				if sa & FdlTelegram.ADDRESS_EXT:
@@ -375,7 +385,7 @@ class FdlTelegram(object):
 				if data[12] != FdlTelegram.calcFCS(data[1:12]):
 					raise FdlError("Checksum mismatch")
 				du = data[4:12]
-				da, sa, dae, sae = data[1], data[2], [], []
+				da, sa, dae, sae = data[1], data[2], b"", b""
 				if da & FdlTelegram.ADDRESS_EXT:
 					du, dae = FdlTelegram.__duExtractAe(du)
 				if sa & FdlTelegram.ADDRESS_EXT:

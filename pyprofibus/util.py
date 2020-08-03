@@ -19,7 +19,6 @@ __all__ = [
 	"ProfibusError",
 	"bytesToHex",
 	"intToHex",
-	"intListToHex",
 	"boolToStr",
 	"fileExists",
 	"monotonic_time",
@@ -32,11 +31,15 @@ class ProfibusError(Exception):
 	)
 
 def bytesToHex(b, sep = " "):
+	if b is None:
+		return "None"
+	assert isinstance(b, (bytes, bytearray))
 	return sep.join("%02X" % c for c in bytearray(b))
 
 def intToHex(val):
 	if val is None:
 		return "None"
+	assert isinstance(val, int)
 	val &= 0xFFFFFFFF
 	if val <= 0xFF:
 		return "0x%02X" % val
@@ -46,11 +49,6 @@ def intToHex(val):
 		return "0x%06X" % val
 	else:
 		return "0x%08X" % val
-
-def intListToHex(valList):
-	if valList is None:
-		return "None"
-	return "[%s]" % ", ".join(intToHex(b) for b in valList)
 
 def boolToStr(val):
 	return str(bool(val))

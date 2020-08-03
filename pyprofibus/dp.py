@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Layer 7
 #
-# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -101,19 +101,22 @@ class DpTelegram(object):
 		self.ssap = ssap
 
 	def __repr__(self):
-		return "DpTelegram(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s) => %s" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc), intToHex(self.dsap),
-			 intToHex(self.ssap),
-			 str(self.getDU()))
+		return ("DpTelegram(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s, du=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap),
+			bytesToHex(self.getDU())))
 
 	def toFdlTelegram(self):
 		du = self.getDU()
 
-		dae, sae = [], []
+		dae = bytearray()
 		if self.dsap is not None:
 			dae.append(self.dsap)
+		sae = bytearray()
 		if self.ssap is not None:
 			sae.append(self.ssap)
 
@@ -192,7 +195,7 @@ class DpTelegram(object):
 	# Get Data-Unit.
 	# This function is overloaded in subclasses.
 	def getDU(self):
-		return []
+		return b""
 
 	@classmethod
 	def checkType(cls, telegram):
@@ -206,22 +209,22 @@ class _DataExchange_Common(DpTelegram):
 	def __init__(self, da, sa, fc, du):
 		DpTelegram.__init__(self,
 			da=da, sa=sa, fc=fc)
-		self.du = list(du[:])
+		self.du = bytearray(du)
 
 	def appendData(self, data):
 		if not self.du:
-			self.du = []
+			self.du = bytearray()
 		self.du.append(data)
 
 	def getDU(self):
-		return self.du[:]
+		return bytearray(self.du)
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
 		dp = cls(da=fdl.da,
 			 sa=fdl.sa,
 			 fc=fdl.fc,
-			 du=fdl.du if fdl.du else ())
+			 du=fdl.du if fdl.du else b"")
 		return dp
 
 class DpTelegram_DataExchange_Req(_DataExchange_Common):
@@ -231,7 +234,7 @@ class DpTelegram_DataExchange_Req(_DataExchange_Common):
 	def __init__(self, da, sa,
 		     fc=FdlTelegram.FC_SRD_HI |
 		        FdlTelegram.FC_REQ,
-		     du=()):
+		     du=b""):
 		_DataExchange_Common.__init__(self,
 			da=da, sa=sa, fc=fc, du=du)
 
@@ -310,14 +313,19 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 		self.identNumber = 0
 
 	def __repr__(self):
-		return "DpTelegram_SlaveDiag_Con(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s) => " \
-			"(b0=%s, b1=%s, b2=%s, masterAddr=%s, identNumber=%s)" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intToHex(self.dsap), intToHex(self.ssap),
-			 intToHex(self.b0), intToHex(self.b1), intToHex(self.b2),
-			 intToHex(self.masterAddr), intToHex(self.identNumber))
+		return ("DpTelegram_SlaveDiag_Con(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s, "
+			"b0=%s, b1=%s, b2=%s, masterAddr=%s, identNumber=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap),
+			intToHex(self.b0),
+			intToHex(self.b1),
+			intToHex(self.b2),
+			intToHex(self.masterAddr),
+			intToHex(self.identNumber)))
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
@@ -337,10 +345,12 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 		return dp
 
 	def getDU(self):
-		return [self.b0, self.b1, self.b2,
-			self.masterAddr,
-			(self.identNumber >> 8) & 0xFF,
-			self.identNumber & 0xFF]
+		return bytearray((self.b0,
+				  self.b1,
+				  self.b2,
+				  self.masterAddr,
+				  (self.identNumber >> 8) & 0xFF,
+				  self.identNumber & 0xFF))
 
 	def notExist(self):
 		return (self.b0 & self.B0_STANOEX) != 0
@@ -450,19 +460,23 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 		self.clearUserPrmData()
 
 	def __repr__(self):
-		return "DpTelegram_SetPrm_Req(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s) => " \
-			"(stationStatus=%s, wdFact1=%s, wdFact2=%s, " \
-			"minTSDR=%s, identNumber=%s, groupIdent=%s " \
-			"userPrmData=%s)" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intToHex(self.dsap), intToHex(self.ssap),
-			 intToHex(self.stationStatus),
-			 intToHex(self.wdFact1), intToHex(self.wdFact2),
-			 intToHex(self.minTSDR), intToHex(self.identNumber),
-			 intToHex(self.groupIdent),
-			 intListToHex(self.userPrmData))
+		return ("DpTelegram_SetPrm_Req(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s, "
+			"stationStatus=%s, wdFact1=%s, wdFact2=%s, "
+			"minTSDR=%s, identNumber=%s, groupIdent=%s, "
+			"userPrmData=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap),
+			intToHex(self.stationStatus),
+			intToHex(self.wdFact1),
+			intToHex(self.wdFact2),
+			intToHex(self.minTSDR),
+			intToHex(self.identNumber),
+			intToHex(self.groupIdent),
+			bytesToHex(self.userPrmData)))
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
@@ -485,18 +499,20 @@ class DpTelegram_SetPrm_Req(DpTelegram):
 		return dp
 
 	def clearUserPrmData(self):
-		self.userPrmData = []
+		self.userPrmData = bytearray()
 
 	def addUserPrmData(self, data):
+		assert isinstance(data, (bytes, bytearray))
 		self.userPrmData.extend(data)
 
 	def getDU(self):
-		du = [self.stationStatus,
-		      self.wdFact1, self.wdFact2,
-		      self.minTSDR,
-		      (self.identNumber >> 8) & 0xFF,
-		      self.identNumber & 0xFF,
-		      self.groupIdent]
+		du = bytearray((self.stationStatus,
+				self.wdFact1,
+				self.wdFact2,
+				self.minTSDR,
+				(self.identNumber >> 8) & 0xFF,
+				self.identNumber & 0xFF,
+				self.groupIdent))
 		du.extend(self.userPrmData)
 		return du
 
@@ -528,17 +544,18 @@ class DpCfgDataElement(object):
 		"lengthBytes",
 	)
 
-	def __init__(self, identifier=0, lengthBytes=()):
+	def __init__(self, identifier=0, lengthBytes=b""):
 		self.identifier = identifier
 		self.lengthBytes = lengthBytes
+		assert isinstance(lengthBytes, (bytes, bytearray))
 	
 	def __repr__(self):
-		return "DpCfgDataElement(identifier=%s, length=%s)" %\
-			(intToHex(self.identifier),
-			 intListToHex(self.lengthBytes))
+		return ("DpCfgDataElement(identifier=%s, length=%s)" % (
+			intToHex(self.identifier),
+			bytesToHex(self.lengthBytes)))
 
 	def getDU(self):
-		du = [ self.identifier ]
+		du = bytearray((self.identifier,))
 		du.extend(self.lengthBytes)
 		return du
 
@@ -557,13 +574,14 @@ class DpTelegram_ChkCfg_Req(DpTelegram):
 		self.clearCfgDataElements()
 
 	def __repr__(self):
-		return "DpTelegram_ChkCfg_Req(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s) => " \
-			"(%s)" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intToHex(self.dsap), intToHex(self.ssap),
-			 ", ".join(str(d) for d in self.cfgData))
+		return ("DpTelegram_ChkCfg_Req(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s cfgData=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap),
+			str(self.cfgData)))
 
 	def clearCfgDataElements(self):
 		self.cfgData = []
@@ -600,7 +618,7 @@ class DpTelegram_ChkCfg_Req(DpTelegram):
 		return dp
 
 	def getDU(self):
-		du = []
+		du = bytearray()
 		for cfgData in self.cfgData:
 			du.extend(cfgData.getDU())
 		return du
@@ -614,11 +632,13 @@ class _Cfg_Common(DpTelegram):
 				    dsap=dsap, ssap=ssap)
 
 	def __repr__(self):
-		return "_Cfg_Common(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s)" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intToHex(self.dsap), intToHex(self.ssap))
+		return ("_Cfg_Common(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap)))
 
 class DpTelegram_GetCfg_Req(_Cfg_Common):
 	__slots__ = (
@@ -686,11 +706,13 @@ class DpTelegram_GlobalControl(DpTelegram):
 		self.groupSelect = self.GSEL_BROADCAST	# Group_Select
 
 	def __repr__(self):
-		return "DpTelegram_GlobalControl(da=%s, sa=%s, fc=%s, " \
-			"dsap=%s, ssap=%s)" %\
-			(intToHex(self.da), intToHex(self.sa),
-			 intToHex(self.fc),
-			 intToHex(self.dsap), intToHex(self.ssap))
+		return ("DpTelegram_GlobalControl(da=%s, sa=%s, fc=%s, "
+			"dsap=%s, ssap=%s)" % (
+			intToHex(self.da),
+			intToHex(self.sa),
+			intToHex(self.fc),
+			intToHex(self.dsap),
+			intToHex(self.ssap)))
 
 	@classmethod
 	def fromFdlTelegram(cls, fdl):
@@ -707,4 +729,5 @@ class DpTelegram_GlobalControl(DpTelegram):
 		return dp
 
 	def getDU(self):
-		return [self.controlCommand, self.groupSelect]
+		return bytearray((self.controlCommand,
+				  self.groupSelect))
