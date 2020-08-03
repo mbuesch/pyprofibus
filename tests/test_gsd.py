@@ -15,7 +15,9 @@ class Test_GSD(TestCase):
 
 		self.assertEqual([ e.getDU()
 					for e in gsd.getCfgDataElements() ],
-				 [ [0x00, ], [0x10, ], [0x20, ], ])
+				 [ bytearray([0x00, ]),
+				   bytearray([0x10, ]),
+				   bytearray([0x20, ]), ])
 		self.assertEqual(gsd.getIdentNumber(), 0x4224)
 		self.assertEqual(gsd.getUserPrmData(), bytearray([0x00, 0x00, 0x00, 0x42]))
 
@@ -23,6 +25,8 @@ class Test_GSD(TestCase):
 		gsd = pyprofibus.gsd.GsdInterp.fromFile(os.path.join("misc", "dummy_compact.gsd"))
 		self.assertEqual([ e.getDU()
 					for e in gsd.getCfgDataElements() ],
-				 [ [0x00, ], [0x10, ], [0x20, ], ])
+				 [ bytearray([0x00, ]),
+				   bytearray([0x10, ]),
+				   bytearray([0x20, ]), ])
 		self.assertEqual(gsd.getIdentNumber(), 0x4224)
 		self.assertEqual(gsd.getUserPrmData(), bytearray([0x00, 0x00, 0x00, 0x42]))
