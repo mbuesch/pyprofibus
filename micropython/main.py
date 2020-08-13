@@ -1,5 +1,5 @@
 print("main.py")
-
+import machine, gc
 
 # Start the pyprofibus application.
 # Modify this to your needs.
@@ -9,17 +9,17 @@ def start_pyprofibus():
 
 	# Start dummy example that uses virtual bus hardware.
 	import example_dummy
-	example_dummy.main() # Run main loop
+	example_dummy.main(watchdog=watchdog) # Run main loop
 	return
 
 	# Start the S7-312-2DP example.
 	#import example_s7_315_2dp
-	#example_s7_315_2dp.main() # Run main loop
+	#example_s7_315_2dp.main(watchdog=watchdog) # Run main loop
 	#return
 
 	# Start the ET200S example.
 	#import example_et200s
-	#example_et200s.main() # Run main loop
+	#example_et200s.main(watchdog=watchdog) # Run main loop
 	#return
 
 
@@ -29,7 +29,6 @@ count = 0
 while True:
 	try:
 		count += 1
-		import gc
 		gc.collect()
 		start_pyprofibus()
 	except KeyboardInterrupt as e:
@@ -42,6 +41,5 @@ while True:
 	try:
 		if count >= 5:
 			count = 0
-			import machine
 			machine.reset()
 	except: pass

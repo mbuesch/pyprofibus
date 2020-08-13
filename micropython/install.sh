@@ -24,11 +24,6 @@ rootpath()
 	realpath --relative-base="$rootdir" "$@"
 }
 
-pyboard()
-{
-	"$pyboard" -d "$dev" "$@" || die "pyboard: $pyboard failed."
-}
-
 build()
 {
 	echo "=== build ==="
@@ -68,6 +63,27 @@ build()
 	done
 }
 
+pyboard()
+{
+	echo "$pyboard -d $dev $*"
+	"$pyboard" -d "$dev" "$@" || die "pyboard: $pyboard failed."
+}
+
+feed_watchdog()
+{
+	pyboard -c 'import machine as m;m.WDT(0,5000)'
+}
+
+reboot_dev()
+{
+	pyboard --no-follow -c 'import machine as m;m.reset()'
+}
+
+format_flash()
+{
+	pyboard -c 'import flashbdev as f, uos as u; u.umount("/"); u.VfsLfs2.mkfs(f.bdev); u.mount(u.VfsLfs2(f.bdev), "/")'
+}
+
 transfer()
 {
 	local from="$1"
@@ -87,11 +103,14 @@ transfer_to_device()
 {
 	echo "=== transfer to device $dev ==="
 
-	pyboard -c 'import flashbdev, uos; uos.umount("/"); uos.VfsLfs2.mkfs(flashbdev.bdev); uos.mount(uos.VfsLfs2(flashbdev.bdev), "/")'
-	for f in $builddir/*; do
+	feed_watchdog
+	format_flash
+	reboot_dev
+	sleep 2
+	for f in "$builddir"/*; do
 		transfer "$f" :/"$(basename $f)"
 	done
-	pyboard --no-follow -c 'import machine; machine.reset()'
+	reboot_dev
 }
 
 builddir="$rootdir/build/micropython"

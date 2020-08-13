@@ -6,7 +6,7 @@ SRCDIR		:= .
 BUILDDIR	:= $(SRCDIR)/build/micropython
 
 MARCH		:= xtensa
-MPYCROSS_OPTS	:=
+MPYCROSS_OPTS	:= -O0
 GSDPARSER_OPTS	:= --dump-strip --dump-notext --dump-noextuserprmdata
 
 MPYCROSS	:= mpy-cross

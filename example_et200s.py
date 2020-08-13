@@ -24,7 +24,7 @@
 
 import pyprofibus
 
-def main():
+def main(watchdog=None):
 	master = None
 	try:
 		# Parse the config file.
@@ -73,6 +73,10 @@ def main():
 					# In our example the output data shall be a mirror of the input.
 					outData[handledSlaveDesc.name][0] = inData[0] & 3
 					outData[handledSlaveDesc.name][1] = (inData[0] >> 2) & 3
+
+			# Feed the system watchdog, if it is available.
+			if watchdog is not None:
+				watchdog()
 
 	except pyprofibus.ProfibusError as e:
 		print("Terminating: %s" % str(e))

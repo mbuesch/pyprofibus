@@ -1,3 +1,7 @@
+# Start the watchdog first.
+import machine
+watchdog = machine.WDT(timeout=5000).feed
+
 print("boot.py")
 import sys, gc
 

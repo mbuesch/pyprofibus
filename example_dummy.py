@@ -6,7 +6,7 @@
 
 import pyprofibus
 
-def main():
+def main(watchdog=None):
 	master = None
 	try:
 		# Parse the config file.
@@ -56,6 +56,10 @@ def main():
 					# In our example the output data shall be the inverted input.
 					outData[handledSlaveDesc.name][0] = inData[1]
 					outData[handledSlaveDesc.name][1] = inData[0]
+
+			# Feed the system watchdog, if it is available.
+			if watchdog is not None:
+				watchdog()
 
 	except pyprofibus.ProfibusError as e:
 		print("Terminating: %s" % str(e))
