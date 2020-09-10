@@ -1,5 +1,5 @@
 print("main.py")
-import machine, gc
+import machine, gc, sys
 
 # Start the pyprofibus application.
 # Modify this to your needs.
@@ -35,7 +35,8 @@ while True:
 		raise e
 	except Exception as e:
 		try:
-			print("FATAL exception: " + str(e))
+			print("FATAL exception:")
+			sys.print_exception(e)
 		except: pass
 	except: pass
 	try:
