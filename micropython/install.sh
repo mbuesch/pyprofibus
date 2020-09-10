@@ -52,6 +52,7 @@ build()
 		echo "--- $target ---"
 		make -j "$(getconf _NPROCESSORS_ONLN)" -f "$rootdir/micropython/Makefile" \
 			SRCDIR="$(rootpath -m "$rootdir")" \
+			MAINPYDIR="$(rootpath -m "$rootdir/micropython")" \
 			BUILDDIR="$builddir" \
 			MPYCROSS="$mpycross" \
 			MARCH="$march" \
@@ -69,11 +70,6 @@ pyboard()
 	"$pyboard" -d "$dev" "$@" || die "pyboard: $pyboard failed."
 }
 
-feed_watchdog()
-{
-	pyboard -c 'import machine as m;m.WDT(0,5000)'
-}
-
 reboot_dev()
 {
 	pyboard --no-follow -c 'import machine as m;m.reset()'
@@ -81,7 +77,14 @@ reboot_dev()
 
 format_flash()
 {
-	pyboard -c 'import flashbdev as f, uos as u; u.umount("/"); u.VfsLfs2.mkfs(f.bdev); u.mount(u.VfsLfs2(f.bdev), "/")'
+	local wd_timeout="5000"
+
+	local cmd="import machine as m, flashbdev as f, uos as u;"
+	cmd="${cmd}m.WDT(0,${wd_timeout}).feed();"
+	cmd="${cmd}u.umount('/');"
+	cmd="${cmd}u.VfsLfs2.mkfs(f.bdev);"
+	cmd="${cmd}u.mount(u.VfsLfs2(f.bdev), '/');"
+	pyboard -c "$cmd"
 }
 
 transfer()
@@ -103,7 +106,6 @@ transfer_to_device()
 {
 	echo "=== transfer to device $dev ==="
 
-	feed_watchdog
 	format_flash
 	reboot_dev
 	sleep 2
@@ -116,7 +118,7 @@ transfer_to_device()
 builddir="$rootdir/build/micropython"
 buildonly=0
 dev="/dev/ttyUSB0"
-march="xtensa"
+march="xtensawin"
 pyboard="pyboard.py"
 mpycross="mpy-cross"
 modules=
@@ -140,7 +142,7 @@ while [ $# -ge 1 ]; do
 		echo " -B|--build-dir DIR  Set the build directory."
 		echo "                     Default: build/micropython"
 		echo " -a|--march ARCH     Target architecture for cross compile."
-		echo "                     Default: xtensa"
+		echo "                     Default: xtensawin"
 		echo " -m|--module NAME    Include GSD module NAME."
 		echo "                     Can be specified multiple times for multiple modules."
 		echo "                     Enter your 'module_X' names from your configuration here."

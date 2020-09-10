@@ -1,11 +1,14 @@
 PYS		:=
+BOOTPY		:= boot.py
+MAINPY		:= main.py
+MAINPYDIR	:=
 GSDS		:=
 CONFS		:=
 
-SRCDIR		:= .
-BUILDDIR	:= $(SRCDIR)/build/micropython
+SRCDIR		:=
+BUILDDIR	:=
 
-MARCH		:= xtensa
+MARCH		:= xtensawin
 MPYCROSS_OPTS	:= -O0
 GSDPARSER_OPTS	:= --dump-strip --dump-notext --dump-noextuserprmdata
 
@@ -24,8 +27,8 @@ _MPYCROSS	= $(MPYCROSS) "$(1)" -s "$(2)" -march="$(MARCH)" $(MPYCROSS_OPTS) -o "
 all: $(call _MPYS,$(PYS),$(BUILDDIR)) \
      $(call _GSDMPYS,$(GSDS),$(BUILDDIR)) \
      $(call _CONFS,$(CONFS),$(BUILDDIR)) \
-     $(BUILDDIR)/boot.py \
-     $(BUILDDIR)/main.py
+     $(BUILDDIR)/$(BOOTPY) \
+     $(BUILDDIR)/$(MAINPY)
 
 $(BUILDDIR)/%.mpy: %.py
 	@$(MKDIR) -p "$(dir $@)"
@@ -41,7 +44,7 @@ $(BUILDDIR)/%.conf: %.conf
 	@$(MKDIR) -p "$(dir $@)"
 	$(CP) "$<" "$@"
 
-$(BUILDDIR)/boot.py $(BUILDDIR)/main.py: $(BUILDDIR)/%.py: $(SRCDIR)/micropython/%.py
+$(BUILDDIR)/$(BOOTPY) $(BUILDDIR)/$(MAINPY): $(BUILDDIR)/%.py: $(MAINPYDIR)/%.py
 	@$(MKDIR) -p "$(dir $@)"
 	$(CP) "$<" "$@"
 
