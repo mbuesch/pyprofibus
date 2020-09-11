@@ -1,3 +1,6 @@
 [submodule "phy_fpga/crcgen"]
 	path = phy_fpga/crcgen
 	url = https://git.bues.ch/git/crcgen.git
+[submodule "phy_fpga/fpgamakelib"]
+	path = phy_fpga/fpgamakelib
+	url = https://git.bues.ch/git/fpgamakelib.git

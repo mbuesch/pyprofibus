@@ -60,18 +60,18 @@ GNU make an other standard GNU/Linux shell utilities
 Downloading and installing all toolchain tools
 ----------------------------------------------
 
-The script `build_toolchain.sh` that is included in the pyprofibus archive can be used to download, build and install all FPGA toolchain tools to the `$HOME` directory.
+The script `build_fpga_toolchain.sh` that is included in the pyprofibus archive can be used to download, build and install all FPGA toolchain tools to the `$HOME` directory.
 
 Just run the script as follows. It will download all required packages, build and install everything to `$HOME/fpga-toolchain` by default.
 
 .. code:: sh
 
-	cd phy_fpga
-	./build_toolchain.sh
+	cd phy_fpga/fpgamakelib
+	./build_fpga_toolchain.sh
 
-After successful execution of `build_toolchain.sh` please read the information about `$PATH` that the script prints to the console. The line printed by the script shall be added to your `$HOME/.bashrc`
+After successful execution of `build_fpga_toolchain.sh` please read the information about `$PATH` that the script prints to the console. The line printed by the script shall be added to your `$HOME/.bashrc`
 
-No changes to the operating system are necessary. Do *not* run `build_toolchain.sh` as root.
+No changes to the operating system are necessary. Do *not* run `build_fpga_toolchain.sh` as root.
 
 The toolchain can be uninstalled by simply deleting the directory `$HOME/fpga-toolchain`
 
