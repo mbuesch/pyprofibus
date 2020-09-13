@@ -1,13 +1,17 @@
 pyprofibus - PROFIBUS-DP stack
 ==============================
 
+`https://bues.ch/a/profibus <https://bues.ch/a/profibus>`_
+
 pyprofibus is an Open Source `PROFIBUS-DP <https://en.wikipedia.org/wiki/Profibus>`_ stack written in Python.
 
 
 Hardware
 ========
 
-What hardware can pyprofibus be run on? Please read the hardware documentation for more information:
+pyprofibus is able to run on any machine that supports Python. It also runs on embedded machines such as the `Raspberry Pi <https://en.wikipedia.org/wiki/Raspberry_Pi>`_ or even tiny microcontrollers such as the `ESP32 <https://en.wikipedia.org/wiki/ESP32>`_ (Micropython).
+
+Please read the hardware documentation for more information:
 
 `pyprofibus hardware documentation <doc/hardware.html>`_
 
@@ -42,7 +46,7 @@ Dependencies
 ============
 
 * `Python <https://www.python.org/>`_ 3.4 or later.
-* Or alternatively `Micropython <https://micropython.org/>`_. Please see the `pyprofibus Micropython help <micropython/README.html>`_ for more info.
+* Or alternatively `Micropython <https://micropython.org/>`_. Please see the `pyprofibus Micropython help <micropython/README.html>`_ for more information.
 
 
 License
