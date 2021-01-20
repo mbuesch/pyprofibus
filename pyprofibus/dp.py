@@ -305,7 +305,7 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 		     dsap=DpTelegram.SSAP_MS0,
 		     ssap=DpTelegram.DSAP_SLAVE_DIAG):
 		DpTelegram.__init__(self, da=da, sa=sa, fc=fc,
-			dsap=dsap, ssap=ssap)
+				    dsap=dsap, ssap=ssap)
 		self.b0 = 0
 		self.b1 = 0
 		self.b2 = 0
@@ -376,19 +376,20 @@ class DpTelegram_SlaveDiag_Con(DpTelegram):
 	def hasOnebit(self):
 		return (self.b1 & self.B1_ONE) != 0
 
+	def prmReq(self):
+		return (self.b1 & self.B1_PRMREQ) != 0
+
 	def needsNewPrmCfg(self):
-		return ((self.b0 & self.B0_CFGFLT) != 0 or\
-			(self.b0 & self.B0_PRMFLT) != 0 or\
+		return ((self.b0 & self.B0_CFGFLT) != 0 or
+			(self.b0 & self.B0_PRMFLT) != 0 or
 			(self.b1 & self.B1_PRMREQ) != 0)
 
 	def isReadyDataEx(self):
-		return not ((self.b0 & (\
-			     self.B0_STANOEX |\
-			     self.B0_STANORDY |\
-			     self.B0_CFGFLT |\
-			     self.B0_PRMFLT)) != 0 or\
-			    (self.b1 & (\
-			     self.B1_PRMREQ)) != 0)
+		return ((self.b0 & (self.B0_STANOEX |
+				    self.B0_STANORDY |
+				    self.B0_CFGFLT |
+				    self.B0_PRMFLT)) == 0 and
+			(self.b1 & (self.B1_PRMREQ)) == 0)
 
 class DpTelegram_SetPrm_Req(DpTelegram):
 	# Station status

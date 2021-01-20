@@ -529,6 +529,10 @@ class DpMaster(object):
 						self.__errorMsg("Slave %d reports a faulty "
 							"parameterization (Set_Prm)." %\
 							slave.slaveDesc.slaveAddr)
+					if telegram.prmReq():
+						self.__debugMsg("Slave %d requests a new "
+							"parameterization (Set_Prm)." %\
+							slave.slaveDesc.slaveAddr)
 					if telegram.isNotSupp():
 						self.__errorMsg("Slave %d replied with "
 							"\"function not supported\". "
@@ -543,9 +547,9 @@ class DpMaster(object):
 						self.__debugMsg("Slave %d diagnostic "
 							"always-one-bit is zero." %\
 							slave.slaveDesc.slaveAddr)
-
 					if telegram.hasExtDiag():
 						pass#TODO turn on red DIAG-LED
+
 					if telegram.isReadyDataEx():
 						slave.setState(slave.STATE_DX)
 						return None
