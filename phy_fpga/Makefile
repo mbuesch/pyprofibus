@@ -26,7 +26,7 @@ CLEAN_FILES	:= crcgen.stamp
 include fpgamakelib/fpgamakelib.mk
 
 crcgen.stamp:
-	$(TEST) -f ./crcgen/crcgen/__main__.py || $(GIT) submodule update --init
+	$(TEST) -f ./crcgen/crcgen || $(GIT) submodule update --init
 	$(TOUCH) $@
 
 crc8_func.v: crcgen.stamp
