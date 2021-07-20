@@ -52,6 +52,6 @@ Dependencies
 License
 =======
 
-Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
+Copyright (c) 2013-2021 Michael Buesch <m@bues.ch>
 
 Licensed under the terms of the GNU General Public License version 2, or (at your option) any later version.
