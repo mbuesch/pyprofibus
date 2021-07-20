@@ -208,7 +208,7 @@ class PbConf(object):
 
 				mods = [ o for o in p.options(section)
 					 if self.__reMod.match(o) ]
-				mods.sort(key = lambda o: self.__reMod.match(o).group(1))
+				mods.sort(key = lambda o: int(self.__reMod.match(o).group(1)))
 				if s.gsd.isModular():
 					for option in mods:
 						s.gsd.setConfiguredModule(get(section, option))
