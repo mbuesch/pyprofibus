@@ -3,11 +3,11 @@ Maintainer: Michael Buesch <m@bues.ch>
 Section: python
 Priority: optional
 Build-Depends: dh-python,
-               python3-all-dev (>= 3.4.2-2),
+               python3-all-dev (>= 3.7),
                python3-setuptools,
                debhelper (>= 9)
-Standards-Version: 3.9.6
-X-Python3-Version: >= 3.4
+Standards-Version: 4.5.1
+X-Python3-Version: >= 3.7
 Vcs-Git: git://git.bues.ch/pyprofibus.git
 Vcs-Browser: https://bues.ch/gitweb?p=pyprofibus.git
 Homepage: https://bues.ch/a/profibus
@@ -16,8 +16,7 @@ Homepage: https://bues.ch/a/profibus
 Package: python3-pyprofibus
 Architecture: any
 Depends: ${misc:Depends},
-         ${python3:Depends},
-         ${shlibs:Depends}
+         ${python3:Depends}
 Description: PROFIBUS-DP stack (Python 3)
  pyprofibus is a PROFIBUS-DP stack written in Python.
 
@@ -26,8 +25,7 @@ Package: profisniff
 Architecture: any
 Depends: python3-pyprofibus,
          ${misc:Depends},
-         ${python3:Depends},
-         ${shlibs:Depends}
+         ${python3:Depends}
 Description: PROFIBUS-DP telegram sniffer (Python 3)
  PROFIBUS-DP telegram sniffer based on pyprofibus.
 
@@ -36,7 +34,6 @@ Package: gsdparser
 Architecture: any
 Depends: python3-pyprofibus,
          ${misc:Depends},
-         ${python3:Depends},
-         ${shlibs:Depends}
+         ${python3:Depends}
 Description: PROFIBUS-DP GSD file parser (Python 3)
  PROFIBUS-DP GSD file parser based on pyprofibus.
