@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Communication Processor PHY access library
 #
-# Copyright (c) 2013-2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -61,6 +61,9 @@ class CpPhy(object):
 	def _debugMsg(self, msg):
 		if self.debug:
 			print(self.PFX + str(msg))
+
+	def _warningMsg(self, msg):
+		print("%sWarning: %s" % (self.PFX, str(msg)))
 
 	def close(self):
 		"""Close the PHY device.

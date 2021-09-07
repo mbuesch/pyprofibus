@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Communication Processor PHY access library
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -47,6 +47,8 @@ class CpPhySerial(CpPhy):
 		"__rxBuf",
 		"__serial",
 	)
+
+	PFX = "PHY-serial: "
 
 	def __init__(self, port, useRS485Class=False, *args, **kwargs):
 		"""port => "/dev/ttySx"
@@ -137,6 +139,8 @@ class CpPhySerial(CpPhy):
 					if size < 0:
 						size = getSize(rxBuf)
 						if size < 0:
+							if self.debug and rxBuf:
+								self._debugMsg("RX (fragment)   %s" % bytesToHex(rxBuf))
 							rxBuf = bytearray()
 							self.__startDiscard()
 							raise PhyError("PHY-serial: "
@@ -156,6 +160,8 @@ class CpPhySerial(CpPhy):
 				    (timeout > 0.0 and monotonic_time() >= timeoutStamp)):
 					break
 		except serial.SerialException as e:
+			if self.debug and rxBuf:
+				self._debugMsg("RX (fragment)   %s" % bytesToHex(rxBuf))
 			rxBuf = bytearray()
 			self.__startDiscard()
 			raise PhyError("PHY-serial: Failed to receive "
@@ -163,7 +169,7 @@ class CpPhySerial(CpPhy):
 		finally:
 			self.__rxBuf = rxBuf
 		if self.debug and ret:
-			print("PHY-serial: RX   %s" % bytesToHex(ret))
+			self._debugMsg("RX   %s" % bytesToHex(ret))
 		return ret
 
 	def sendData(self, telegramData, srd):
@@ -171,7 +177,7 @@ class CpPhySerial(CpPhy):
 			return
 		try:
 			if self.debug:
-				print("PHY-serial: TX   %s" % bytesToHex(telegramData))
+				self._debugMsg("TX   %s" % bytesToHex(telegramData))
 			self.__serial.write(telegramData)
 		except serial.SerialException as e:
 			raise PhyError("PHY-serial: Failed to transmit "
@@ -182,14 +188,14 @@ class CpPhySerial(CpPhy):
 		if baudrate not in wellSuppBaud and not isMicropython:
 			# The hw/driver might silently ignore the baudrate
 			# and use the already set value from __init__().
-			print("PHY-serial: Warning: The configured baud rate %d baud "
-			      "might not be supported by the hardware. "
-			      "Note that some hardware silently falls back "
-			      "to 9600 baud for unsupported rates. "
-			      "Commonly well supported baud rates by serial "
-			      "hardware are: %s." % (
-			      baudrate,
-			      ", ".join(str(b) for b in wellSuppBaud)))
+			self._warningMsg("The configured baud rate %d baud "
+					 "might not be supported by the hardware. "
+					 "Note that some hardware silently falls back "
+					 "to 9600 baud for unsupported rates. "
+					 "Commonly well supported baud rates by serial "
+					 "hardware are: %s." % (
+					 baudrate,
+					 ", ".join(str(b) for b in wellSuppBaud)))
 		try:
 			if baudrate != self.__serial.baudrate or rtscts != self.__serial.rtscts or dsrdtr != self.__serial.dsrdtr:
 				self.__serial.close()
