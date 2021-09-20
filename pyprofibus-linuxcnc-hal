@@ -3,7 +3,7 @@
 #
 # PROFIBUS DP - LinuxCNC HAL module
 #
-# Copyright 2016-2019 Michael Buesch <m@bues.ch>
+# Copyright 2016-2021 Michael Buesch <m@bues.ch>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -290,6 +290,7 @@ class Worker(object):
 					txData = bytearray(slaveConf.outputSize)
 					for sig in slave.userData["activePbOutputs"]:
 						sig.fromHal(txData)
+					slave.setOutData(txData)
 			slave = master.run()
 			if slave:
 				slaveConf = slave.slaveConf
