@@ -2,7 +2,7 @@
 #
 # PROFIBUS - GSD file parser
 #
-# Copyright (c) 2016-2020 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -248,7 +248,7 @@ class GsdParser(object):
 	def __parseByteArray(cls, byteText):
 		data = byteText.split(",")
 		data = [ cls.__parseNum(d) for d in data ]
-		return bytes(data)
+		return bytes(bytearray(data))
 
 	def __trySimpleNum(self, line, name, hasOffset = False):
 		m = re.match(r'^' + name +\

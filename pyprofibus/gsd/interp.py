@@ -2,7 +2,7 @@
 #
 # PROFIBUS - GSD file interpreter
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -168,7 +168,7 @@ class GsdInterp(GsdParser):
 		def trunc(data, length, fieldname, extend = True):
 			if length is not None:
 				if extend:
-					data.extend(bytearray((0,) * (length - len(data))))
+					data.extend(bytearray(length - len(data)))
 				if len(data) > length:
 					self.__interpWarn("User_Prm_Data "
 						"truncated by %s" % fieldname)
