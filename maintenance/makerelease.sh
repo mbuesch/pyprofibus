@@ -33,9 +33,9 @@ hook_post_checkout()
 	rm -r "$1"/maintenance
 }
 
-hook_regression_tests()
+hook_testbuild()
 {
-	default_hook_regression_tests "$@"
+	default_hook_testbuild "$@"
 
 	if which mpy-cross >/dev/null 2>&1; then
 		# Try a Micropython test build.
@@ -43,6 +43,11 @@ hook_regression_tests()
 	else
 		warn "mpy-cross not available. Skipping Micropython test."
 	fi
+}
+
+hook_regression_tests()
+{
+	default_hook_regression_tests "$@"
 
 	# Run selftests
 	sh "$1/tests/run.sh"
