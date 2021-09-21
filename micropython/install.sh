@@ -19,20 +19,15 @@ echos()
 	printf '%s' "$*"
 }
 
-rootpath()
-{
-	realpath --relative-base="$rootdir" "$@"
-}
-
 build()
 {
 	echo "=== build ==="
 
 	cd "$rootdir" || die "Failed to switch to root dir."
 
-	local gsds="$(rootpath -e misc/*.gsd *.gsd)"
-	local pys="$(find pyprofibus/ -name '*.py') $(find stublibs/ -name '*.py') $(rootpath -e example_*.py)"
-	local confs="$(rootpath -e *.conf)"
+	local gsds="$(find . -maxdepth 1 -name '*.gsd') $(find misc/ -maxdepth 1 -name '*.gsd')"
+	local pys="$(find pyprofibus/ -name '*.py') $(find stublibs/ -name '*.py') $(find . -maxdepth 1 -name 'example_*.py')"
+	local confs="$(find . -maxdepth 1 -name '*.conf')"
 
 	local gsdparser_opts="--dump-strip --dump-notext --dump-noextuserprmdata \
 		--dump-module '6ES7 138-4CA01-0AA0 PM-E DC24V' \
@@ -51,8 +46,8 @@ build()
 	for target in $targets; do
 		echo "--- $target ---"
 		make -j "$(getconf _NPROCESSORS_ONLN)" -f "$rootdir/micropython/Makefile" \
-			SRCDIR="$(rootpath -m "$rootdir")" \
-			MAINPYDIR="$(rootpath -m "$rootdir/micropython")" \
+			SRCDIR="." \
+			MAINPYDIR="./micropython" \
 			BUILDDIR="$builddir" \
 			MPYCROSS="$mpycross" \
 			MARCH="$march" \

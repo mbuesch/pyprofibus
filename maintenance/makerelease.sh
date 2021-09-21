@@ -37,6 +37,13 @@ hook_regression_tests()
 {
 	default_hook_regression_tests "$@"
 
+	if which mpy-cross >/dev/null 2>&1; then
+		# Try a Micropython test build.
+		sh "$1/micropython/install.sh" --clean --build-only
+	else
+		warn "mpy-cross not available. Skipping Micropython test."
+	fi
+
 	# Run selftests
 	sh "$1/tests/run.sh"
 }
