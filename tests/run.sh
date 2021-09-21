@@ -52,6 +52,9 @@ run_testdir()
 	export PYTHONWARNINGS=once
 	export PYTHONHASHSEED=random
 
+	if python2 -c 'import serial' >/dev/null 2>&1; then
+		run_pyunit python2 "$test_dir"
+	fi
 	run_pyunit python3 "$test_dir"
 	run_pyunit pypy3 "$test_dir"
 }
