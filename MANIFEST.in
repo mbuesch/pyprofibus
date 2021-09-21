@@ -10,6 +10,7 @@ graft tests
 
 include COPYING
 include README.html
+include README.md
 include README.rst
 include example_*.conf
 include example_*.py
