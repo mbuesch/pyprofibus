@@ -5,7 +5,7 @@ Priority: optional
 Build-Depends: dh-python,
                python3-all-dev (>= 3.7),
                python3-setuptools,
-               debhelper (>= 9)
+               debhelper (>= 10)
 Standards-Version: 4.5.1
 X-Python3-Version: >= 3.7
 Vcs-Git: git://git.bues.ch/pyprofibus.git
