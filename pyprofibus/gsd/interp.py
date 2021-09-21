@@ -168,7 +168,7 @@ class GsdInterp(GsdParser):
 		def trunc(data, length, fieldname, extend = True):
 			if length is not None:
 				if extend:
-					data.extend(bytearray(length - len(data)))
+					data.extend(bytearray(max(length - len(data), 0)))
 				if len(data) > length:
 					self.__interpWarn("User_Prm_Data "
 						"truncated by %s" % fieldname)
