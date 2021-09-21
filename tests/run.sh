@@ -33,6 +33,11 @@ run_pyunit()
 	) || die
 }
 
+test_interpreter()
+{
+	"$1" -c 'import serial' >/dev/null 2>&1
+}
+
 # $1=test_dir
 run_testdir()
 {
@@ -52,11 +57,22 @@ run_testdir()
 	export PYTHONWARNINGS=once
 	export PYTHONHASHSEED=random
 
-	if python2 -c 'import serial' >/dev/null 2>&1; then
+	local exec_any=0
+	if test_interpreter python2; then
 		run_pyunit python2 "$test_dir"
+		local exec_any=1
 	fi
-	run_pyunit python3 "$test_dir"
-	run_pyunit pypy3 "$test_dir"
+	if test_interpreter python3; then
+		run_pyunit python3 "$test_dir"
+		local exec_any=1
+	fi
+	if test_interpreter pypy3; then
+		run_pyunit pypy3 "$test_dir"
+		local exec_any=1
+	fi
+	if [ $exec_any -eq 0 ]; then
+		die "Failed to find any usable Python interpreter."
+	fi
 }
 
 run_tests()
