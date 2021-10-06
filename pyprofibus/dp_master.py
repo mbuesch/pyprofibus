@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Master
 #
-# Copyright (c) 2013-2020 Michael Buesch <m@bues.ch>
+# Copyright (c) 2013-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -156,42 +156,42 @@ class DpSlaveDesc(object):
 	"""
 
 	__slots__ = (
-		"index",
-		"name",
-		"chkCfgTelegram",
 		"dpm",
 		"gsd",
-		"identNumber",
-		"setPrmTelegram",
-		"setPrmTelegram",
 		"slaveAddr",
+		"identNumber",
+		"name",
+		"index",
+		"inputSize",
+		"outputSize",
 		"slaveConf",
 		"userData",
+		"setPrmTelegram",
+		"chkCfgTelegram",
 	)
 
-	def __init__(self,
-		     gsd,
-		     slaveAddr,
-		     slaveConf=None):
-		self.gsd = gsd
-		self.slaveAddr = slaveAddr
-		self.slaveConf = slaveConf
-		self.identNumber = gsd.getIdentNumber() if gsd else 0
+	def __init__(self, slaveConf=None):
 		self.dpm = None
-		self.name = None
-		self.index = None
+		self.gsd = slaveConf.gsd if slaveConf else None
+		self.slaveAddr = slaveConf.addr if slaveConf else None
+		self.identNumber = self.gsd.getIdentNumber() if self.gsd else 0
+		self.name = slaveConf.name if slaveConf else None
+		self.index = slaveConf.index if slaveConf else None
+		self.inputSize = slaveConf.inputSize if slaveConf else None
+		self.outputSize = slaveConf.outputSize if slaveConf else None
+		self.slaveConf = slaveConf
 		self.userData = {} # For use by application code.
 
 		# Prepare a Set_Prm telegram.
 		self.setPrmTelegram = DpTelegram_SetPrm_Req(
-					da = self.slaveAddr,
-					sa = None)
+					da=self.slaveAddr,
+					sa=None)
 		self.setPrmTelegram.identNumber = self.identNumber
 
 		# Prepare a Chk_Cfg telegram.
 		self.chkCfgTelegram = DpTelegram_ChkCfg_Req(
-					da = self.slaveAddr,
-					sa = None)
+					da=self.slaveAddr,
+					sa=None)
 
 	def setCfgDataElements(self, cfgDataElements):
 		"""Sets DpCfgDataElement()s from the specified list
@@ -314,8 +314,8 @@ class DpMaster(object):
 		self.fdlTrans = FdlTransceiver(self.phy)
 		self.dpTrans = DpTransceiver(self.fdlTrans, thisIsMaster=True)
 
-		mcastSlaveDesc = DpSlaveDesc(gsd=None,
-					     slaveAddr=FdlTelegram.ADDRESS_MCAST)
+		mcastSlaveDesc = DpSlaveDesc()
+		mcastSlaveDesc.slaveAddr = FdlTelegram.ADDRESS_MCAST
 		mcastSlave = DpSlaveState(self, mcastSlaveDesc)
 
 		self.__slaveDescs = {

@@ -3,7 +3,9 @@ from pyprofibus_tstlib import *
 initTest(__file__)
 
 import pyprofibus
+import pyprofibus.conf
 import pyprofibus.dp
+import pyprofibus.dp_master
 import pyprofibus.phy_dummy
 import pyprofibus.phy_serial
 
@@ -17,8 +19,9 @@ class Test_DummyPhy(TestCase):
 					 masterAddr=42,
 					 debug=True)
 
-		slaveDesc = pyprofibus.DpSlaveDesc(gsd=None,
-						   slaveAddr=84)
+		conf = pyprofibus.conf.PbConf._SlaveConf()
+		conf.addr = 84
+		slaveDesc = pyprofibus.dp_master.DpSlaveDesc(conf)
 
 		slaveDesc.setCfgDataElements([
 			pyprofibus.dp.DpCfgDataElement(pyprofibus.dp.DpCfgDataElement.ID_TYPE_OUT),

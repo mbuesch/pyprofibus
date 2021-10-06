@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Configuration file parser
 #
-# Copyright (c) 2016-2019 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -56,11 +56,7 @@ class PbConf(object):
 			"""Create a DpSlaveDesc instance based on the configuration.
 			"""
 			from pyprofibus.dp_master import DpSlaveDesc
-			slaveDesc = DpSlaveDesc(gsd=self.gsd,
-						slaveAddr=self.addr,
-						slaveConf=self)
-			slaveDesc.index = self.index
-			slaveDesc.name = self.name
+			slaveDesc = DpSlaveDesc(self)
 
 			# Create Chk_Cfg telegram
 			slaveDesc.setCfgDataElements(self.gsd.getCfgDataElements())
