@@ -21,6 +21,8 @@ class Test_DummyPhy(TestCase):
 
 		conf = pyprofibus.conf.PbConf._SlaveConf()
 		conf.addr = 84
+		conf.inputSize = 1
+		conf.outputSize = 1
 		slaveDesc = pyprofibus.dp_master.DpSlaveDesc(conf)
 
 		slaveDesc.setCfgDataElements([

@@ -62,6 +62,7 @@ class DpSlaveState(object):
 		"__state",
 		"__stateTimeout",
 		"dxStartTime",
+		"firstDxCycle",
 		"faultDeb",
 		"fcb",
 		"master",
@@ -123,6 +124,8 @@ class DpSlaveState(object):
 	def setState(self, state, stateTimeLimit=None):
 		if stateTimeLimit is None:
 			stateTimeLimit = self.stateTimeLimits[state]
+		if state == self.STATE_INIT:
+			self.firstDxCycle = True
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeLimit)
 		self.master.phy.clearTxQueueAddr(self.slaveDesc.slaveAddr)
@@ -177,8 +180,8 @@ class DpSlaveDesc(object):
 		self.identNumber = self.gsd.getIdentNumber() if self.gsd else 0
 		self.name = slaveConf.name if slaveConf else None
 		self.index = slaveConf.index if slaveConf else None
-		self.inputSize = slaveConf.inputSize if slaveConf else None
-		self.outputSize = slaveConf.outputSize if slaveConf else None
+		self.inputSize = slaveConf.inputSize if slaveConf else 0
+		self.outputSize = slaveConf.outputSize if slaveConf else 0
 		self.slaveConf = slaveConf
 		self.userData = {} # For use by application code.
 
@@ -358,6 +361,9 @@ class DpMaster(object):
 	def addSlave(self, slaveDesc):
 		"""Register a slave."""
 
+		if slaveDesc.inputSize <= 0:
+			raise DpError("Slave %d: input_size=0 is currently not supported." % slaveAddr)
+
 		slaveAddr = slaveDesc.slaveAddr
 		if slaveAddr in self.__slaveDescs or\
 		   slaveAddr in self.__slaveStates:
@@ -535,46 +541,54 @@ class DpMaster(object):
 						self.__errorMsg("Slave %d is not reachable "
 							"via this line." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.cfgFault():
 						self.__errorMsg("Slave %d reports a faulty "
 							"configuration (Chk_Cfg)." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.prmFault():
 						self.__errorMsg("Slave %d reports a faulty "
 							"parameterization (Set_Prm)." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.prmReq():
 						self.__debugMsg("Slave %d requests a new "
 							"parameterization (Set_Prm)." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.isNotSupp():
 						self.__errorMsg("Slave %d replied with "
 							"\"function not supported\". "
 							"The parameters should be checked "
 							"(Set_Prm)." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.masterLock():
 						self.__errorMsg("Slave %d is already controlled "
 							"(locked to) another DP-master." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if not telegram.hasOnebit():
 						self.__debugMsg("Slave %d diagnostic "
 							"always-one-bit is zero." %\
 							slave.slaveDesc.slaveAddr)
+						slave.faultDeb.fault()
 					if telegram.hasExtDiag():
 						pass#TODO turn on red DIAG-LED
+						slave.faultDeb.fault()
 
 					if telegram.isReadyDataEx():
 						slave.setState(slave.STATE_DX)
 						return None
-					elif telegram.needsNewPrmCfg():
+					if telegram.needsNewPrmCfg():
 						slave.setState(slave.STATE_INIT)
 						return None
 					break
 				else:
 					self.__debugMsg("Received spurious "
 						"telegram:\n%s" % str(telegram))
-
+					slave.faultDeb.fault()
 		if (not slave.pendingReq or
 		    slave.pendingReqTimeout.exceed()):
 			ok = self.__send(slave,
@@ -584,79 +598,108 @@ class DpMaster(object):
 					 timeout=0.05)
 			if not ok:
 				self.__debugMsg("SlaveDiag_Req failed")
+				slave.faultDeb.fault()
 				return None
+		self.__checkFaultDeb(slave, False)
 		return None
 
 	def __runSlave_dataExchange(self, slave):
-		#TODO: add support for in/out-only slaves
 		dataExInData = None
 
 		if slave.stateJustEntered():
-			self.__debugMsg("Initialization finished. "
-				"Running Data_Exchange with slave %d..." %\
-				slave.slaveDesc.slaveAddr)
+			self.__debugMsg("%sRunning Data_Exchange with slave %d..." % (
+				"Initialization finished. " if slave.firstDxCycle else "",
+				slave.slaveDesc.slaveAddr))
 			slave.flushRxQueue()
+			slave.faultDeb.ok()
 			slave.dxStartTime = monotonic_time()
+			slave.firstDxCycle = False
 
+		slaveOutputSize = slave.slaveDesc.outputSize
 		if slave.pendingReq:
 			for telegram in slave.getRxQueue():
-				if not DpTelegram_DataExchange_Con.checkType(telegram):
+				if slaveOutputSize == 0:
+					# This slave should not send any data.
 					self.__debugMsg("Ignoring telegram in "
 						"DataExchange with slave %d:\n%s" %(
 						slave.slaveDesc.slaveAddr, str(telegram)))
 					slave.faultDeb.fault()
 					continue
-				resFunc = telegram.fc & FdlTelegram.FC_RESFUNC_MASK
-				if resFunc in (FdlTelegram.FC_DH,
-					       FdlTelegram.FC_RDH,):
-					self.__debugMsg("Slave %d requested diagnostics." %\
-						slave.slaveDesc.slaveAddr)
-					slave.setState(slave.STATE_WDXRDY, 0.2)
-				elif resFunc == FdlTelegram.FC_RS:
-					raise DpError("Service not active "
-						"on slave %d" % slave.slaveDesc.slaveAddr)
-				dataExInData = telegram.getDU()
-
-			if dataExInData is None:
-				if slave.pendingReqTimeout.exceed():
-					self.__debugMsg("Data_Exchange timeout with slave %d" % (
-							slave.slaveDesc.slaveAddr))
-					slave.faultDeb.fault()
-					slave.pendingReq = None
-			else:
+				else:
+					# This slave is supposed to send some data.
+					# Get it.
+					if not DpTelegram_DataExchange_Con.checkType(telegram):
+						self.__debugMsg("Ignoring telegram in "
+							"DataExchange with slave %d:\n%s" %(
+							slave.slaveDesc.slaveAddr, str(telegram)))
+						slave.faultDeb.fault()
+						continue
+					resFunc = telegram.fc & FdlTelegram.FC_RESFUNC_MASK
+					if resFunc in (FdlTelegram.FC_DH, FdlTelegram.FC_RDH):
+						self.__debugMsg("Slave %d requested diagnostics." %\
+							slave.slaveDesc.slaveAddr)
+						slave.setState(slave.STATE_WDXRDY, 0.2)
+					elif resFunc == FdlTelegram.FC_RS:
+						raise DpError("Service not active "
+							"on slave %d" % slave.slaveDesc.slaveAddr)
+					dataExInData = telegram.getDU()
+			if (dataExInData is not None or
+			    (slaveOutputSize == 0 and slave.shortAckReceived)):
 				# We received some data.
 				slave.pendingReq = None
 				slave.faultDeb.ok()
 				slave.restartStateTimeout()
 				self._releaseSlave(slave)
+			else:
+				# No data or ack received from slave.
+				if slave.pendingReqTimeout.exceed():
+					self.__debugMsg("Data_Exchange timeout with slave %d" % (
+							slave.slaveDesc.slaveAddr))
+					slave.faultDeb.fault()
+					slave.pendingReq = None
 		else:
-			# Send the out data telegram, if any.
-			toSlaveData = slave.toSlaveData
-			if toSlaveData is not None:
-				ok = self.__send(slave,
-						 telegram=DpTelegram_DataExchange_Req(
-							da=slave.slaveDesc.slaveAddr,
-							sa=self.masterAddr,
-							du=toSlaveData),
-						 timeout=0.1)
-				if not ok:
-					self.__debugMsg("DataExchange_Req failed")
-					return None
-				# We sent it. Reset the data.
-				slave.toSlaveData = None
+			if slaveOutputSize == 0 and False: #TODO diag request.
+				slave.setState(slave.STATE_WDXRDY, 0.2)
+			else:
+				# Send the out data telegram, if any.
+				toSlaveData = slave.toSlaveData
+				if toSlaveData is not None:
+					if slave.slaveDesc.inputSize == 0:
+						self.__debugMsg("Got data for slave, "
+								"but slave does not expect any input data.")
+					else:
+						ok = self.__send(slave,
+								 telegram=DpTelegram_DataExchange_Req(
+									da=slave.slaveDesc.slaveAddr,
+									sa=self.masterAddr,
+									du=toSlaveData),
+								 timeout=0.1)
+						if ok:
+							# We sent it. Reset the data.
+							slave.toSlaveData = None
+						else:
+							self.__debugMsg("DataExchange_Req failed")
+							slave.faultDeb.fault()
+		if self.__checkFaultDeb(slave, True):
+			return None
+		return dataExInData
 
+	def __checkFaultDeb(self, slave, inDataExchange):
 		faultCount = slave.faultDeb.get()
 		if faultCount >= 5:
 			# communication lost
-			self.__debugMsg("Communication lost in Data_Exchange.")
+			self.__debugMsg("Communication lost in Data_Exchange or Slave_Diag.")
 			slave.setState(slave.STATE_INIT)
-		elif faultCount >= 3 and monotonic_time() >= slave.dxStartTime + 0.2:
+			return True
+		elif (faultCount >= 3 and
+		      inDataExchange and
+		      (monotonic_time() >= slave.dxStartTime + 0.2 or slave.slaveDesc.outputSize == 0)):
 			# Diagnose the slave
 			self.__debugMsg("Many errors in Data_Exchange. "
-				"Requesting diagnostic information...")
+					"Requesting diagnostic information...")
 			slave.setState(slave.STATE_WDXRDY, 0.2)
-
-		return dataExInData
+			return True
+		return False
 
 	__slaveStateHandlers = {
 		DpSlaveState.STATE_INIT		: __runSlave_init,
