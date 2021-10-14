@@ -37,7 +37,7 @@ class Test_DummyPhy(TestCase):
 
 		# Run slave initialization state machine.
 		for i in range(25):
-			slaveDesc.setOutData(bytearray([1, ]))
+			slaveDesc.setMasterOutData(bytearray([1, ]))
 			master.run()
 		# Check dummy-slave response to Data_Exchange.
 		for i in range(100):
@@ -46,9 +46,9 @@ class Test_DummyPhy(TestCase):
 			while True:
 				j += 1
 				self.assertTrue(j < 10)
-				slaveDesc.setOutData(bytearray([i, ]))
+				slaveDesc.setMasterOutData(bytearray([i, ]))
 				master.run()
-				ret = slaveDesc.getInData()
+				ret = slaveDesc.getMasterInData()
 				if j >= 5 and ret is not None:
 					break
 			self.assertEqual(bytearray(ret), bytearray([i ^ 0xFF, ]))

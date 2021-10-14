@@ -64,9 +64,9 @@ class DpSlaveState(object):
 		"dxStartTime",
 		"faultDeb",
 		"fcb",
-		"inData",
 		"master",
-		"outData",
+		"fromSlaveData",
+		"toSlaveData",
 		"pendingReq",
 		"pendingReqTimeout",
 		"rxQueue",
@@ -103,8 +103,8 @@ class DpSlaveState(object):
 		self.rxQueue = []
 
 		# In/Out user data
-		self.outData = None
-		self.inData = None
+		self.toSlaveData = None
+		self.fromSlaveData = None
 
 	def getRxQueue(self):
 		rxQueue = self.rxQueue
@@ -257,11 +257,25 @@ class DpSlaveDesc(object):
 		self.setPrmTelegram.wdFact1 = fact1
 		self.setPrmTelegram.wdFact2 = fact2
 
+	def setMasterOutData(self, data):
+		"""Set the master-out-data that will be sent the
+		next time we are able to send something to that slave.
+		"""
+		self.dpm._setToSlaveData(self, data)
+
+	def getMasterInData(self):
+		"""Get the latest received master-in-data.
+		Returns None, if there was no received data.
+		"""
+		return self.dpm._getFromSlaveData(self)
+
 	def setOutData(self, outData):
-		self.dpm.setSlaveOutData(self, outData)
+		"""Deprecated: Don't use this method. Use setMasterOutData() instead."""
+		self.setMasterOutData(outData)
 
 	def getInData(self):
-		return self.dpm.getSlaveInData(self)
+		"""Deprecated: Don't use this method. Use getMasterInData() instead."""
+		return self.getMasterInData()
 
 	def __repr__(self):
 		return "DpSlaveDesc(identNumber=%s, slaveAddr=%d)" %\
@@ -617,19 +631,19 @@ class DpMaster(object):
 				self._releaseSlave(slave)
 		else:
 			# Send the out data telegram, if any.
-			outData = slave.outData
-			if outData is not None:
+			toSlaveData = slave.toSlaveData
+			if toSlaveData is not None:
 				ok = self.__send(slave,
 						 telegram=DpTelegram_DataExchange_Req(
 							da=slave.slaveDesc.slaveAddr,
 							sa=self.masterAddr,
-							du=outData),
+							du=toSlaveData),
 						 timeout=0.1)
 				if not ok:
 					self.__debugMsg("DataExchange_Req failed")
 					return None
 				# We sent it. Reset the data.
-				slave.outData = None
+				slave.toSlaveData = None
 
 		faultCount = slave.faultDeb.get()
 		if faultCount >= 5:
@@ -743,25 +757,25 @@ class DpMaster(object):
 		self.__runNextSlaveIndex = (runNextSlaveIndex + 1) % len(slaveDescsList)
 
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
-		slave.inData = self.__runSlave(slave)
+		slave.fromSlaveData = self.__runSlave(slave)
 
 		return slaveDesc
 
-	def setSlaveOutData(self, slaveDesc, outData):
-		"""Set the out-data that will be sent the
+	def _setToSlaveData(self, slaveDesc, data):
+		"""Set the master-out-data that will be sent the
 		next time we are able to send something to that slave.
 		"""
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
-		slave.outData = outData
+		slave.toSlaveData = data
 
-	def getSlaveInData(self, slaveDesc):
-		"""Get the latest received in-data.
+	def _getFromSlaveData(self, slaveDesc):
+		"""Get the latest received master-in-data.
 		Returns None, if there was no received data.
 		"""
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
-		inData = slave.inData
-		slave.inData = None
-		return inData
+		fromSlaveData = slave.fromSlaveData
+		slave.fromSlaveData = None
+		return fromSlaveData
 
 	def initialize(self):
 		"""Initialize the DPM."""

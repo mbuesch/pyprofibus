@@ -290,12 +290,12 @@ class Worker(object):
 					txData = bytearray(slaveConf.outputSize)
 					for sig in slave.userData["activePbOutputs"]:
 						sig.fromHal(txData)
-					slave.setOutData(txData)
+					slave.setMasterOutData(txData)
 			slave = master.run()
 			if slave:
 				slaveConf = slave.slaveConf
 				if slaveConf is not None:
-					rxData = slave.getInData()
+					rxData = slave.getMasterInData()
 					if rxData:
 						inputSize = slaveConf.inputSize
 						if len(rxData) > inputSize:

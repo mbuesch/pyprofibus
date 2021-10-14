@@ -35,14 +35,14 @@ def main(watchdog=None):
 		while True:
 			# Write the output data.
 			for slaveDesc in master.getSlaveList():
-				slaveDesc.setOutData(outData[slaveDesc.slaveAddr])
+				slaveDesc.setMasterOutData(outData[slaveDesc.slaveAddr])
 
 			# Run slave state machines.
 			handledSlaveDesc = master.run()
 
 			# Get the in-data (receive) and set it as out-data (transmit).
 			if handledSlaveDesc:
-				inData = handledSlaveDesc.getInData()
+				inData = handledSlaveDesc.getMasterInData()
 				if inData is not None:
 					# In our example the output data shall be a mirror of the input.
 					outData[handledSlaveDesc.slaveAddr] = inData

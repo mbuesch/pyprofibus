@@ -44,14 +44,14 @@ def main(watchdog=None):
 		while True:
 			# Write the output data.
 			for slaveDesc in master.getSlaveList():
-				slaveDesc.setOutData(outData[slaveDesc.name])
+				slaveDesc.setMasterOutData(outData[slaveDesc.name])
 
 			# Run slave state machines.
 			handledSlaveDesc = master.run()
 
 			# Get the in-data (receive)
 			if handledSlaveDesc:
-				inData = handledSlaveDesc.getInData()
+				inData = handledSlaveDesc.getMasterInData()
 				if inData is not None:
 					# In our example the output data shall be the inverted input.
 					outData[handledSlaveDesc.name][0] = inData[1]
