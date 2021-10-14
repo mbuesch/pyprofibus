@@ -260,20 +260,20 @@ class Worker(object):
 			if slaveConf is None:
 				continue
 
-			activePbInputs = self.__buildTable(
+			activePbMasterOutputs = self.__buildTable(
 				slave.slaveAddr, "input", slaveConf.inputSize)
 
-			activePbOutputs = self.__buildTable(
+			activePbMasterInputs = self.__buildTable(
 				slave.slaveAddr, "output", slaveConf.outputSize)
 
-			slave.userData["activePbInputs"] = activePbInputs
-			slave.userData["activePbOutputs"] = activePbOutputs
+			slave.userData["activePbMasterInputs"] = activePbMasterInputs
+			slave.userData["activePbMasterOutputs"] = activePbMasterOutputs
 
 			printInfo("Active DP slave (addr=%d) pins:" % slave.slaveAddr)
-			for sig in activePbInputs:
-				printInfo("DP input:   " + str(sig))
-			for sig in activePbOutputs:
-				printInfo("DP output:  " + str(sig))
+			for sig in activePbMasterOutputs:
+				printInfo("DP slave input:   " + str(sig))
+			for sig in activePbMasterInputs:
+				printInfo("DP slave output:  " + str(sig))
 
 		self.__configDone = True
 		printInfo("HAL configuration done")
@@ -287,8 +287,8 @@ class Worker(object):
 			for slave in self.slaves:
 				slaveConf = slave.slaveConf
 				if slaveConf is not None:
-					txData = bytearray(slaveConf.outputSize)
-					for sig in slave.userData["activePbOutputs"]:
+					txData = bytearray(slaveConf.inputSize)
+					for sig in slave.userData["activePbMasterOutputs"]:
 						sig.fromHal(txData)
 					slave.setMasterOutData(txData)
 			slave = master.run()
@@ -297,12 +297,12 @@ class Worker(object):
 				if slaveConf is not None:
 					rxData = slave.getMasterInData()
 					if rxData:
-						inputSize = slaveConf.inputSize
-						if len(rxData) > inputSize:
-							rxData = rxData[0 : inputSize]
-						if len(rxData) < inputSize:
-							rxData += b'\0' * (inputSize - len(rxData))
-						for sig in slave.userData["activePbInputs"]:
+						slaveOutputSize = slaveConf.outputSize
+						if len(rxData) > slaveOutputSize:
+							rxData = rxData[0 : slaveOutputSize]
+						if len(rxData) < slaveOutputSize:
+							rxData += b'\0' * (slaveOutputSize - len(rxData))
+						for sig in slave.userData["activePbMasterInputs"]:
 							sig.toHal(rxData)
 
 class LinuxCNC_NotRunning(Exception):
@@ -333,7 +333,7 @@ def watchdog():
 	raise LinuxCNC_NotRunning()
 
 # Create the LinuxCNC HAL pins
-def createHalPins(hal, slaveAddr, outputSize, inputSize):
+def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 	HAL_BIT, HAL_U32, HAL_S32, HAL_FLOAT = \
 		LinuxCNC_HAL.HAL_BIT, LinuxCNC_HAL.HAL_U32, \
 		LinuxCNC_HAL.HAL_S32, LinuxCNC_HAL.HAL_FLOAT
@@ -342,82 +342,82 @@ def createHalPins(hal, slaveAddr, outputSize, inputSize):
 		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
 	addr = slaveAddr
 
-	printInfo("DP slave %d output: %d bytes" % (addr, outputSize))
-	printInfo("DP slave %d input:  %d bytes" % (addr, inputSize))
+	printInfo("DP slave %d output: %d bytes" % (addr, slaveOutputSize))
+	printInfo("DP slave %d input:  %d bytes" % (addr, slaveInputSize))
 
 	# Create the input pins
-	for i in range(0, inputSize):
+	for i in range(slaveInputSize):
 		for bit in range(8):
 			hal.newpin("slave.%d.input.bit.%d.%d" % (addr, i, bit),
-				   HAL_BIT, HAL_OUT)
+				   HAL_BIT, HAL_IN)
 			hal.newparam("slave.%d.input.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.input.u8.%d" % (addr, i),
-			   HAL_U32, HAL_OUT)
+			   HAL_U32, HAL_IN)
 		hal.newparam("slave.%d.input.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
-		if inputSize - i < 2:
+		if slaveInputSize - i < 2:
 			continue
 		hal.newpin("slave.%d.input.u16.%d" % (addr, i),
-			   HAL_U32, HAL_OUT)
+			   HAL_U32, HAL_IN)
 		hal.newparam("slave.%d.input.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.input.s16.%d" % (addr, i),
-			   HAL_S32, HAL_OUT)
+			   HAL_S32, HAL_IN)
 		hal.newparam("slave.%d.input.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		if inputSize - i < 4:
+		if slaveInputSize - i < 4:
 			continue
 		hal.newpin("slave.%d.input.u31.%d" % (addr, i),
-			   HAL_U32, HAL_OUT)
+			   HAL_U32, HAL_IN)
 		hal.newparam("slave.%d.input.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.input.s32.%d" % (addr, i),
-			   HAL_S32, HAL_OUT)
+			   HAL_S32, HAL_IN)
 		hal.newparam("slave.%d.input.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.input.float.%d" % (addr, i),
-			   HAL_FLOAT, HAL_OUT)
+			   HAL_FLOAT, HAL_IN)
 		hal.newparam("slave.%d.input.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
 	# Create the output pins
-	for i in range(0, outputSize):
+	for i in range(slaveOutputSize):
 		for bit in range(8):
 			hal.newpin("slave.%d.output.bit.%d.%d" % (addr, i, bit),
-				   HAL_BIT, HAL_IN)
+				   HAL_BIT, HAL_OUT)
 			hal.newparam("slave.%d.output.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.output.u8.%d" % (addr, i),
-			   HAL_U32, HAL_IN)
+			   HAL_U32, HAL_OUT)
 		hal.newparam("slave.%d.output.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
-		if outputSize < 2:
+		if slaveOutputSize < 2:
 			continue
 		hal.newpin("slave.%d.output.u16.%d" % (addr, i),
-			   HAL_U32, HAL_IN)
+			   HAL_U32, HAL_OUT)
 		hal.newparam("slave.%d.output.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.output.s16.%d" % (addr, i),
-			   HAL_S32, HAL_IN)
+			   HAL_S32, HAL_OUT)
 		hal.newparam("slave.%d.output.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		if outputSize < 4:
+		if slaveOutputSize < 4:
 			continue
 		hal.newpin("slave.%d.output.u31.%d" % (addr, i),
-			   HAL_U32, HAL_IN)
+			   HAL_U32, HAL_OUT)
 		hal.newparam("slave.%d.output.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.output.s32.%d" % (addr, i),
-			   HAL_S32, HAL_IN)
+			   HAL_S32, HAL_OUT)
 		hal.newparam("slave.%d.output.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		hal.newpin("slave.%d.output.float.%d" % (addr, i),
-			   HAL_FLOAT, HAL_IN)
+			   HAL_FLOAT, HAL_OUT)
 		hal.newparam("slave.%d.output.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
@@ -525,8 +525,8 @@ def main():
 		for slaveConf in config.slaveConfs:
 			createHalPins(hal=hal,
 				      slaveAddr=slaveConf.addr,
-				      inputSize=slaveConf.inputSize,
-				      outputSize=slaveConf.outputSize)
+				      slaveInputSize=slaveConf.inputSize,
+				      slaveOutputSize=slaveConf.outputSize)
 
 		# Setup the PROFIBUS stack.
 		master = config.makeDPM()
