@@ -30,22 +30,26 @@ Examples
 pyprofibus comes with a couple of examples that can teach you how to use pyprofibus in your project.
 
 * Example that runs pyprofibus without any hardware. This example can be used to play around with pyprofibus.
-	* example_dummy.py
-	* example_dummy.conf
+	* examples/example_dummy_oneslave.py
+	* examples/example_dummy_oneslave.conf
+	* examples/example_dummy_twoslaves.py
+	* examples/example_dummy_twoslaves.conf
+	* examples/example_dummy_inputonly.py
+	* examples/example_dummy_inputonly.conf
 
 * Example that runs pyprofibus as master connected to an ET200S as slave.
-	* example_et200s.py
-	* example_et200s.conf
+	* examples/example_et200s.py
+	* examples/example_et200s.conf
 
 * Example that runs pyprofibus as master connected to an S7-315-2DP as *slave*.
-	* example_s7-315-2dp.py
-	* example_s7-315-2dp.conf
+	* examples/example_s7-315-2dp.py
+	* examples/example_s7-315-2dp.conf
 
 
 Dependencies
 ============
 
-* `Python <https://www.python.org/>`_ 3.4 or later.
+* `Python <https://www.python.org/>`_ 3.5 or later.
 * Or alternatively `Micropython <https://micropython.org/>`_. Please see the `pyprofibus Micropython help <micropython/README.html>`_ for more information.
 
 
