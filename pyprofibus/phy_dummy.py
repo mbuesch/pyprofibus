@@ -87,6 +87,7 @@ class CpPhyDummySlave(CpPhy):
 			if DpTelegram_SlaveDiag_Req.checkType(dp):
 				telegram = DpTelegram_SlaveDiag_Con(da = fdl.sa,
 								    sa = fdl.da)
+				telegram.b1 |= DpTelegram_SlaveDiag_Con.B1_ONE
 				self.__pollQueue.append(telegram.toFdlTelegram().getRawData())
 				return
 			if DpTelegram_SetPrm_Req.checkType(dp):
