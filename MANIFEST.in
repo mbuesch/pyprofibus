@@ -1,5 +1,6 @@
 graft debian
 graft doc
+graft examples
 graft linuxcnc-demo-dummyphy
 graft linuxcnc-demo-et200s
 graft micropython
@@ -12,8 +13,6 @@ include COPYING
 include README.html
 include README.md
 include README.rst
-include example_*.conf
-include example_*.py
 
 prune ./build
 prune build

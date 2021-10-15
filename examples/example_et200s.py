@@ -1,17 +1,36 @@
 #!/usr/bin/env python3
 #
-# Simple pyprofibus dummy example using dummy PHY.
-# This example can be run without any PB hardware.
+# Simple pyprofibus example
+#
+# This example initializes an ET-200S slave, reads input
+# data and writes the data back to the module.
+#
+# The hardware configuration is as follows:
+#
+#   v--------------v----------v----------v----------v----------v
+#   |     IM 151-1 | PM-E     | 2 DO     | 2 DO     | 4 DI     |
+#   |     STANDARD | DC24V    | DC24V/2A | DC24V/2A | DC24V    |
+#   |              |          |          |          |          |
+#   |              |          |          |          |          |
+#   | ET 200S      |          |          |          |          |
+#   |              |          |          |          |          |
+#   |              |          |          |          |          |
+#   |       6ES7   | 6ES7     | 6ES7     | 6ES7     | 6ES7     |
+#   |       151-   | 138-     | 132-     | 132-     | 131-     |
+#   |       1AA04- | 4CA01-   | 4BB30-   | 4BB30-   | 4BD01-   |
+#   |       0AB0   | 0AA0     | 0AA0     | 0AA0     | 0AA0     |
+#   ^--------------^----------^----------^----------^----------^
 #
 
+import sys
+sys.path.insert(0, "..")
 import pyprofibus
-import time
 
 def main(watchdog=None):
 	master = None
 	try:
 		# Parse the config file.
-		config = pyprofibus.PbConf.fromFile("example_dummy_inputonly.conf")
+		config = pyprofibus.PbConf.fromFile("example_et200s.conf")
 
 		# Create a DP master.
 		master = config.makeDPM()
@@ -31,17 +50,16 @@ def main(watchdog=None):
 			slaveDesc.setUserPrmData(slaveConf.gsd.getUserPrmData(dp1PrmMask=dp1PrmMask,
 									      dp1PrmSet=dp1PrmSet))
 
-
-			# Register the slave at the DPM
+			# Register the ET-200S slave at the DPM
 			master.addSlave(slaveDesc)
 
 			# Set initial output data.
-			outData[slaveDesc.name] = bytearray((0x42, 0x24))
+			outData[slaveDesc.name] = bytearray((0x00, 0x00))
 
 		# Initialize the DPM
 		master.initialize()
 
-		# Run the slave state machine.
+		# Cyclically run Data_Exchange.
 		while True:
 			# Write the output data.
 			for slaveDesc in master.getSlaveList():
@@ -53,14 +71,14 @@ def main(watchdog=None):
 			# Get the in-data (receive)
 			if handledSlaveDesc:
 				inData = handledSlaveDesc.getMasterInData()
-				# This slave will not send any data. It's input-only (see config).
-				assert inData is None
+				if inData is not None:
+					# In our example the output data shall be a mirror of the input.
+					outData[handledSlaveDesc.name][0] = inData[0] & 3
+					outData[handledSlaveDesc.name][1] = (inData[0] >> 2) & 3
 
 			# Feed the system watchdog, if it is available.
 			if watchdog is not None:
 				watchdog()
-			# Slow down main loop. Just for debugging.
-			time.sleep(0.01)
 
 	except pyprofibus.ProfibusError as e:
 		print("Terminating: %s" % str(e))

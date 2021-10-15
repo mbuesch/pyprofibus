@@ -4,13 +4,16 @@
 # This example can be run without any PB hardware.
 #
 
+import sys
+sys.path.insert(0, "..")
 import pyprofibus
+import time
 
 def main(watchdog=None):
 	master = None
 	try:
 		# Parse the config file.
-		config = pyprofibus.PbConf.fromFile("example_dummy.conf")
+		config = pyprofibus.PbConf.fromFile("example_dummy_inputonly.conf")
 
 		# Create a DP master.
 		master = config.makeDPM()
@@ -52,14 +55,14 @@ def main(watchdog=None):
 			# Get the in-data (receive)
 			if handledSlaveDesc:
 				inData = handledSlaveDesc.getMasterInData()
-				if inData is not None:
-					# In our example the output data shall be the inverted input.
-					outData[handledSlaveDesc.name][0] = inData[1]
-					outData[handledSlaveDesc.name][1] = inData[0]
+				# This slave will not send any data. It's input-only (see config).
+				assert inData is None
 
 			# Feed the system watchdog, if it is available.
 			if watchdog is not None:
 				watchdog()
+			# Slow down main loop. Just for debugging.
+			time.sleep(0.01)
 
 	except pyprofibus.ProfibusError as e:
 		print("Terminating: %s" % str(e))

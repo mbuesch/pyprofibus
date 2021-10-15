@@ -6,6 +6,8 @@
 # reads its input data and writes the data back to the module.
 #
 
+import sys
+sys.path.insert(0, "..")
 import pyprofibus
 
 def main(watchdog=None):
