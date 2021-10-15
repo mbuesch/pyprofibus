@@ -62,6 +62,7 @@ class DpSlaveState(object):
 		"__state",
 		"__stateTimeout",
 		"dxStartTime",
+		"dxCount",
 		"firstDxCycle",
 		"faultDeb",
 		"fcb",
@@ -99,6 +100,7 @@ class DpSlaveState(object):
 
 		# Data_Exchange context
 		self.dxStartTime = 0.0
+		self.dxCount = 0
 
 		# Received telegrams
 		self.rxQueue = []
@@ -167,6 +169,7 @@ class DpSlaveDesc(object):
 		"index",
 		"inputSize",
 		"outputSize",
+		"diagPeriod",
 		"slaveConf",
 		"userData",
 		"setPrmTelegram",
@@ -182,6 +185,7 @@ class DpSlaveDesc(object):
 		self.index = slaveConf.index if slaveConf else None
 		self.inputSize = slaveConf.inputSize if slaveConf else 0
 		self.outputSize = slaveConf.outputSize if slaveConf else 0
+		self.diagPeriod = slaveConf.diagPeriod if slaveConf else 0
 		self.slaveConf = slaveConf
 		self.userData = {} # For use by application code.
 
@@ -614,6 +618,7 @@ class DpMaster(object):
 			slave.faultDeb.ok()
 			slave.dxStartTime = monotonic_time()
 			slave.firstDxCycle = False
+			slave.dxCount = 0
 
 		slaveOutputSize = slave.slaveDesc.outputSize
 		if slave.pendingReq:
@@ -645,20 +650,23 @@ class DpMaster(object):
 					dataExInData = telegram.getDU()
 			if (dataExInData is not None or
 			    (slaveOutputSize == 0 and slave.shortAckReceived)):
-				# We received some data.
+				# We received some data or an ACK (input-only slave).
 				slave.pendingReq = None
 				slave.faultDeb.ok()
 				slave.restartStateTimeout()
 				self._releaseSlave(slave)
 			else:
-				# No data or ack received from slave.
+				# No data or ACK received from slave.
 				if slave.pendingReqTimeout.exceed():
 					self.__debugMsg("Data_Exchange timeout with slave %d" % (
 							slave.slaveDesc.slaveAddr))
 					slave.faultDeb.fault()
 					slave.pendingReq = None
 		else:
-			if slaveOutputSize == 0 and False: #TODO diag request.
+			diagPeriod = slave.slaveDesc.diagPeriod
+			if diagPeriod > 0 and slave.dxCount >= diagPeriod:
+				# The input-only slave shall periodically be diagnosed.
+				# Go to diagnostic state.
 				slave.setState(slave.STATE_WDXRDY, 0.2)
 			else:
 				# Send the out data telegram, if any.
@@ -677,6 +685,7 @@ class DpMaster(object):
 						if ok:
 							# We sent it. Reset the data.
 							slave.toSlaveData = None
+							slave.dxCount = min(slave.dxCount + 1, 0x3FFFFFFF)
 						else:
 							self.__debugMsg("DataExchange_Req failed")
 							slave.faultDeb.fault()

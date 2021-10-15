@@ -51,6 +51,7 @@ class PbConf(object):
 		watchdogMs	= None
 		inputSize	= None
 		outputSize	= None
+		diagPeriod	= None
 
 		def makeDpSlaveDesc(self):
 			"""Create a DpSlaveDesc instance based on the configuration.
@@ -201,6 +202,9 @@ class PbConf(object):
 				s.outputSize = getint(section, "output_size")
 				if s.outputSize < 0 or s.outputSize > 246:
 					raise ValueError("Invalid output_size")
+				s.diagPeriod = getint(section, "diag_period", 0)
+				if s.diagPeriod < 0 or s.diagPeriod > 0x3FFFFFFF:
+					raise ValueError("Invalid diag_period")
 
 				mods = [ o for o in p.options(section)
 					 if self.__reMod.match(o) ]
