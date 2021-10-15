@@ -235,12 +235,18 @@ class PbConf(object):
 		if phyType == "serial":
 			import pyprofibus.phy_serial
 			phyClass = pyprofibus.phy_serial.CpPhySerial
+			extraKwArgs = {}
 		elif phyType in {"dummyslave", "dummy_slave", "dummy-slave"}:
 			import pyprofibus.phy_dummy
 			phyClass = pyprofibus.phy_dummy.CpPhyDummySlave
+			extraKwArgs = {
+				"echoDX" : all(slaveConf.outputSize > 0
+					       for slaveConf in self.slaveConfs)
+			}
 		elif phyType == "fpga":
 			import pyprofibus.phy_fpga
 			phyClass = pyprofibus.phy_fpga.CpPhyFPGA
+			extraKwArgs = {}
 		else:
 			raise PbConfError("Invalid phyType parameter value: "
 					  "%s" % self.phyType)
@@ -248,7 +254,8 @@ class PbConf(object):
 			       port=self.phyDev,
 			       spiBus=self.phySpiBus,
 			       spiCS=self.phySpiCS,
-			       spiSpeedHz=self.phySpiSpeedHz)
+			       spiSpeedHz=self.phySpiSpeedHz,
+			       **extraKwArgs)
 		phy.setConfig(baudrate=self.phyBaud,
 			      rtscts=self.phyRtsCts,
 			      dsrdtr=self.phyDsrDtr)

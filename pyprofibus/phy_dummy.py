@@ -25,11 +25,13 @@ class CpPhyDummySlave(CpPhy):
 	"""
 
 	__slots__ = (
+		"__echoDX",
 		"__pollQueue",
 	)
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, *args, echoDX=True, **kwargs):
 		super(CpPhyDummySlave, self).__init__(*args, **kwargs)
+		self.__echoDX = echoDX
 		self.__pollQueue = []
 
 	def __msg(self, message):
@@ -96,11 +98,15 @@ class CpPhyDummySlave(CpPhy):
 				self.__pollQueue.append(telegram.getRawData())
 				return
 			if DpTelegram_DataExchange_Req.checkType(dp):
-				du = bytearray([ d ^ 0xFF for d in dp.du ])
-				telegram = DpTelegram_DataExchange_Con(da = fdl.sa,
-								       sa = fdl.da,
-								       du = du)
-				self.__pollQueue.append(telegram.toFdlTelegram().getRawData())
+				if self.__echoDX:
+					du = bytearray([ d ^ 0xFF for d in dp.du ])
+					telegram = DpTelegram_DataExchange_Con(da = fdl.sa,
+									       sa = fdl.da,
+									       du = du)
+					self.__pollQueue.append(telegram.toFdlTelegram().getRawData())
+				else:
+					telegram = FdlTelegram_ack()
+					self.__pollQueue.append(telegram.getRawData())
 				return
 
 			self.__msg("Dropping SRD telegram: %s" % str(fdl))

@@ -12,7 +12,7 @@ import pyprofibus.phy_serial
 
 class Test_DummyPhy(TestCase):
 	def test_dummy_phy(self):
-		phy = pyprofibus.phy_dummy.CpPhyDummySlave(debug=True)
+		phy = pyprofibus.phy_dummy.CpPhyDummySlave(debug=True, echoDX=True)
 		phy.setConfig(baudrate=19200)
 
 		master = pyprofibus.DPM1(phy=phy,
