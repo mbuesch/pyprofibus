@@ -261,10 +261,10 @@ class Worker(object):
 				continue
 
 			activePbMasterOutputs = self.__buildTable(
-				slave.slaveAddr, "input", slaveConf.inputSize)
+				slave.slaveAddr, "mosi", slaveConf.inputSize)
 
 			activePbMasterInputs = self.__buildTable(
-				slave.slaveAddr, "output", slaveConf.outputSize)
+				slave.slaveAddr, "miso", slaveConf.outputSize)
 
 			slave.userData["activePbMasterInputs"] = activePbMasterInputs
 			slave.userData["activePbMasterOutputs"] = activePbMasterOutputs
@@ -342,83 +342,83 @@ def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
 	addr = slaveAddr
 
-	printInfo("DP slave %d output: %d bytes" % (addr, slaveOutputSize))
-	printInfo("DP slave %d input:  %d bytes" % (addr, slaveInputSize))
+	printInfo("DP slave %d output (MISO): %d bytes" % (addr, slaveOutputSize))
+	printInfo("DP slave %d input (MOSI):  %d bytes" % (addr, slaveInputSize))
 
 	# Create the input pins
 	for i in range(slaveInputSize):
 		for bit in range(8):
-			hal.newpin("slave.%d.input.bit.%d.%d" % (addr, i, bit),
+			hal.newpin("slave.%d.mosi.bit.%d.%d" % (addr, i, bit),
 				   HAL_BIT, HAL_IN)
-			hal.newparam("slave.%d.input.bit.%d.%d.active" % (addr, i, bit),
+			hal.newparam("slave.%d.mosi.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.u8.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.u8.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.input.u8.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
 		if slaveInputSize - i < 2:
 			continue
-		hal.newpin("slave.%d.input.u16.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.u16.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.input.u16.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.s16.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.s16.%d" % (addr, i),
 			   HAL_S32, HAL_IN)
-		hal.newparam("slave.%d.input.s16.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if slaveInputSize - i < 4:
 			continue
-		hal.newpin("slave.%d.input.u31.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.u31.%d" % (addr, i),
 			   HAL_U32, HAL_IN)
-		hal.newparam("slave.%d.input.u31.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.s32.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.s32.%d" % (addr, i),
 			   HAL_S32, HAL_IN)
-		hal.newparam("slave.%d.input.s32.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.input.float.%d" % (addr, i),
+		hal.newpin("slave.%d.mosi.float.%d" % (addr, i),
 			   HAL_FLOAT, HAL_IN)
-		hal.newparam("slave.%d.input.float.%d.active" % (addr, i),
+		hal.newparam("slave.%d.mosi.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
 	# Create the output pins
 	for i in range(slaveOutputSize):
 		for bit in range(8):
-			hal.newpin("slave.%d.output.bit.%d.%d" % (addr, i, bit),
+			hal.newpin("slave.%d.miso.bit.%d.%d" % (addr, i, bit),
 				   HAL_BIT, HAL_OUT)
-			hal.newparam("slave.%d.output.bit.%d.%d.active" % (addr, i, bit),
+			hal.newparam("slave.%d.miso.bit.%d.%d.active" % (addr, i, bit),
 				     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.u8.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.u8.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.output.u8.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.u8.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if i % 2:
 			continue
 		if slaveOutputSize < 2:
 			continue
-		hal.newpin("slave.%d.output.u16.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.u16.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.output.u16.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.u16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.s16.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.s16.%d" % (addr, i),
 			   HAL_S32, HAL_OUT)
-		hal.newparam("slave.%d.output.s16.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.s16.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 		if slaveOutputSize < 4:
 			continue
-		hal.newpin("slave.%d.output.u31.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.u31.%d" % (addr, i),
 			   HAL_U32, HAL_OUT)
-		hal.newparam("slave.%d.output.u31.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.u31.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.s32.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.s32.%d" % (addr, i),
 			   HAL_S32, HAL_OUT)
-		hal.newparam("slave.%d.output.s32.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.s32.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
-		hal.newpin("slave.%d.output.float.%d" % (addr, i),
+		hal.newpin("slave.%d.miso.float.%d" % (addr, i),
 			   HAL_FLOAT, HAL_OUT)
-		hal.newparam("slave.%d.output.float.%d.active" % (addr, i),
+		hal.newparam("slave.%d.miso.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
 	hal.newparam("config.ready", HAL_BIT, HAL_RW)
