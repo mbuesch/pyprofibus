@@ -29,9 +29,9 @@ class CpPhyDummySlave(CpPhy):
 		"__pollQueue",
 	)
 
-	def __init__(self, *args, echoDX=True, **kwargs):
+	def __init__(self, *args, **kwargs):
 		super(CpPhyDummySlave, self).__init__(*args, **kwargs)
-		self.__echoDX = echoDX
+		self.__echoDX = kwargs.get("echoDX", True)
 		self.__pollQueue = []
 
 	def __msg(self, message):
