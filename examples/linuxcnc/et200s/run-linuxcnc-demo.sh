@@ -32,7 +32,7 @@ basedir="$(dirname "$0")"
 [ "$(echo "$basedir" | cut -c1)" = '/' ] || basedir="$PWD/$basedir"
 
 # rootdir = root of the pyprofibus repository
-rootdir="$basedir/.."
+rootdir="$basedir/../../.."
 
 [ -x "$rootdir/pyprofibus-linuxcnc-hal" ] || die "pyprofibus-linuxcnc-hal not found"
 
