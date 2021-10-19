@@ -1,5 +1,5 @@
-pyprofibus (1.10) UNRELEASED; urgency=low
+pyprofibus (1.11) UNRELEASED; urgency=low
 
-  * Version 1.10
+  * Version 1.11
 
  -- Michael Buesch <m@bues.ch>  Mon, 01 Feb 2016 00:00:00 +0100
