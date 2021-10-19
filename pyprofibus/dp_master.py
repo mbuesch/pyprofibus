@@ -809,7 +809,17 @@ class DpMaster(object):
 		self.__runNextSlaveIndex = (runNextSlaveIndex + 1) % len(slaveDescsList)
 
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
-		slave.fromSlaveData = self.__runSlave(slave)
+		fromSlaveData = self.__runSlave(slave)
+		if (fromSlaveData is not None and
+		    len(fromSlaveData) != slaveDesc.outputSize):
+			self.__errorMsg("Slave %d: The received data size (%d bytes) "
+					"does not match the slave's configured output_size (%d bytes)." % (
+					slaveDesc.slaveAddr,
+					len(fromSlaveData),
+					slaveDesc.outputSize))
+			slave.faultDeb.fault()
+			fromSlaveData = None
+		slave.fromSlaveData = fromSlaveData
 
 		return slaveDesc
 
@@ -817,6 +827,13 @@ class DpMaster(object):
 		"""Set the master-out-data that will be sent the
 		next time we are able to send something to that slave.
 		"""
+		if (data is not None and
+		    len(data) != slaveDesc.inputSize):
+			raise DpError("Slave %d: The setMasterOutData() data size (%d bytes) "
+				      "does not match the slave's configured input_size (%d bytes)." % (
+				      slaveDesc.slaveAddr,
+				      len(data),
+				      slaveDesc.inputSize))
 		slave = self.__slaveStates[slaveDesc.slaveAddr]
 		slave.toSlaveData = data
 
