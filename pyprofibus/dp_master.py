@@ -366,7 +366,8 @@ class DpMaster(object):
 		"""Register a slave."""
 
 		if slaveDesc.inputSize <= 0:
-			raise DpError("Slave %d: input_size=0 is currently not supported." % slaveAddr)
+			raise DpError("Slave %d: input_size=0 is currently not supported." % (
+				      slaveDesc.slaveAddr))
 
 		slaveAddr = slaveDesc.slaveAddr
 		if slaveAddr in self.__slaveDescs or\
