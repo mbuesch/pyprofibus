@@ -30,7 +30,7 @@ import struct
 
 from pyprofibus import ProfibusError, FdlError, DpError
 from pyprofibus.compat import isPy2Compat
-from pyprofibus.util import fileExists, monotonic_time
+from pyprofibus.util import fileExists, FaultDebouncer
 from pyprofibus.dp import DpTelegram_SetPrm_Req
 from pyprofibus.conf import PbConf, PbConfError
 from pyprofibus.version import *
@@ -278,7 +278,7 @@ class Worker(object):
 		self.__configDone = True
 		printInfo("HAL configuration done")
 
-	def mainLoop(self):
+	def mainLoop(self, faultDeb):
 		master = self.master
 		while watchdog() and not self.__configDone:
 			self.__tryBuildConfig()
@@ -292,18 +292,15 @@ class Worker(object):
 						sig.fromHal(txData)
 					slave.setMasterOutData(txData)
 			slave = master.run()
-			if slave:
+			if slave is not None:
 				slaveConf = slave.slaveConf
 				if slaveConf is not None:
 					rxData = slave.getMasterInData()
-					if rxData:
-						slaveOutputSize = slaveConf.outputSize
-						if len(rxData) > slaveOutputSize:
-							rxData = rxData[0 : slaveOutputSize]
-						if len(rxData) < slaveOutputSize:
-							rxData += b'\0' * (slaveOutputSize - len(rxData))
+					if rxData is not None:
+						assert len(rxData) == slaveConf.outputSize
 						for sig in slave.userData["activePbMasterInputs"]:
 							sig.toHal(rxData)
+			faultDeb.ok()
 
 class LinuxCNC_NotRunning(Exception):
 	pass
@@ -550,25 +547,21 @@ def main():
 		worker = Worker(hal, master)
 		hal.ready()
 		printInfo("ready.")
-		lastExceptionTime = None
+		faultDeb = FaultDebouncer()
 		while True:
 			try:
-				worker.mainLoop()
-			except ProfibusError as e:
-				now = monotonic_time()
-				if lastExceptionTime is not None and\
-				   now - lastExceptionTime < 1.0:
-					# The last fault is less than one second
-					# in the past. Raise a fatal exception.
-					printError("Fatal fault detected")
+				worker.mainLoop(faultDeb)
+			except (LinuxCNC_NotRunning, KeyboardInterrupt) as e:
+				raise e
+			except Exception as e:
+				if faultDeb.fault() >= 3:
+					# Too many faults. Raise a fatal exception.
+					printError("Fatal PROFIBUS fault.")
 					raise e
 				else:
-					lastExceptionTime = now
 					# Non-fatal fault.
 					printError("PROFIBUS fault:\n%s" % str(e))
-	except LinuxCNC_NotRunning as e:
-		result = 1
-	except KeyboardInterrupt as e:
+	except (LinuxCNC_NotRunning, KeyboardInterrupt) as e:
 		result = 1
 	except PbConfError as e:
 		printError("Profibus configuration error:\n%s" % str(e))
