@@ -254,8 +254,10 @@ class PbConf(object):
 			import pyprofibus.phy_dummy
 			phyClass = pyprofibus.phy_dummy.CpPhyDummySlave
 			extraKwArgs = {
-				"echoDX" : all(slaveConf.outputSize > 0
-					       for slaveConf in self.slaveConfs)
+				"echoDX"	: all(slaveConf.outputSize > 0
+						      for slaveConf in self.slaveConfs),
+				"echoDXSize"	: max(slaveConf.outputSize
+						      for slaveConf in self.slaveConfs),
 			}
 		elif phyType == "fpga":
 			import pyprofibus.phy_fpga

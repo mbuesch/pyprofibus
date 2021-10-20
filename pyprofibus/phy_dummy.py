@@ -2,7 +2,7 @@
 #
 # PROFIBUS DP - Communication Processor PHY access library
 #
-# Copyright (c) 2016 Michael Buesch <m@bues.ch>
+# Copyright (c) 2016-2021 Michael Buesch <m@bues.ch>
 #
 # Licensed under the terms of the GNU General Public License version 2,
 # or (at your option) any later version.
@@ -26,12 +26,14 @@ class CpPhyDummySlave(CpPhy):
 
 	__slots__ = (
 		"__echoDX",
+		"__echoDXSize",
 		"__pollQueue",
 	)
 
 	def __init__(self, *args, **kwargs):
 		super(CpPhyDummySlave, self).__init__(*args, **kwargs)
 		self.__echoDX = kwargs.get("echoDX", True)
+		self.__echoDXSize = kwargs.get("echoDXSize", None)
 		self.__pollQueue = []
 
 	def __msg(self, message):
@@ -101,6 +103,11 @@ class CpPhyDummySlave(CpPhy):
 			if DpTelegram_DataExchange_Req.checkType(dp):
 				if self.__echoDX:
 					du = bytearray([ d ^ 0xFF for d in dp.du ])
+					if self.__echoDXSize is not None:
+						if len(du) > self.__echoDXSize:
+							du = du[ : self.__echoDXSize]
+						if len(du) < self.__echoDXSize:
+							du += bytearray(self.__echoDXSize - len(du))
 					telegram = DpTelegram_DataExchange_Con(da = fdl.sa,
 									       sa = fdl.da,
 									       du = du)
