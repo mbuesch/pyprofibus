@@ -31,6 +31,30 @@ __all__ = [
 	"PbConf",
 ]
 
+def loadGsd(name, debug=0):
+	exceptions = []
+	# Try name as a direct file name.
+	try:
+		return GsdInterp.fromFile(name, debug=(debug > 0))
+	except GsdError as e:
+		exceptions.append(str(e))
+	# Try to interpret the name as a module name.
+	try:
+		if "/" not in name:
+			mod = name.replace(".gsd", "_gsd")
+			return GsdInterp.fromPy(mod, debug=(debug > 0))
+	except GsdError as e:
+		exceptions.append(str(e))
+	# Try to interpret the name as a module name with leading fs path components stripped.
+	try:
+		slashIdx = name.rfind("/")
+		if slashIdx >= 0:
+			mod = name[slashIdx + 1 : ].replace(".gsd", "_gsd")
+			return GsdInterp.fromPy(mod, debug=(debug > 0))
+	except GsdError as e:
+		exceptions.append(str(e))
+	raise GsdError("\n".join(exceptions))
+
 class PbConfError(ProfibusError):
 	pass
 
@@ -173,17 +197,7 @@ class PbConf(object):
 				s.index = index
 				s.name = get(section, "name", section)
 				s.addr = getint(section, "addr")
-				try:
-					s.gsd = GsdInterp.fromFile(
-						get(section, "gsd"),
-						debug=(self.debug > 0))
-				except GsdError as origExc:
-					try:
-						s.gsd = GsdInterp.fromPy(
-							get(section, "gsd").replace(".", "_"),
-							debug=(self.debug > 0))
-					except GsdError as e:
-						raise GsdError("%s\n%s" % (str(origExc), str(e)))
+				s.gsd = loadGsd(get(section, "gsd"), self.debug)
 				s.syncMode = getboolean(section, "sync_mode",
 							fallback=False)
 				s.freezeMode = getboolean(section, "freeze_mode",
