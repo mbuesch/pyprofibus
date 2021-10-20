@@ -8,11 +8,11 @@ import sys
 sys.path.insert(0, "..")
 import pyprofibus
 
-def main(watchdog=None):
+def main(confdir=".", watchdog=None):
 	master = None
 	try:
 		# Parse the config file.
-		config = pyprofibus.PbConf.fromFile("example_dummy_oneslave.conf")
+		config = pyprofibus.PbConf.fromFile(confdir + "/example_dummy_oneslave.conf")
 
 		# Create a DP master.
 		master = config.makeDPM()
