@@ -26,8 +26,8 @@ build()
 	cd "$rootdir" || die "Failed to switch to root dir."
 
 	local gsds="$(find . -maxdepth 1 -name '*.gsd') $(find misc/ -maxdepth 1 -name '*.gsd')"
-	local pys="$(find pyprofibus/ -name '*.py') $(find stublibs/ -name '*.py') $(find . -maxdepth 1 -name 'example_*.py')"
-	local confs="$(find . -maxdepth 1 -name '*.conf')"
+	local pys="$(find pyprofibus/ -name '*.py') $(find stublibs/ -name '*.py') $(find examples -maxdepth 1 -name 'example_*.py')"
+	local confs="$(find examples -maxdepth 1 -name '*.conf')"
 
 	local gsdparser_opts="--dump-strip --dump-notext --dump-noextuserprmdata \
 		--dump-module '6ES7 138-4CA01-0AA0 PM-E DC24V' \

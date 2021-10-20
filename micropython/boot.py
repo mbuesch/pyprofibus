@@ -11,8 +11,10 @@ else:
 
 import sys, gc
 
-# Add stubs to Python path.
+# Add to Python path.
 sys.path.insert(0, "/stublibs")
+sys.path.append("/examples")
+sys.path.append("/misc")
 
 # Enable gc after allocation of this many bytes:
 gc.threshold(2**11)

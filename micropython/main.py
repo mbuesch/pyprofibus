@@ -8,18 +8,18 @@ def start_pyprofibus():
 	print("Starting pyprofibus...")
 
 	# Start dummy example that uses virtual bus hardware.
-	import example_dummy
-	example_dummy.main(watchdog=watchdog) # Run main loop
+	import example_dummy_oneslave
+	example_dummy_oneslave.main(confdir="examples", watchdog=watchdog) # Run main loop
 	return
 
 	# Start the S7-312-2DP example.
 	#import example_s7_315_2dp
-	#example_s7_315_2dp.main(watchdog=watchdog) # Run main loop
+	#example_s7_315_2dp.main(confdir="examples", watchdog=watchdog) # Run main loop
 	#return
 
 	# Start the ET200S example.
 	#import example_et200s
-	#example_et200s.main(watchdog=watchdog) # Run main loop
+	#example_et200s.main(confdir="examples", watchdog=watchdog) # Run main loop
 	#return
 
 
