@@ -37,12 +37,12 @@ class DpSlaveState(object):
 	STATE_DX	= 5 # Data_Exchange
 
 	state2name = {
-		_STATE_INVALID	: "invalid",
-		STATE_INIT	: "init",
-		STATE_WDIAG	: "wait for diag",
-		STATE_WPRM	: "wait for Prm",
-		STATE_WCFG	: "wait for Cfg",
-		STATE_WDXRDY	: "wait for Data_Exchange-ready",
+		_STATE_INVALID	: "Invalid",
+		STATE_INIT	: "Init",
+		STATE_WDIAG	: "Wait for diag",
+		STATE_WPRM	: "Wait for Prm",
+		STATE_WCFG	: "Wait for Cfg",
+		STATE_WDXRDY	: "Request diag and wait for DX-ready",
 		STATE_DX	: "Data_Exchange",
 	}
 
