@@ -53,6 +53,9 @@ setp	profibus.slave.8.miso.bit.0.1.active		1
 setp	profibus.slave.8.miso.bit.0.2.active		1
 setp	profibus.slave.8.miso.bit.0.3.active		1
 
+# If the slave disconnects, then reset all slave-to-master pins to zero.
+setp	profibus.slave.8.config.disconnect-clear-pins	1
+
 # --- Connect slave-to-master pins ---
 # MISO = MasterInputSlaveOutput = Data flow from PB slave to PB master.
 net	limit-x			<= profibus.slave.8.miso.bit.0.0

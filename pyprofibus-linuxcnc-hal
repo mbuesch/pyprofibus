@@ -269,7 +269,7 @@ class Worker(object):
 			slave.userData["activePbMasterInputs"] = activePbMasterInputs
 			slave.userData["activePbMasterOutputs"] = activePbMasterOutputs
 
-			printInfo("Active DP slave (addr=%d) pins:" % slave.slaveAddr)
+			printInfo("Active DP slave (addr=%d) I/O pins:" % slave.slaveAddr)
 			for sig in activePbMasterOutputs:
 				printInfo("DP slave input:   " + str(sig))
 			for sig in activePbMasterInputs:
@@ -287,6 +287,7 @@ class Worker(object):
 			for slave in self.slaves:
 				slaveConf = slave.slaveConf
 				if slaveConf is not None:
+					# Copy I/O data from HAL to PB master output.
 					txData = bytearray(slaveConf.inputSize)
 					for sig in slave.userData["activePbMasterOutputs"]:
 						sig.fromHal(txData)
@@ -296,10 +297,23 @@ class Worker(object):
 				slaveConf = slave.slaveConf
 				if slaveConf is not None:
 					rxData = slave.getMasterInData()
-					if rxData is not None:
-						assert len(rxData) == slaveConf.outputSize
-						for sig in slave.userData["activePbMasterInputs"]:
-							sig.toHal(rxData)
+					halBaseName = "slave.%d" % slave.slaveAddr
+					self.hal[halBaseName + ".connecting"] = slave.isConnecting()
+					isConnected = slave.isConnected()
+					if isConnected: # Slave is connected.
+						# Copy I/O data from PB master input to HAL.
+						if rxData is not None:
+							assert len(rxData) == slaveConf.outputSize
+							for sig in slave.userData["activePbMasterInputs"]:
+								sig.toHal(rxData)
+							self.hal[halBaseName + ".connected"] = True
+					else: # Slave is not connected.
+						self.hal[halBaseName + ".connected"] = False
+						if self.hal[halBaseName + ".config.disconnect-clear-pins"]:
+							# Clear the HAL data.
+							rxData = bytearray(slaveConf.outputSize)
+							for sig in slave.userData["activePbMasterInputs"]:
+								sig.toHal(rxData)
 			faultDeb.ok()
 
 class LinuxCNC_NotRunning(Exception):
@@ -338,6 +352,9 @@ def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 		LinuxCNC_HAL.HAL_IN, LinuxCNC_HAL.HAL_OUT, \
 		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
 	addr = slaveAddr
+
+	hal.newpin("slave.%d.connecting" % addr, HAL_BIT, HAL_OUT)
+	hal.newpin("slave.%d.connected" % addr, HAL_BIT, HAL_OUT)
 
 	printInfo("DP slave %d output (MISO): %d bytes" % (addr, slaveOutputSize))
 	printInfo("DP slave %d input (MOSI):  %d bytes" % (addr, slaveInputSize))
@@ -418,6 +435,7 @@ def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 		hal.newparam("slave.%d.miso.float.%d.active" % (addr, i),
 			     HAL_BIT, HAL_RW)
 
+	hal.newparam("slave.%d.config.disconnect-clear-pins" % addr, HAL_BIT, HAL_RW)
 	hal.newparam("config.ready", HAL_BIT, HAL_RW)
 
 def usage():
