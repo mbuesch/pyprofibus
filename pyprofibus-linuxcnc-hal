@@ -343,8 +343,19 @@ def watchdog():
 		   "(Use '--watchdog off' to disable this check.)")
 	raise LinuxCNC_NotRunning()
 
-# Create the LinuxCNC HAL pins
-def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
+# Create the global LinuxCNC HAL pins and params
+def createGlobalHalPins(hal):
+	HAL_BIT, HAL_U32, HAL_S32, HAL_FLOAT = \
+		LinuxCNC_HAL.HAL_BIT, LinuxCNC_HAL.HAL_U32, \
+		LinuxCNC_HAL.HAL_S32, LinuxCNC_HAL.HAL_FLOAT
+	HAL_IN, HAL_OUT, HAL_RO, HAL_RW = \
+		LinuxCNC_HAL.HAL_IN, LinuxCNC_HAL.HAL_OUT, \
+		LinuxCNC_HAL.HAL_RO, LinuxCNC_HAL.HAL_RW
+
+	hal.newparam("config.ready", HAL_BIT, HAL_RW)
+
+# Create the per-slave LinuxCNC HAL pins and params
+def createSlaveHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 	HAL_BIT, HAL_U32, HAL_S32, HAL_FLOAT = \
 		LinuxCNC_HAL.HAL_BIT, LinuxCNC_HAL.HAL_U32, \
 		LinuxCNC_HAL.HAL_S32, LinuxCNC_HAL.HAL_FLOAT
@@ -436,7 +447,6 @@ def createHalPins(hal, slaveAddr, slaveOutputSize, slaveInputSize):
 			     HAL_BIT, HAL_RW)
 
 	hal.newparam("slave.%d.config.disconnect-clear-pins" % addr, HAL_BIT, HAL_RW)
-	hal.newparam("config.ready", HAL_BIT, HAL_RW)
 
 def usage():
 	print("pyprofibus-linuxcnc-hal version %s" % VERSION_STRING)
@@ -537,11 +547,12 @@ def main():
 		hal = LinuxCNC_HAL.component("profibus")
 
 		# Create the HAL pins.
+		createGlobalHalPins(hal=hal)
 		for slaveConf in config.slaveConfs:
-			createHalPins(hal=hal,
-				      slaveAddr=slaveConf.addr,
-				      slaveInputSize=slaveConf.inputSize,
-				      slaveOutputSize=slaveConf.outputSize)
+			createSlaveHalPins(hal=hal,
+				           slaveAddr=slaveConf.addr,
+				           slaveInputSize=slaveConf.inputSize,
+				           slaveOutputSize=slaveConf.outputSize)
 
 		# Setup the PROFIBUS stack.
 		master = config.makeDPM()
