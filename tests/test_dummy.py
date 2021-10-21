@@ -40,14 +40,21 @@ class Test_DummyPhy(TestCase):
 
 		master.addSlave(slaveDesc)
 		master.initialize()
+		self.assertFalse(slaveDesc.isConnecting())
+		self.assertFalse(slaveDesc.isConnected())
 
 		# Run slave initialization state machine.
 		for i in range(25):
 			slaveDesc.setMasterOutData(bytearray([1, ]))
 			master.run()
+			if i == 1:
+				self.assertTrue(slaveDesc.isConnecting())
+				self.assertFalse(slaveDesc.isConnected())
 		# Check dummy-slave response to Data_Exchange.
 		for i in range(100):
 			print("testing %d" % i)
+			self.assertFalse(slaveDesc.isConnecting())
+			self.assertTrue(slaveDesc.isConnected())
 			j = 0
 			while True:
 				j += 1
