@@ -63,7 +63,7 @@ class DpSlaveState(object):
 		"__stateTimeout",
 		"dxStartTime",
 		"dxCount",
-		"firstDxCycle",
+		"dxCycleRunning",
 		"faultDeb",
 		"fcb",
 		"master",
@@ -127,7 +127,7 @@ class DpSlaveState(object):
 		if stateTimeLimit is None:
 			stateTimeLimit = self.stateTimeLimits[state]
 		if state == self.STATE_INIT:
-			self.firstDxCycle = True
+			self.dxCycleRunning = False
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeLimit)
 		self.master.phy.clearTxQueueAddr(self.slaveDesc.slaveAddr)
@@ -283,6 +283,20 @@ class DpSlaveDesc(object):
 	def getInData(self):
 		"""Deprecated: Don't use this method. Use getMasterInData() instead."""
 		return self.getMasterInData()
+
+	def isConnecting(self):
+		"""Returns True, if the slave is in the process of getting connected/configured,
+		but is not fully connected, yet.
+		Otherwise returns False.
+		"""
+		return self.dpm._slaveIsConnecting(self)
+
+	def isConnected(self):
+		"""Returns True, if this slave is fully connected and Data_Exchange
+		or periodic slave diagnosis is currently running.
+		Otherwise returns False.
+		"""
+		return self.dpm._slaveIsConnected(self)
 
 	def __repr__(self):
 		return "DpSlaveDesc(identNumber=%s, slaveAddr=%d)" %\
@@ -613,12 +627,12 @@ class DpMaster(object):
 
 		if slave.stateJustEntered():
 			self.__debugMsg("%sRunning Data_Exchange with slave %d..." % (
-				"Initialization finished. " if slave.firstDxCycle else "",
+				"" if slave.dxCycleRunning else "Initialization finished. ",
 				slave.slaveDesc.slaveAddr))
 			slave.flushRxQueue()
 			slave.faultDeb.ok()
 			slave.dxStartTime = monotonic_time()
-			slave.firstDxCycle = False
+			slave.dxCycleRunning = True
 			slave.dxCount = 0
 
 		slaveOutputSize = slave.slaveDesc.outputSize
@@ -846,6 +860,15 @@ class DpMaster(object):
 		fromSlaveData = slave.fromSlaveData
 		slave.fromSlaveData = None
 		return fromSlaveData
+
+	def _slaveIsConnecting(self, slaveDesc):
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+		return (not slave.dxCycleRunning and
+		        slave.getState() != DpSlaveState.STATE_INIT)
+
+	def _slaveIsConnected(self, slaveDesc):
+		slave = self.__slaveStates[slaveDesc.slaveAddr]
+		return slave.dxCycleRunning
 
 	def initialize(self):
 		"""Initialize the DPM."""
