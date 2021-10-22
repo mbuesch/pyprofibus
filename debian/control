@@ -12,14 +12,12 @@ Vcs-Git: git://git.bues.ch/pyprofibus.git
 Vcs-Browser: https://bues.ch/gitweb?p=pyprofibus.git
 Homepage: https://bues.ch/a/profibus
 
-
 Package: python3-pyprofibus
 Architecture: any
 Depends: ${misc:Depends},
          ${python3:Depends}
 Description: PROFIBUS-DP stack (Python 3)
  pyprofibus is a PROFIBUS-DP stack written in Python.
-
 
 Package: profisniff
 Architecture: any
@@ -28,7 +26,6 @@ Depends: python3-pyprofibus,
          ${python3:Depends}
 Description: PROFIBUS-DP telegram sniffer (Python 3)
  PROFIBUS-DP telegram sniffer based on pyprofibus.
-
 
 Package: gsdparser
 Architecture: any
