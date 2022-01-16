@@ -31,7 +31,7 @@ pyprofibus on ESP32 with Micropython
 
 Pyprofibus on ESP32 with Micropython supports baud rates of at least 1.5 MBaud.
 
-Please see the `pyprofibus Micropython help <../micropython/README.html>`_.
+Please see the `pyprofibus Micropython help <../micropython/README.rst>`_.
 
 To run pyprofibus on Micropython serial port (UART 2) configure pyprofibus as follows:
 
@@ -50,7 +50,7 @@ This is one of the fastest albeit most expensive alternative to connect pyprofib
 
 The pyprofibus FPGA is connected via high speed SPI bus to the host computer. It's known to work well with the Raspberry Pi. However it's not strictly limited to that as host computer. The pyprofibus FPGA PHY driver utilizes the Linux SPI subsystem for communication to the FPGA board.
 
-Please see the `pyprofibus FPGA PHY documentation <hardware_fpga.html>`_ for more information on how to build and run the FPGA PHY.
+Please see the `pyprofibus FPGA PHY documentation <hardware_fpga.rst>`_ for more information on how to build and run the FPGA PHY.
 
 To run pyprofibus on FPGA PHY configure pyprofibus as follows:
 

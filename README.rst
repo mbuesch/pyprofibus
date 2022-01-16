@@ -13,7 +13,7 @@ pyprofibus is able to run on any machine that supports Python. It also runs on e
 
 Please read the hardware documentation for more information:
 
-`pyprofibus hardware documentation <doc/hardware.html>`_
+`pyprofibus hardware documentation <doc/hardware.rst>`_
 
 
 Speed / Baud rate
@@ -21,7 +21,7 @@ Speed / Baud rate
 
 The achievable Profibus-DP speed depends on the hardware that it runs on and what kind of serial transceiver is used. There is no software side artificial limit.
 
-Please see the `pyprofibus hardware documentation <doc/hardware.html>`_
+Please see the `pyprofibus hardware documentation <doc/hardware.rst>`_
 
 
 Examples
@@ -50,12 +50,12 @@ Dependencies
 ============
 
 * `Python <https://www.python.org/>`_ 3.5 or later.
-* Or alternatively `Micropython <https://micropython.org/>`_. Please see the `pyprofibus Micropython help <micropython/README.html>`_ for more information.
+* Or alternatively `Micropython <https://micropython.org/>`_. Please see the `pyprofibus Micropython help <micropython/README.rst>`_ for more information.
 
 
 License
 =======
 
-Copyright (c) 2013-2021 Michael Buesch <m@bues.ch>
+Copyright (c) 2013-2022 Michael Buesch <m@bues.ch>
 
 Licensed under the terms of the GNU General Public License version 2, or (at your option) any later version.

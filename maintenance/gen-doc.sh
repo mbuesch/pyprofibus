@@ -22,10 +22,13 @@ gen()
 	local docname="$(basename "$rst" .rst)"
 	local dir="$(dirname "$rst")"
 	local html="$dir/$docname.html"
+	local tmpfile="$(mktemp)"
 
 	echo "Generating $(realpath --relative-to="$srcdir" "$html") from $(realpath --relative-to="$srcdir" "$rst") ..."
 
-	python3 -m readme_renderer -o "$html" "$rst" ||\
+	sed -e 's|\.rst>`_|.html>`_|g' "$rst" > "$tmpfile" ||\
+		die "Failed to generate"
+	python3 -m readme_renderer -o "$html" "$tmpfile" ||\
 		die "Failed to generate"
 }
 
