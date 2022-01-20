@@ -30,13 +30,13 @@ If you want to modify the FPGA sources and build your own version of the FPGA bi
 Project IceStorm
 ~~~~~~~~~~~~~~~~
 
-The `Project IceStorm <http://www.clifford.at/icestorm/>`_ is needed to build the bitstream for the TinyFPGA BX board.
+The `Project IceStorm <http://bygone.clairexen.net/icestorm/>`_ is needed to build the bitstream for the TinyFPGA BX board.
 
 
 Yosys
 ~~~~~
 
-The `Yosys Open SYnthesis Suite <http://www.clifford.at/yosys/>`_ is required to synthesize the Verilog sources.
+The `Yosys Open SYnthesis Suite <https://yosyshq.net/yosys/>`_ is required to synthesize the Verilog sources.
 
 
 nextpnr
