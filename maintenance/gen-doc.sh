@@ -22,7 +22,7 @@ gen()
 	local docname="$(basename "$rst" .rst)"
 	local dir="$(dirname "$rst")"
 	local html="$dir/$docname.html"
-	local tmpfile="$(mktemp)"
+	local tmpfile="$(mktemp --tmpdir=/tmp --suffix=.rst)"
 
 	echo "Generating $(realpath --relative-to="$srcdir" "$html") from $(realpath --relative-to="$srcdir" "$rst") ..."
 
@@ -30,6 +30,8 @@ gen()
 		die "Failed to generate"
 	python3 -m readme_renderer -o "$html" "$tmpfile" ||\
 		die "Failed to generate"
+	rm "$tmpfile" ||\
+		die "Failed to delete temporary file"
 }
 
 for i in $(find "$srcdir" \( -name submodules -prune \) -o \( -name release-archives -prune \) -o \( -name build -prune \) -o \( -name toolchain-build -prune \) -o \( -name crcgen -prune \) -o \( -name '*.rst' -print \)); do
