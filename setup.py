@@ -10,11 +10,11 @@ for base in (os.getcwd(), basedir):
 	# Add the basedir to PYTHONPATH before we try to import pyprofibus.version
 	sys.path.insert(0, base)
 
-from pyprofibus.version import VERSION_STRING
+from setuptools import setup
 import setup_cython
-from distutils.core import setup
 import warnings
 import re
+from pyprofibus.version import VERSION_STRING
 
 
 isWindows = os.name.lower() in {"nt", "ce"}
