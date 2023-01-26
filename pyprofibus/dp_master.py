@@ -87,11 +87,14 @@ class DpSlaveState(object):
 		self.__nextState = self._STATE_INVALID
 		self.__prevState = self._STATE_INVALID
 		self.__stateTimeout = TimeLimit()
+
+		# Context for FC-Bit toggeling
+		# must preceed call setState()
+		self.fcb = FdlFCB()
+		
 		self.setState(self.STATE_INIT)
 		self.applyState()
 
-		# Context for FC-Bit toggeling
-		self.fcb = FdlFCB()
 
 		# Currently running request telegram
 		self.pendingReq = None
@@ -128,6 +131,7 @@ class DpSlaveState(object):
 			stateTimeLimit = self.stateTimeLimits[state]
 		if state == self.STATE_INIT:
 			self.dxCycleRunning = False
+			self.fcb.resetFCB()
 		self.__nextState = state
 		self.__stateTimeout.start(stateTimeLimit)
 		self.master.phy.clearTxQueueAddr(self.slaveDesc.slaveAddr)
