@@ -89,12 +89,10 @@ class DpSlaveState(object):
 		self.__stateTimeout = TimeLimit()
 
 		# Context for FC-Bit toggeling
-		# must preceed call setState()
 		self.fcb = FdlFCB()
 		
 		self.setState(self.STATE_INIT)
 		self.applyState()
-
 
 		# Currently running request telegram
 		self.pendingReq = None
