@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # PROFIBUS DP - LinuxCNC HAL module
 #
-# Copyright 2016-2021 Michael Buesch <m@bues.ch>
+# Copyright 2016-2023 Michael Buesch <m@bues.ch>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ from pyprofibus.conf import PbConf, PbConfError
 from pyprofibus.version import *
 
 
-class SigBit(object):
+class SigBit:
 	def __init__(self, hal, halName, byteOffset, bitOffset):
 		self.hal = hal
 		self.halName = halName
@@ -57,7 +57,7 @@ class SigBit(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigU8(object):
+class SigU8:
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
@@ -72,7 +72,7 @@ class SigU8(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigU16(object):
+class SigU16:
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
@@ -91,7 +91,7 @@ class SigU16(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigS16(object):
+class SigS16:
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
@@ -113,7 +113,7 @@ class SigS16(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigU31(object):
+class SigU31:
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
@@ -136,7 +136,7 @@ class SigU31(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigS32(object):
+class SigS32:
 	def __init__(self, hal, halName, offset):
 		self.hal = hal
 		self.halName = halName
@@ -162,7 +162,7 @@ class SigS32(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class SigFloat(object):
+class SigFloat:
 	floatStruct = struct.Struct(str('>f'))
 
 	def __init__(self, hal, halName, offset):
@@ -201,7 +201,7 @@ class SigFloat(object):
 	def __str__(self):
 		return "profibus.%s" % self.halName
 
-class Worker(object):
+class Worker:
 	def __init__(self, hal, master):
 		self.__configDone = False
 		self.hal = hal
@@ -334,9 +334,8 @@ def printInfo(msg):
 # Raises LinuxCNC_NotRunning, if LinuxCNC is not detected.
 def watchdog():
 	# Check whether LinuxCNC is running.
-	for lockname in ("/tmp/linuxcnc.lock", "/tmp/emc.lock"):
-		if fileExists(lockname):
-			return True
+	if fileExists("/tmp/linuxcnc.lock"):
+		return True
 	if not opt_watchdog:
 		# The check is disabled. Return success.
 		return True
