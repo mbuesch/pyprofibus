@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 
@@ -70,7 +71,7 @@ setup(	name		= "pyprofibus",
 	version		= VERSION_STRING,
 	description	= "Python PROFIBUS module",
 	license		= "GNU General Public License v2 or later",
-	author		= "Michael Buesch",
+	author		= "Michael Büsch",
 	author_email	= "m@bues.ch",
 	url		= "https://bues.ch/a/profibus",
 	scripts		= [ "gsdparser",
