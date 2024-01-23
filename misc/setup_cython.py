@@ -1,8 +1,7 @@
 #
 #   Cython patcher
-#   v1.21
 #
-#   Copyright (C) 2012-2020 Michael Buesch <m@bues.ch>
+#   Copyright (C) 2012-2024 Michael Buesch <m@bues.ch>
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -328,7 +327,7 @@ def registerCythonModule(baseDir, sourceModName):
 				if not _isWindows:
 					extra_compile_args.append("-Wall")
 					extra_compile_args.append("-Wextra")
-					#extra_compile_args.append("-Wcast-qual")
+					extra_compile_args.append("-Wcast-qual")
 					extra_compile_args.append("-Wlogical-op")
 					extra_compile_args.append("-Wpointer-arith")
 					extra_compile_args.append("-Wundef")
@@ -442,6 +441,9 @@ if cythonBuildPossible():
 
 			# First patch the files, the run the build
 			patchCythonModules(self.build_lib)
+
+			# FIXME: Parallel build currently does not work on Cython 3.x
+			parallelBuild = False
 
 			if parallelBuild:
 				# Run the parallel build, yay.

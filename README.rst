@@ -1,9 +1,13 @@
 pyprofibus - PROFIBUS-DP stack
 ==============================
 
-`https://bues.ch/a/profibus <https://bues.ch/a/profibus>`_
-
 pyprofibus is an Open Source `PROFIBUS-DP <https://en.wikipedia.org/wiki/Profibus>`_ stack written in Python.
+
+`pyprofibus home <https://bues.ch/a/profibus>`_
+
+`Git repository <https://bues.ch/cgit/pyprofibus.git>`_
+
+`Github repository <https://github.com/mbuesch/pyprofibus>`_
 
 
 Hardware
@@ -56,6 +60,6 @@ Dependencies
 License
 =======
 
-Copyright (c) 2013-2023 Michael Buesch <m@bues.ch>
+Copyright (c) 2013-2024 Michael Büsch <m@bues.ch>
 
 Licensed under the terms of the GNU General Public License version 2, or (at your option) any later version.
