@@ -65,12 +65,13 @@ class CpPhySerial(CpPhy):
 						"is not available. "
 						"Please use useRS485Class=False.")
 				self.__serial = serial.rs485.RS485()
+				self.__serial.port = port
 			else:
 				if hasattr(serial, 'serial_for_url'):
 					self.__serial = serial.serial_for_url(port, do_not_open = True)
 				else:
 					self.__serial = serial.Serial()
-			self.__serial.port = port
+					self.__serial.port = port
 			self.__serial.baudrate = CpPhy.BAUD_9600
 			self.__serial.bytesize = 8
 			self.__serial.parity = serial.PARITY_EVEN
