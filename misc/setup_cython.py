@@ -334,6 +334,9 @@ def registerCythonModule(baseDir, sourceModName):
 					extra_compile_args.append("-Wno-cast-function-type")
 					extra_compile_args.append("-Wno-maybe-uninitialized")
 					extra_compile_args.append("-Wno-type-limits")
+					extra_compile_args.append("-Wno-unused-parameter")
+					extra_compile_args.append("-Wno-unused-function")
+					extra_compile_args.append("-Wno-unused-variable")
 					if debugEnabled:
 						# Enable debugging and UBSAN.
 						extra_compile_args.append("-g3")
@@ -360,6 +363,7 @@ def registerCythonModule(baseDir, sourceModName):
 							"language_level" : 3,
 						},
 						define_macros=[
+							("CYTHON_PROFILE",	str(int(profileEnabled))),
 							("CYTHON_TRACE",	str(int(profileEnabled))),
 							("CYTHON_TRACE_NOGIL",	str(int(profileEnabled))),
 						],
@@ -416,6 +420,7 @@ def cythonBuildPossible():
 	_cythonPossible = True
 	return True
 
+
 if cythonBuildPossible():
 	# Override Cython's build_ext class.
 	class CythonBuildExtension(_Cython_Distutils_build_ext):
@@ -428,15 +433,13 @@ if cythonBuildPossible():
 		def build_extensions(self):
 			global parallelBuild
 
-			# First patch the files, the run the build
+			# First patch the files, then run the build
 			patchCythonModules(self.build_lib)
 
 			if parallelBuild:
 				# Run the parallel build using the setuptools/distutils
 				# built-in parallel support (self.parallel)
 				try:
-					self.check_extensions_list(self.extensions)
-
 					# Calculate the number of worker threads to use.
 					memBytes = getSystemMemBytesCount()
 					if memBytes is None:
